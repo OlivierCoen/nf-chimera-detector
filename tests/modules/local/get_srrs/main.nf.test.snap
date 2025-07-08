@@ -1,0 +1,53 @@
+{
+    "Should run without failures": {
+        "content": [
+            {
+                "0": [
+                    "96803_srrs.txt:md5,d8709d9b8ad05aa5fffc74ad4364a02a"
+                ],
+                "1": [
+                    "96803_sra_metadata.csv:md5,d361c3234f67723ebfa8aebf4f4f4ac1"
+                ],
+                "2": [
+                    [
+                        "GET_SRRS",
+                        "python",
+                        "3.13.5"
+                    ]
+                ],
+                "3": [
+                    [
+                        "GET_SRRS",
+                        "pandas",
+                        "2.3.0"
+                    ]
+                ],
+                "4": [
+                    [
+                        "GET_SRRS",
+                        "tqdm",
+                        "4.67.1"
+                    ]
+                ],
+                "5": [
+                    [
+                        "GET_SRRS",
+                        "entrez-direct",
+                        "24.0"
+                    ]
+                ],
+                "sra_metadata": [
+                    "96803_sra_metadata.csv:md5,d361c3234f67723ebfa8aebf4f4f4ac1"
+                ],
+                "srrs": [
+                    "96803_srrs.txt:md5,d8709d9b8ad05aa5fffc74ad4364a02a"
+                ]
+            }
+        ],
+        "meta": {
+            "nf-test": "0.9.2",
+            "nextflow": "25.04.6"
+        },
+        "timestamp": "2025-07-08T17:17:51.707439099"
+    }
+}

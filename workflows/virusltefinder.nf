@@ -3,9 +3,8 @@
     IMPORT MODULES / SUBWORKFLOWS / FUNCTIONS
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
-include { paramsSummaryMap       } from 'plugin/nf-schema'
-include { softwareVersionsToYAML } from '../subworkflows/nf-core/utils_nfcore_pipeline'
-include { methodsDescriptionText } from '../subworkflows/local/utils_nfcore_virusltefinder_pipeline'
+
+include { MULTIQC_WORKFLOW                                        } from '../subworkflows/local/multiqc'
 
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -17,9 +16,16 @@ workflow VIRUSLTEFINDER {
 
     take:
     ch_samplesheet // channel: samplesheet read in from --input
+
     main:
 
     ch_versions = Channel.empty()
+
+    // ------------------------------------------------------------------------------------
+    // MULTIQC
+    // ------------------------------------------------------------------------------------
+
+    MULTIQC_WORKFLOW ( ch_versions )
 
     //
     // Collate and save software versions

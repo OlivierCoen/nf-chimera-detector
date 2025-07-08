@@ -214,3 +214,22 @@ def methodsDescriptionText(mqc_methods_yaml) {
 
     return description_html.toString()
 }
+
+
+//
+// Get channel of software versions used in pipeline in YAML format
+// temporary replacements of the native softwareVersionsToYAML
+//
+def formatVersionsToYAML( ch_versions ) {
+    return ch_versions
+            .unique()
+            .map {
+                name, tool, version -> [ name.tokenize(':').last(), [ tool, version ] ]
+            }
+            .groupTuple()
+            .map {
+                processName, toolInfo ->
+                    def toolVersions = toolInfo.collect { tool, version -> "    ${tool}: ${version}" }.join('\n')
+                    "${processName}:\n${toolVersions}\n"
+            }
+}

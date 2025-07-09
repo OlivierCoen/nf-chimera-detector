@@ -5,6 +5,7 @@
 import pandas as pd
 import subprocess
 import argparse
+import sys
 from tqdm import tqdm
 import logging
 
@@ -67,6 +68,11 @@ if __name__ == "__main__":
 
     logger.info("Formatting data and exporting...")
     df = pd.DataFrame.from_dict(exp_dicts)
+
+    if df.empty:
+        logger.error(f"No SRA experiment could be retrieved for taxon ID {args.taxid}")
+        sys.exit(100)
+
     srrs = df["Run"].tolist()
 
     srr_outfile = f"{args.taxid}_srrs.txt"

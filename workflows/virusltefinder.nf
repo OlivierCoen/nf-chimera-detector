@@ -6,6 +6,9 @@
 
 include { MULTIQC_WORKFLOW                                        } from '../subworkflows/local/multiqc'
 
+include { GET_CHILDREN_TAXIDS                                     } from '../modules/local/get_children_taxids'
+include { GET_SRRS                                                } from '../modules/local/get_srrs'
+
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     RUN MAIN WORKFLOW
@@ -15,11 +18,16 @@ include { MULTIQC_WORKFLOW                                        } from '../sub
 workflow VIRUSLTEFINDER {
 
     take:
-    ch_samplesheet // channel: samplesheet read in from --input
+    ch_families
 
     main:
 
     ch_versions = Channel.empty()
+
+    GET_CHILDREN_TAXIDS ( ch_families )
+    GET_CHILDREN_TAXIDS.out.taxids | GET_SRRS
+
+    GET_SRRS.out.srrs.view()
 
     // ------------------------------------------------------------------------------------
     // MULTIQC
@@ -27,20 +35,8 @@ workflow VIRUSLTEFINDER {
 
     MULTIQC_WORKFLOW ( ch_versions )
 
-    //
-    // Collate and save software versions
-    //
-    softwareVersionsToYAML(ch_versions)
-        .collectFile(
-            storeDir: "${params.outdir}/pipeline_info",
-            name:  'virusltefinder_software_'  + 'versions.yml',
-            sort: true,
-            newLine: true
-        ).set { ch_collated_versions }
-
-
     emit:
-    versions       = ch_versions                 // channel: [ path(versions.yml) ]
+    multiqc_report = MULTIQC_WORKFLOW.out.multiqc_report
 
 }
 

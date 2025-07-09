@@ -28,7 +28,7 @@ include { PIPELINE_COMPLETION     } from './subworkflows/local/utils_nfcore_viru
 workflow EGCE_VIRUSLTEFINDER {
 
     take:
-    samplesheet // channel: samplesheet read in from --input
+    families
 
     main:
 
@@ -36,7 +36,7 @@ workflow EGCE_VIRUSLTEFINDER {
     // WORKFLOW: Run pipeline
     //
     VIRUSLTEFINDER (
-        samplesheet
+        families
     )
 }
 /*
@@ -56,15 +56,14 @@ workflow {
         params.validate_params,
         params.monochrome_logs,
         args,
-        params.outdir,
-        params.input
+        params.outdir
     )
 
     //
     // WORKFLOW: Run main workflow
     //
     EGCE_VIRUSLTEFINDER (
-        PIPELINE_INITIALISATION.out.samplesheet
+        PIPELINE_INITIALISATION.out.families
     )
     //
     // SUBWORKFLOW: Run completion tasks

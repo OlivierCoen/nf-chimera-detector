@@ -30,7 +30,6 @@ workflow PIPELINE_INITIALISATION {
     monochrome_logs   // boolean: Do not use coloured log outputs
     nextflow_cli_args //   array: List of positional nextflow CLI args
     outdir            //  string: The output directory where the results will be saved
-    input             //  string: Path to input samplesheet
 
     main:
 
@@ -67,27 +66,13 @@ workflow PIPELINE_INITIALISATION {
     //
 
     Channel
-        .fromList(samplesheetToList(params.input, "${projectDir}/assets/schema_input.json"))
-        .map {
-            meta, fastq_1, fastq_2 ->
-                if (!fastq_2) {
-                    return [ meta.id, meta + [ single_end:true ], [ fastq_1 ] ]
-                } else {
-                    return [ meta.id, meta + [ single_end:false ], [ fastq_1, fastq_2 ] ]
-                }
-        }
-        .groupTuple()
-        .map { samplesheet ->
-            validateInputSamplesheet(samplesheet)
-        }
-        .map {
-            meta, fastqs ->
-                return [ meta, fastqs.flatten() ]
-        }
-        .set { ch_samplesheet }
+        .fromPath( params.families )
+        .splitText()
+        .map { family -> family.strip() }
+        .set { ch_families }
 
     emit:
-    samplesheet = ch_samplesheet
+    families = ch_families
     versions    = ch_versions
 }
 
@@ -233,3 +218,4 @@ def formatVersionsToYAML( ch_versions ) {
                     "${processName}:\n${toolVersions}\n"
             }
 }
+

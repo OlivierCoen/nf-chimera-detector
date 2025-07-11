@@ -3,21 +3,34 @@
 # Written by Olivier Coen. Released under the MIT license.
 
 import requests
-import subprocess
 import sys
 import argparse
+import xml.etree.ElementTree as ET
 import logging
+
+from tenacity import (
+    retry,
+    retry_if_exception_type,
+    stop_after_delay,
+    wait_exponential,
+    before_sleep_log,
+)
 
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Modern NCBI API
 NCBI_API_URL = "https://api.ncbi.nlm.nih.gov/datasets/v2/taxonomy"
 NCBI_API_HEADERS = {
     "accept": "application/json",
     "content-type": "application/json"
 }
-CHUNKSIZE = 2000
 
+# E-UTILITIES OL API
+ESEARCH_BASE_URL = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi"
+ESEARCH_RETMAX = 1000000000 # max retmax that worked
+
+OUTFILE_SUFFIX = ".children_taxids.txt"
 
 #####################################################
 #####################################################
@@ -36,15 +49,12 @@ def parse_args():
     return parser.parse_args()
 
 
-def get_virus_taxids(taxid: str):
-    command = f'esearch -db taxonomy -query "txid{taxid}[Subtree]" | efetch -format uid'
-    result = subprocess.run(command, shell=True, capture_output=True, check=True, text=True)
-    if result.returncode != 0:
-        logger.info(result.stderr)
-        raise RuntimeError('Could not get virus taxids')
-    return [taxid for taxid in result.stdout.split('\n') if taxid != '']
-
-
+@retry(
+    retry=retry_if_exception_type(requests.exceptions.HTTPError),
+    stop=stop_after_delay(600),
+    wait=wait_exponential(multiplier=1, min=1, max=30),
+    before_sleep=before_sleep_log(logger, logging.WARNING),
+)
 def send_request_to_ncbi_taxonomy(taxons: list[str]):
     data = {
         "taxons": taxons
@@ -56,22 +66,49 @@ def send_request_to_ncbi_taxonomy(taxons: list[str]):
     return response.json()
 
 
-def get_children_taxids(taxids: list[str]):
-    # querying NCBI taxonomy API
-    result = send_request_to_ncbi_taxonomy(taxids)
+@retry(
+    retry=retry_if_exception_type(requests.exceptions.HTTPError),
+    stop=stop_after_delay(600),
+    wait=wait_exponential(multiplier=1, min=1, max=30),
+    before_sleep=before_sleep_log(logger, logging.WARNING),
+)
+def send_esearch_query(query: str, database: str):
+    """
+    Query NCBI's db with Esearch API
+    """
+    params = dict(
+        db=database,
+        term=query,
+        retmax=ESEARCH_RETMAX
+    )
+    response = requests.get(ESEARCH_BASE_URL, params=params)
+    response.raise_for_status()
+    return response.text
 
-    # parsing result
-    children_taxids = []
-    for taxonomy_node_dict in result.get("taxonomy_nodes", []):
-        if (taxon_dict := taxonomy_node_dict.get("taxonomy")) is not None:
 
-            taxid = taxon_dict.get("tax_id")
-            rank = taxon_dict.get("rank")
+def parse_ids_from_xml(xml_string: str):
+    """
+    Parse XML string and get text in <Id>...</Id> blocks
+    :param xml_string:
+    :return: list of Ids
+    """
+    # parsing XML returned by API
+    root = ET.fromstring(xml_string)
+    # species taxon IDs are contained in <Id>...</Id> blocks
+    return [id_element.text for id_element in root.findall('.//Id')]
 
-            if taxid is not None and rank == 'SPECIES':
-                children_taxids.append(taxid)
 
-    return children_taxids
+def get_children_species_taxids(taxid: str) -> list[str]:
+    """
+   Get list of children taxonomy IDs given a family taxonomy ID
+   :param taxid:
+   :return: list of SRA experiment IDs
+   """
+    xml_string = send_esearch_query(
+        query=f"txid{taxid}[Subtree] AND species[Rank]",
+        database="taxonomy"
+    )
+    return parse_ids_from_xml(xml_string)
 
 
 #####################################################
@@ -84,9 +121,7 @@ if __name__ == "__main__":
     args = parse_args()
     
     family = args.family
-
     logger.info(f"Getting all children taxids for family {family}")
-    family_dna_children_taxids = []
 
     result = send_request_to_ncbi_taxonomy([family])
     if len(result['taxonomy_nodes']) > 1:
@@ -102,17 +137,14 @@ if __name__ == "__main__":
 
     family_taxid = node['taxonomy']['tax_id']
     logger.info(f"Family taxid: {family_taxid}")
-    virus_taxids = get_virus_taxids(family_taxid)
 
-    virus_taxids_chunks = [virus_taxids[i:i + CHUNKSIZE] for i in range(0, len(virus_taxids), CHUNKSIZE)]
-    for virus_taxids_chunk in virus_taxids_chunks:
-        family_dna_children_taxids += get_children_taxids(virus_taxids_chunk)
+    logger.info(f"Getting children species taxids for family {family}")
+    species_taxids = get_children_species_taxids(family_taxid)
+    logger.info(f"Obtained {len(species_taxids)} children taxids\n")
 
-    logger.info(f"Obtained {len(family_dna_children_taxids)} children taxids\n")
-
-    outfile = f"{family}.children_taxids.txt"
+    outfile = f"{family}{OUTFILE_SUFFIX}"
     with open(outfile, 'w') as fout:
-        for taxid in family_dna_children_taxids:
+        for taxid in species_taxids:
             fout.write(f"{taxid}\n")
 
     logger.info("Done")

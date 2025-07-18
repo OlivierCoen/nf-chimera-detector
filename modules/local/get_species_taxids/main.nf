@@ -21,7 +21,7 @@ process GET_SPECIES_TAXIDS {
     val family
 
     output:
-    path("*.species_taxids.txt"),                                                                                                emit: taxid_files
+    tuple val(meta), path("*.species_taxids.txt"),                                                                                                emit: taxid_files
     tuple val("${task.process}"), val('python'),   eval("python3 --version | sed 's/Python //'"),                                topic: versions
     tuple val("${task.process}"), val('requests'), eval('python3 -c "import requests; print(requests.__version__)"'),            topic: versions
 
@@ -29,11 +29,13 @@ process GET_SPECIES_TAXIDS {
     task.ext.when == null || task.ext.when
 
     script:
+    meta = [family: family]
     """
     get_species_taxids.py --family $family
     """
 
     stub:
+    meta = [family: family]
     """
     touch test.species_taxids.txt
     """

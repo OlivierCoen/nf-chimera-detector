@@ -10,4 +10,4 @@ null/
 .nf-test/
 .nf-test.log
 .idea/
-local/
+local/*

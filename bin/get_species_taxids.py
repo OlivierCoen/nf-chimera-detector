@@ -30,7 +30,7 @@ NCBI_API_HEADERS = {
 ESEARCH_BASE_URL = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi"
 ESEARCH_RETMAX = 1000000000 # max retmax that worked
 
-OUTFILE_SUFFIX = ".children_taxids.txt"
+OUTFILE_SUFFIX = ".species_taxids.txt"
 
 #####################################################
 #####################################################

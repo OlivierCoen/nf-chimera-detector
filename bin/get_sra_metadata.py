@@ -28,8 +28,8 @@ EFETCH_BASE_URL = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=
 ESEARCH_RETMAX = 1000000000 # max retmax that worked
 CHUNKSIZE = 2000
 
-SRA_IDS_OUTFILE_SUFFIX = ".srrs.txt"
-EXPERIMENT_OUTFILE_SUFFIX = ".srr_metadata.json"
+SRA_IDS_OUTFILE_SUFFIX = ".sra_ids.txt"
+EXPERIMENT_OUTFILE_SUFFIX = ".sra_metadata.json"
 
 
 #####################################################
@@ -155,10 +155,6 @@ if __name__ == "__main__":
     sra_uids_chunks = [sra_uids[i:i + CHUNKSIZE] for i in range(0, len(sra_uids), CHUNKSIZE)]
     for sra_uids_chunk in sra_uids_chunks:
         experiments += fetch_sra_experiments(sra_uids_chunk)
-
-    if not experiments:
-        logger.error(f"No SRA experiment could be retrieved for taxon ID {args.taxid}")
-        sys.exit(100)
 
     outfile = f"{args.taxid}{EXPERIMENT_OUTFILE_SUFFIX}"
     with open(outfile, 'w') as fout:

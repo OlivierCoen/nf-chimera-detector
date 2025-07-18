@@ -33,6 +33,13 @@
                     "fa_icon": "fas fa-envelope",
                     "help_text": "Set this parameter to your e-mail address to get a summary e-mail with details of the run sent to you when the workflow exits. If set in your user config file (`~/.nextflow/config`) then you don't need to specify this on the command line for every run.",
                     "pattern": "^([a-zA-Z0-9_\\-\\.]+)@([a-zA-Z0-9_\\-\\.]+)\\.([a-zA-Z]{2,5})$"
+                },
+                "dbgap_key": {
+                    "type": "string",
+                    "fa_icon": "fas fa-address-card",
+                    "help_text": "Path to a JWT cart file used to access protected dbGAP data on SRA using the sra-toolkit. Users with granted access to controlled data can download the JWT cart file for the study from the SRA Run Selector upon logging in. The JWT file can only be used on cloud platforms and is valid for 1 hour upon creation.",
+                    "format": "file-path",
+                    "description": "dbGaP repository key."
                 }
             }
         },

@@ -1,4 +1,4 @@
-include { MULTIQC                                                 } from '../../../modules/nf-core/multiqc/main'
+include { MULTIQC                                                 } from '../../../modules/nf-core/multiqc'
 
 include { paramsSummaryMap                                        } from 'plugin/nf-schema'
 include { paramsSummaryMultiqc                                    } from '../../nf-core/utils_nfcore_pipeline'

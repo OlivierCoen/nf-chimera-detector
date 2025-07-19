@@ -1,6 +1,6 @@
-include { CUSTOM_SRATOOLSNCBISETTINGS } from '../../../modules/nf-core/custom/sratoolsncbisettings/main'
-include { SRATOOLS_PREFETCH           } from '../../../modules/nf-core/sratools/prefetch/main'
-include { SRATOOLS_FASTERQDUMP        } from '../../../modules/nf-core/sratools/fasterqdump/main'
+include { CUSTOM_SRATOOLSNCBISETTINGS } from '../../../modules/nf-core/custom/sratoolsncbisettings'
+include { SRATOOLS_PREFETCH           } from '../../../modules/local/sratools/prefetch'
+include { SRATOOLS_FASTERQDUMP        } from '../../../modules/local/sratools/fasterqdump'
 
 //
 // Download FASTQ sequencing reads from the NCBI's Sequence Read Archive (SRA).
@@ -24,14 +24,20 @@ workflow FASTQ_DOWNLOAD_PREFETCH_FASTERQDUMP_SRATOOLS {
     //
     // Prefetch sequencing reads in SRA format.
     //
-    SRATOOLS_PREFETCH ( ch_sra_ids, ch_ncbi_settings, ch_dbgap_key )
-    ch_versions = ch_versions.mix(SRATOOLS_PREFETCH.out.versions.first())
+    SRATOOLS_PREFETCH (
+        ch_sra_ids,
+        ch_ncbi_settings,
+        ch_dbgap_key
+    )
 
     //
     // Convert the SRA format into one or more compressed FASTQ files.
     //
-    SRATOOLS_FASTERQDUMP ( SRATOOLS_PREFETCH.out.sra, ch_ncbi_settings, ch_dbgap_key )
-    ch_versions = ch_versions.mix(SRATOOLS_FASTERQDUMP.out.versions.first())
+    SRATOOLS_FASTERQDUMP (
+        SRATOOLS_PREFETCH.out.sra,
+        ch_ncbi_settings,
+        ch_dbgap_key
+    )
 
     emit:
     reads    = SRATOOLS_FASTERQDUMP.out.reads // channel: [ val(meta), [ reads ] ]

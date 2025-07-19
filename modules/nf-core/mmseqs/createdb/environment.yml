@@ -4,5 +4,4 @@ channels:
   - conda-forge
   - bioconda
 dependencies:
-  - bioconda::sra-tools=3.1.0
-  - conda-forge::curl=8.5.0
+  - bioconda::mmseqs2=17.b804f

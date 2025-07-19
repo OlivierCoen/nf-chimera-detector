@@ -1,0 +1,76 @@
+process SRATOOLS_PREFETCH {
+    tag "$sra_id"
+    label 'process_low'
+
+    errorStrategy = {
+        if (task.exitStatus == 100) {
+            // if vdb_validate fails ...
+            log.warn("vdb-validate returned error for SRA ID $sra_id")
+            return 'retry'
+        } else if (task.exitStatus == 101) {
+            // if checksum fails...
+            log.warn("Wrong checksum for SRA ID $sra_id")
+            return 'retry'
+        } else {
+            log.warn("Unknown issue when prefetching SRA ID $sra_id")
+            sleep(Math.pow(2, task.attempt) * 200 as long)
+            return 'retry'
+        }
+    }
+    maxRetries 5
+
+    conda "${moduleDir}/environment.yml"
+    container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
+        'https://community-cr-prod.seqera.io/docker/registry/v2/blobs/sha256/07/079d860bc0b82e189e4015772a7c6d8fe20d9b740058f854dd1513ce33460950/data' :
+        'community.wave.seqera.io/library/sra-tools:3.2.1--2063130dadd340c5' }"
+
+    input:
+    tuple val(meta), val(sra_id)
+    path ncbi_settings
+    path certificate
+
+    output:
+    tuple val(meta), path("SR*", type: 'dir'),                                                                   emit: sra
+    tuple val("${task.process}"), val('sratools'), eval("prefetch --version 2>&1 | grep -Eo '[0-9.]+'"),         topic: versions
+    tuple val("${task.process}"), val('curl'), eval("curl --version | head -n 1 | sed 's/^curl //; s/ .*\$//'"), topic: versions
+
+    when:
+    task.ext.when == null || task.ext.when
+
+    script:
+    args = task.ext.args ?: ''
+    if (certificate) {
+        if (certificate.toString().endsWith('.jwt')) {
+            args += " --perm ${certificate}"
+        }
+        else if (certificate.toString().endsWith('.ngc')) {
+            args += " --ngc ${certificate}"
+        }
+    }
+    // augmenting meta
+    new_meta = meta + [original_sra_id: sra_id]
+
+    """
+    prefetch $args $sra_id
+
+    # sometimes the SRA ID actually downloaded
+    DOWNLOADED_SRA=\$(find . -name "SR*" -type d)
+    # check file integrity using vdb-validate or (when archive contains no checksums) md5sum
+    vdb-validate \$DOWNLOADED_SRA > vdb-validate_result.txt 2>&1 || exit 100
+    if grep -q "checksums missing" vdb-validate_result.txt; then
+        VALID_MD5SUMS=\$(curl --silent --fail --location --retry 3 --retry-delay 60 "https://locate.ncbi.nlm.nih.gov/sdl/2/retrieve?filetype=run&acc=\${DOWNLOADED_SRA}")
+        FILES=\$(find \$DOWNLOADED_SRA -name "*" -type f)
+        LOCAL_MD5SUMS=\$(md5sum \$FILES | cut -f1 -d' ')
+        if ! grep -q -F -f <(echo "\$LOCAL_MD5SUMS") <(echo "\$VALID_MD5SUMS"); then
+            echo "MD5 sum check failed" 1>&2
+            exit 101
+        fi
+    fi
+    """
+
+    stub:
+    """
+    mkdir ${sra_id}
+    touch ${sra_id}/${sra_id}.sra
+    """
+}

@@ -9,19 +9,18 @@ workflow FETCH_SRA_IDS {
 
     main:
 
-    ch_versions = Channel.empty()
-
     GET_SPECIES_TAXIDS ( ch_families )
     GET_SPECIES_TAXIDS.out.taxid_files
-    .map
-        .splitText()
-        .map { taxid -> taxid.strip() }
+        .map { meta, file -> [ meta, file.splitText() ] }
+        .transpose() // explodes each list
+        .map { meta, taxid -> [ meta, taxid.strip() ] }
         .set { ch_species_taxids }
 
     GET_SRA_METADATA ( ch_species_taxids )
     GET_SRA_METADATA.out.sra_id_files
-        .splitText()
-        .map { sra_id -> sra_id.strip() }
+        .map { meta, file -> [ meta, file.splitText() ] }
+        .transpose() // explodes each list
+        .map { meta, sra_id -> [ meta, sra_id.strip() ] }
         .set { ch_sra_ids }
 
     emit:

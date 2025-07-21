@@ -1,5 +1,5 @@
 process SRATOOLS_FASTERQDUMP {
-    tag "$meta.id"
+    tag "${sra.name}"
     label 'process_medium'
 
     conda "${moduleDir}/environment.yml"
@@ -10,10 +10,9 @@ process SRATOOLS_FASTERQDUMP {
     input:
     tuple val(meta), path(sra)
     path ncbi_settings
-    path certificate
 
     output:
-    tuple val(meta), path('*.fastq.gz'), emit: reads
+    tuple val(new_meta), path('*.fastq.gz'),                                                                    emit: reads
     tuple val("${task.process}"), val('sratools'), eval("fasterq-dump --version 2>&1 | grep -Eo '[0-9.]+'"),    topic: versions
     tuple val("${task.process}"), val('curl'), eval("pigz --version 2>&1 | sed 's/pigz //g'"),                  topic: versions
 
@@ -23,72 +22,28 @@ process SRATOOLS_FASTERQDUMP {
     script:
     def args = task.ext.args ?: ''
     def args2 = task.ext.args2 ?: ''
-    def prefix = task.ext.prefix ?: "${meta.id}"
-    def outfile = "${prefix}.fastq"
-    def exclude_third = meta.single_end ? '' : "mv $outfile $prefix || echo 'No third file'"
-    // Excludes the "${prefix}.fastq" file from output `reads` channel for paired end cases and
-    // avoids the '.' in the path bug: https://github.com/ncbi/sra-tools/issues/865
-    def key_file = ''
-    if (certificate.toString().endsWith('.jwt')) {
-        key_file += " --perm ${certificate}"
-    } else if (certificate.toString().endsWith('.ngc')) {
-        key_file += " --ngc ${certificate}"
-    }
+    def prefix = task.ext.prefix ?: "${sra.name}"
+    // augmenting meta
+    new_meta = meta + [ id: sra.name ]
     """
     export NCBI_SETTINGS="\$PWD/${ncbi_settings}"
 
     fasterq-dump \\
         $args \\
         --threads $task.cpus \\
-        --outfile $outfile \\
-        ${key_file} \\
+        --outfile ${prefix}.fastq \\
         ${sra}
-
-    $exclude_third
 
     pigz \\
         $args2 \\
         --no-name \\
         --processes $task.cpus \\
         *.fastq
-
     """
 
     stub:
-    def args = task.ext.args ?: ''
-    def args2 = task.ext.args2 ?: ''
-    def prefix = task.ext.prefix ?: "${meta.id}"
-    def outfile = "${prefix}.fastq"
-    def exclude_third = meta.single_end ? '' : "mv $outfile $prefix || echo 'No third file'"
-    // Excludes the "${prefix}.fastq" file from output `reads` channel for paired end cases and
-    // avoids the '.' in the path bug: https://github.com/ncbi/sra-tools/issues/865
-    def key_file = ''
-    if (certificate.toString().endsWith('.jwt')) {
-        key_file += " --perm ${certificate}"
-    } else if (certificate.toString().endsWith('.ngc')) {
-        key_file += " --ngc ${certificate}"
-    }
-    def touch_outfiles = meta.single_end ? "${prefix}.fastq" : "${prefix}_1.fastq ${prefix}_2.fastq"
+    def prefix = task.ext.prefix ?: "${sra.name}"
     """
-    touch $touch_outfiles
-
-    export NCBI_SETTINGS="\$PWD/${ncbi_settings}"
-
-    echo \\
-    "fasterq-dump \\
-        $args \\
-        --threads $task.cpus \\
-        --outfile $outfile \\
-        ${key_file} \\
-        ${sra}"
-
-    $exclude_third
-
-    pigz \\
-        $args2 \\
-        --no-name \\
-        --processes $task.cpus \\
-        *.fastq
-
+    touch ${prefix}.fastq.gz
     """
 }

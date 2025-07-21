@@ -27,10 +27,9 @@ process SRATOOLS_PREFETCH {
     input:
     tuple val(meta), val(sra_id)
     path ncbi_settings
-    path certificate
 
     output:
-    tuple val(meta), path("SR*", type: 'dir'),                                                                   emit: sra
+    tuple val(meta), path("${two_first_letters}*", type: 'dir'),                                                                   emit: sra
     tuple val("${task.process}"), val('sratools'), eval("prefetch --version 2>&1 | grep -Eo '[0-9.]+'"),         topic: versions
     tuple val("${task.process}"), val('curl'), eval("curl --version | head -n 1 | sed 's/^curl //; s/ .*\$//'"), topic: versions
 
@@ -39,22 +38,17 @@ process SRATOOLS_PREFETCH {
 
     script:
     args = task.ext.args ?: ''
-    if (certificate) {
-        if (certificate.toString().endsWith('.jwt')) {
-            args += " --perm ${certificate}"
-        }
-        else if (certificate.toString().endsWith('.ngc')) {
-            args += " --ngc ${certificate}"
-        }
-    }
     // augmenting meta
     new_meta = meta + [original_sra_id: sra_id]
-
+    two_first_letters = sra_id[0..1]
     """
+    export NCBI_SETTINGS="$PWD/!{ncbi_settings}"
+
     prefetch $args $sra_id
 
-    # sometimes the SRA ID actually downloaded
-    DOWNLOADED_SRA=\$(find . -name "SR*" -type d)
+    # sometimes the SRA ID actually downloaded is different from the original one
+    # but the two first letters stay the same
+    DOWNLOADED_SRA=\$(find . -name "${two_first_letters}*" -type d)
     # check file integrity using vdb-validate or (when archive contains no checksums) md5sum
     vdb-validate \$DOWNLOADED_SRA > vdb-validate_result.txt 2>&1 || exit 100
     if grep -q "checksums missing" vdb-validate_result.txt; then

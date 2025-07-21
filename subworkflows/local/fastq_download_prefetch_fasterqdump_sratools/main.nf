@@ -7,8 +7,7 @@ include { SRATOOLS_FASTERQDUMP        } from '../../../modules/local/sratools/fa
 //
 workflow FASTQ_DOWNLOAD_PREFETCH_FASTERQDUMP_SRATOOLS {
     take:
-    ch_sra_ids   // channel: [ val(meta), val(id) ]
-    ch_dbgap_key // channel: [ path(dbgap_key) ]
+    ch_sra_ids   // channel: [ val(meta), val(sra_id) ]
 
     main:
 
@@ -26,8 +25,7 @@ workflow FASTQ_DOWNLOAD_PREFETCH_FASTERQDUMP_SRATOOLS {
     //
     SRATOOLS_PREFETCH (
         ch_sra_ids,
-        ch_ncbi_settings,
-        ch_dbgap_key
+        ch_ncbi_settings
     )
 
     //
@@ -35,8 +33,7 @@ workflow FASTQ_DOWNLOAD_PREFETCH_FASTERQDUMP_SRATOOLS {
     //
     SRATOOLS_FASTERQDUMP (
         SRATOOLS_PREFETCH.out.sra,
-        ch_ncbi_settings,
-        ch_dbgap_key
+        ch_ncbi_settings
     )
 
     emit:

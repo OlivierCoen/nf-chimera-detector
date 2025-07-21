@@ -39,13 +39,22 @@
                     "format": "file-path",
                     "description": "Path to directory containing FASTA files to run MMSeqs2 and Blastn against.",
                     "fa_icon": "fas fa-folder-open"
-                },
-                "dbgap_key": {
-                    "type": "string",
-                    "fa_icon": "fas fa-address-card",
-                    "help_text": "Path to a JWT cart file used to access protected dbGAP data on SRA using the sra-toolkit. Users with granted access to controlled data can download the JWT cart file for the study from the SRA Run Selector upon logging in. The JWT file can only be used on cloud platforms and is valid for 1 hour upon creation.",
-                    "format": "file-path",
-                    "description": "dbGaP repository key."
+                }
+            }
+        },
+        "stat_options": {
+            "title": "Statistical options",
+            "type": "object",
+            "fa_icon": "fas fa-terminal",
+            "description": "Statistical options.",
+            "required": ["max_mmseqs_evalue"],
+            "properties": {
+                "max_mmseqs_evalue": {
+                    "type": "number",
+                    "minimum": 0,
+                    "default": 1E-3,
+                    "description": "Maximum (inclusive) allowed evalue for considering SRA data as candidates and giving them to BLAST.",
+                    "fa_icon": "fas fa-chart-simple"
                 }
             }
         },
@@ -205,6 +214,9 @@
     "allOf": [
         {
             "$ref": "#/$defs/input_output_options"
+        },
+         {
+            "$ref": "#/$defs/stat_options"
         },
         {
             "$ref": "#/$defs/institutional_config_options"

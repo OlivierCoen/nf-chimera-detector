@@ -4,6 +4,8 @@ process GET_SRA_METADATA {
 
     tag "${meta.family} :: ${taxid}"
 
+    errorStrategy 'ignore'
+
     conda "${moduleDir}/spec-file.txt"
     container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
         'https://community-cr-prod.seqera.io/docker/registry/v2/blobs/sha256/71/7140956576e6779ff2bea610b8e41bde95d4909d67b31634d0ddb6dba50aef5a/data':
@@ -23,7 +25,7 @@ process GET_SRA_METADATA {
     task.ext.when == null || task.ext.when
 
     script:
-    new_meta = meta + [taxid: taxid]
+    new_meta = meta + [ taxid: taxid ]
     """
     get_sra_metadata.py --taxon-id $taxid
     """

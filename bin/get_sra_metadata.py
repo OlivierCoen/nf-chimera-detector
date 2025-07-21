@@ -6,7 +6,7 @@ import argparse
 import json
 
 import requests
-import sys
+import urllib3
 import xml.etree.ElementTree as ET
 import xmltodict
 import logging
@@ -49,7 +49,10 @@ def parse_args():
     return parser.parse_args()
 
 @retry(
-    retry=retry_if_exception_type(requests.exceptions.HTTPError),
+    retry=retry_if_exception_type((
+        requests.exceptions.HTTPError,
+        urllib3.exceptions.ReadTimeoutError
+    )),
     stop=stop_after_delay(600),
     wait=wait_exponential(multiplier=1, min=1, max=30),
     before_sleep=before_sleep_log(logger, logging.WARNING),

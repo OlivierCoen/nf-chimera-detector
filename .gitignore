@@ -11,3 +11,4 @@ null/
 .nf-test.log
 .idea/
 local/*
+!{ncbi_settings}

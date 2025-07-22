@@ -39,6 +39,11 @@
                     "format": "file-path",
                     "description": "Path to directory containing FASTA files to run MMSeqs2 and Blastn against.",
                     "fa_icon": "fas fa-folder-open"
+                },
+                "skip_mmseqs_prefiltering": {
+                    "type": "boolean",
+                    "description": "Whether to pre-filter SRA reads using MMSEQS before submitting to BLASTN.",
+                    "fa_icon": "fas fa-folder-open"
                 }
             }
         },

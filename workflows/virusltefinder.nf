@@ -51,44 +51,44 @@ workflow VIRUSLTEFINDER {
     // ------------------------------------------------------------------------------------
 
     POST_PROCESS_SRA ( DOWNLOAD_SRA.out.reads )
-    POST_PROCESS_SRA.out.single_reads.set { ch_sra_single_reads }
+    POST_PROCESS_SRA.out.single_reads.set { ch_sra_reads }
 
     // ------------------------------------------------------------------------------------
     // PRE-FILTER CANDIDATE QUERY SEQUENCES
     // ------------------------------------------------------------------------------------
 
-    MMSEQS_WORKFLOW (
-        ch_sra_single_reads,
-        ch_target_db
-    )
+    if ( !params.skip_mmseqs_prefiltering ) {
 
-    PARSE_MMSEQS_OUTPUT (
-        MMSEQS_WORKFLOW.out.hits,
-        params.max_mmseqs_evalue
-    )
+        MMSEQS_WORKFLOW (
+            ch_sra_reads,
+            ch_target_db
+        )
 
-    PARSE_MMSEQS_OUTPUT.out.status
-        .view { v -> "before fitler" + v}
-        .filter { meta, status -> status == "PASS" }
-        .view { v -> "after fitler" + v}
-        .join( ch_sra_single_reads )
-        .map {
-            meta, status, sra_read ->
-                [ meta, sra_read ]
-        }
-        .view { v -> "after map" + v}
-        .set { ch_filtered_sra_reads }
+        PARSE_MMSEQS_OUTPUT (
+            MMSEQS_WORKFLOW.out.hits,
+            params.max_mmseqs_evalue
+        )
+
+        PARSE_MMSEQS_OUTPUT.out.status
+            .filter { meta, status -> status == "PASS" }
+            .join( ch_sra_single_reads )
+            .map {
+                meta, status, sra_read ->
+                    [ meta, sra_read ]
+            }
+            .set { ch_sra_single_reads }
+
+    }
 
     // ------------------------------------------------------------------------------------
     // BLAST
     // ------------------------------------------------------------------------------------
 
     BLAST_WORKFLOW (
-        ch_filtered_sra_reads,
+        ch_sra_reads,
         ch_target_db
     )
 
-    BLAST_WORKFLOW.out.hits.view()
 
     // ------------------------------------------------------------------------------------
     // MULTIQC

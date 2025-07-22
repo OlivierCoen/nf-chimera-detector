@@ -8,12 +8,11 @@ process BLAST_BLASTN {
         'community.wave.seqera.io/library/blast:2.16.0--540f4b669b0a0ddd' }"
 
     input:
-    tuple val(meta) , path(fasta)
-    tuple val(meta2), path(db)
+    tuple val(meta) , path(fasta), path(db)
 
     output:
     tuple val(meta), path('*.txt'), emit: txt
-    path "versions.yml"           , emit: versions
+    tuple val("${task.process}"), val('blast'), eval("blastn -version 2>&1 | sed 's/^.*blastn: //; s/ .*\$//'"), topic: versions
 
     when:
     task.ext.when == null || task.ext.when
@@ -41,11 +40,6 @@ process BLAST_BLASTN {
         -query ${fasta_name} \\
         ${args} \\
         -out ${prefix}.txt
-
-    cat <<-END_VERSIONS > versions.yml
-    "${task.process}":
-        blast: \$(blastn -version 2>&1 | sed 's/^.*blastn: //; s/ .*\$//')
-    END_VERSIONS
     """
 
     stub:
@@ -53,10 +47,5 @@ process BLAST_BLASTN {
     def prefix = task.ext.prefix ?: "${meta.id}"
     """
     touch ${prefix}.txt
-
-    cat <<-END_VERSIONS > versions.yml
-    "${task.process}":
-        blast: \$(blastn -version 2>&1 | sed 's/^.*blastn: //; s/ .*\$//')
-    END_VERSIONS
     """
 }

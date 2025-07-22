@@ -1,4 +1,4 @@
-include { GET_SPECIES_TAXIDS                                      } from '../../../modules/local/get_species_taxids'
+include { GET_CHILDREN_TAXIDS                                     } from '../../../modules/local/get_children_taxids'
 include { GET_SRA_METADATA                                        } from '../../../modules/local/get_sra_metadata'
 
 
@@ -9,8 +9,8 @@ workflow FETCH_SRA_IDS {
 
     main:
 
-    GET_SPECIES_TAXIDS ( ch_families )
-    GET_SPECIES_TAXIDS.out.taxid_files
+    GET_CHILDREN_TAXIDS ( ch_families )
+    GET_CHILDREN_TAXIDS.out.taxid_files
         .map { meta, file -> [ meta, file.splitText() ] }
         .transpose() // explodes each list
         .map { meta, taxid -> [ meta, taxid.strip() ] }

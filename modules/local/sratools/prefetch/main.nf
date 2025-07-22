@@ -38,8 +38,6 @@ process SRATOOLS_PREFETCH {
 
     script:
     args = task.ext.args ?: ''
-    // augmenting meta
-    new_meta = meta + [original_sra_id: sra_id]
     two_first_letters = sra_id[0..1]
     """
     export NCBI_SETTINGS="$PWD/!{ncbi_settings}"

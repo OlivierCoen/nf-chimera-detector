@@ -11,6 +11,7 @@ include { MMSEQS_WORKFLOW                                                   } fr
 include { BLAST_WORKFLOW as BLAST_AGAINST_TE                                } from '../subworkflows/local/blast'
 include { MULTIQC_WORKFLOW                                                  } from '../subworkflows/local/multiqc'
 
+include { GET_MEAN_ASSEMBLY_LENGTH                                          } from '../modules/local/get_mean_assembly_length'
 include { PARSE_MMSEQS_OUTPUT                                               } from '../modules/local/parse_mmseqs_output'
 
 /*
@@ -33,6 +34,17 @@ workflow VIRUSLTEFINDER {
         [ id: te_fasta_file.baseName ],
         te_fasta_file
     ])
+
+    GET_MEAN_ASSEMBLY_LENGTH ( ch_families )
+
+    GET_MEAN_ASSEMBLY_LENGTH.out.families
+        .map {
+            family, mean_assembly_length ->
+                def meta = [ family: family, mean_assembly_length: mean_assembly_length ]
+                [ meta, family ]
+        }
+        .set { ch_families }
+
 
     // ------------------------------------------------------------------------------------
     // GETTING LIST OF SRA IDS

@@ -1,4 +1,4 @@
-process GET_CHILDREN_TAXIDS {
+process GET_MEAN_ASSEMBLY_LENGTH {
 
     label 'process_single'
 
@@ -18,10 +18,10 @@ process GET_CHILDREN_TAXIDS {
         'community.wave.seqera.io/library/requests_tenacity_xmltodict:9e74a2aeeb88aab9' }"
 
     input:
-    tuple val(meta), val(family)
+    val family
 
     output:
-    tuple val(meta), path("*.species_taxids.txt"),                                                                               emit: taxid_files
+    tuple val(family), eval('cat mean_assembly_length.txt'),                                                                     emit: families
     tuple val("${task.process}"), val('python'),   eval("python3 --version | sed 's/Python //'"),                                topic: versions
     tuple val("${task.process}"), val('requests'), eval('python3 -c "import requests; print(requests.__version__)"'),            topic: versions
 
@@ -30,12 +30,12 @@ process GET_CHILDREN_TAXIDS {
 
     script:
     """
-    get_children_taxids.py --family $family
+    get_assembly_stats.py --family $family
     """
 
     stub:
     """
-    touch test.species_taxids.txt
+    echo 1 > mean_assembly_length.txt
     """
 
 }

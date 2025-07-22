@@ -21,6 +21,18 @@ workflow FASTQ_DOWNLOAD_PREFETCH_FASTERQDUMP_SRATOOLS {
     ch_versions = ch_versions.mix(CUSTOM_SRATOOLSNCBISETTINGS.out.versions)
 
     //
+    // Reducing nb of processed SRRs in dev
+    //
+    if ( params.max_srrs > 0 ) {
+
+        log.info "Param --max_srrs provided: reducing number of SRRs to process to " + params.max_srrs
+
+        ch_sra_ids
+            .take( params.max_srrs )
+            .set { ch_sra_ids }
+    }
+
+    //
     // Prefetch sequencing reads in SRA format.
     //
     SRATOOLS_PREFETCH (
@@ -28,11 +40,19 @@ workflow FASTQ_DOWNLOAD_PREFETCH_FASTERQDUMP_SRATOOLS {
         ch_ncbi_settings
     )
 
+    SRATOOLS_PREFETCH.out.sra
+        .map {
+            meta, sra ->
+                def new_meta = meta + [ id: sra.name ]
+                [ new_meta, sra ]
+        }
+        .set { ch_sra }
+
     //
     // Convert the SRA format into one or more compressed FASTQ files.
     //
     SRATOOLS_FASTERQDUMP (
-        SRATOOLS_PREFETCH.out.sra,
+        ch_sra,
         ch_ncbi_settings
     )
 

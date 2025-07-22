@@ -12,7 +12,7 @@ process SRATOOLS_FASTERQDUMP {
     path ncbi_settings
 
     output:
-    tuple val(new_meta), path('*.fastq.gz'),                                                                    emit: reads
+    tuple val(meta), path('*.fastq.gz'),                                                                        emit: reads
     tuple val("${task.process}"), val('sratools'), eval("fasterq-dump --version 2>&1 | grep -Eo '[0-9.]+'"),    topic: versions
     tuple val("${task.process}"), val('curl'), eval("pigz --version 2>&1 | sed 's/pigz //g'"),                  topic: versions
 
@@ -23,8 +23,6 @@ process SRATOOLS_FASTERQDUMP {
     def args = task.ext.args ?: ''
     def args2 = task.ext.args2 ?: ''
     def prefix = task.ext.prefix ?: "${sra.name}"
-    // augmenting meta
-    new_meta = meta + [ id: sra.name ]
     """
     export NCBI_SETTINGS="\$PWD/${ncbi_settings}"
 

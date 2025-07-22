@@ -50,7 +50,14 @@
                     "type": "boolean",
                     "description": "Whether to pre-filter SRA reads using MMSEQS before submitting to BLASTN.",
                     "fa_icon": "fas fa-folder-open"
-                }
+                },
+                 "max_srrs": {
+                     "type": "integer",
+                     "minimum": 1,
+                     "default": null,
+                     "description": "[ For dev purposes ] : if specified, sets the max number of SRRs to process.",
+                     "fa_icon": "fas fa-chart-simple"
+                 }
             }
         },
         "stat_options": {

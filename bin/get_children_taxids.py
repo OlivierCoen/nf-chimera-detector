@@ -55,7 +55,8 @@ def parse_args():
     wait=wait_exponential(multiplier=1, min=1, max=30),
     before_sleep=before_sleep_log(logger, logging.WARNING),
 )
-def send_request_to_ncbi_taxonomy(taxons: list[str]):
+def send_request_to_ncbi_taxonomy(taxid: str):
+    taxons = [taxid]
     data = {
         "taxons": taxons
     }
@@ -98,6 +99,24 @@ def parse_ids_from_xml(xml_string: str):
     return [id_element.text for id_element in root.findall('.//Id')]
 
 
+def get_family_taxid(family: str):
+
+    result = send_request_to_ncbi_taxonomy(family)
+
+    if len(result['taxonomy_nodes']) > 1:
+        raise ValueError(f"Multiple taxids for family {family}")
+    node = result['taxonomy_nodes'][0]
+
+    if "taxonomy" not in node:
+        logger.info(f"Could not find taxonomy results for family {family}")
+        if "errors" in node:
+            for error in node["errors"]:
+                logger.error(f"Error: {error['reason']}\n")
+                sys.exit(100)
+
+    return node['taxonomy']['tax_id']
+
+
 def get_children_taxids(taxid: str) -> list[str]:
     """
    Get list of children taxonomy IDs given a family taxonomy ID
@@ -120,23 +139,9 @@ def get_children_taxids(taxid: str) -> list[str]:
 
 if __name__ == "__main__":
     args = parse_args()
-    
     family = args.family
-    logger.info(f"Getting all children taxids for family {family}")
 
-    result = send_request_to_ncbi_taxonomy([family])
-    if len(result['taxonomy_nodes']) > 1:
-        raise ValueError(f"Multiple taxids for family {family}")
-    node = result['taxonomy_nodes'][0]
-
-    if "taxonomy" not in node:
-        logger.info(f"Could not find taxnomomy results for family {family}")
-        if "errors" in node:
-            for error in node["errors"]:
-                logger.error(f"Error: {error['reason']}\n")
-                sys.exit(100)
-
-    family_taxid = node['taxonomy']['tax_id']
+    family_taxid = get_family_taxid(family)
     logger.info(f"Family taxid: {family_taxid}")
 
     logger.info(f"Getting children taxids for family {family}")

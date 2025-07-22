@@ -10,17 +10,27 @@ workflow FETCH_SRA_IDS {
     main:
 
     GET_CHILDREN_TAXIDS ( ch_families )
+
     GET_CHILDREN_TAXIDS.out.taxid_files
         .map { meta, file -> [ meta, file.splitText() ] }
         .transpose() // explodes each list
-        .map { meta, taxid -> [ meta, taxid.strip() ] }
+        .map {
+            meta, taxid ->
+                def new_meta = meta + [ taxid: taxid.strip() ]
+                [ new_meta, taxid.strip() ]
+        }
         .set { ch_species_taxids }
 
     GET_SRA_METADATA ( ch_species_taxids )
+
     GET_SRA_METADATA.out.sra_id_files
         .map { meta, file -> [ meta, file.splitText() ] }
         .transpose() // explodes each list
-        .map { meta, sra_id -> [ meta, sra_id.strip() ] }
+        .map {
+            meta, sra_id ->
+                def new_meta = meta + [ original_sra_id: sra_id.strip() ]
+                [ new_meta, sra_id.strip() ]
+        }
         .set { ch_sra_ids }
 
     emit:

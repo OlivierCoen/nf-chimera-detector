@@ -98,14 +98,15 @@ def parse_ids_from_xml(xml_string: str):
     return [id_element.text for id_element in root.findall('.//Id')]
 
 
-def get_children_species_taxids(taxid: str) -> list[str]:
+def get_children_taxids(taxid: str) -> list[str]:
     """
    Get list of children taxonomy IDs given a family taxonomy ID
    :param taxid:
    :return: list of SRA experiment IDs
    """
     xml_string = send_esearch_query(
-        query=f"txid{taxid}[Subtree] AND species[Rank]",
+        query=f"txid{taxid}[Subtree]",
+        #query=f"txid{taxid}[Subtree] AND species[Rank]",
         database="taxonomy"
     )
     return parse_ids_from_xml(xml_string)
@@ -138,13 +139,16 @@ if __name__ == "__main__":
     family_taxid = node['taxonomy']['tax_id']
     logger.info(f"Family taxid: {family_taxid}")
 
-    logger.info(f"Getting children species taxids for family {family}")
-    species_taxids = get_children_species_taxids(family_taxid)
-    logger.info(f"Obtained {len(species_taxids)} children taxids\n")
+    logger.info(f"Getting children taxids for family {family}")
+    children_taxids = get_children_taxids(family_taxid)
+    logger.info(f"Obtained {len(children_taxids)} children taxids\n")
+
+    # adding family taxid to children taxids
+    children_taxids.append(family_taxid)
 
     outfile = f"{family}{OUTFILE_SUFFIX}"
     with open(outfile, 'w') as fout:
-        for taxid in species_taxids:
+        for taxid in children_taxids:
             fout.write(f"{taxid}\n")
 
     logger.info("Done")

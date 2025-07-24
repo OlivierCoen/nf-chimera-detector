@@ -74,8 +74,8 @@ def send_request_to_ncbi_genome_dataset_api(taxid: int):
     wait=wait_exponential(multiplier=1, min=1, max=30),
     before_sleep=before_sleep_log(logger, logging.WARNING),
 )
-def send_request_to_ncbi_taxonomy(family: str):
-    taxons = [family]
+def send_request_to_ncbi_taxonomy(taxon: str):
+    taxons = [str(taxon)]
     data = {
         "taxons": taxons
     }
@@ -126,8 +126,7 @@ def get_parent_taxid(taxid: int):
     return node['taxonomy']['lineage'][-1]
 
 
-
-def get_mean_assembly_length(taxid: int, attempt: int) -> float:
+def get_mean_assembly_length(taxid: int) -> float:
 
     result = send_request_to_ncbi_genome_dataset_api(taxid)
 

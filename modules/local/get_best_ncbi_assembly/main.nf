@@ -4,14 +4,6 @@ process GET_BEST_NCBI_ASSEMBLY {
 
     tag "$taxid"
 
-    errorStrategy = {
-        if (task.exitStatus == 100) {
-            // ignoring cases when family does not have children
-            log.warn("Could not find genome assembly for taxid ${taxid}.")
-            return 'ignore'
-        }
-    }
-
     conda "${moduleDir}/spec-file.txt"
     container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
         'https://community-cr-prod.seqera.io/docker/registry/v2/blobs/sha256/8d/8da74f9621e013b83c1e2405c8e20fa68c625523b2336704784acaf81c724c04/data':

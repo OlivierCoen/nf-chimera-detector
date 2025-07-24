@@ -1,0 +1,136 @@
+{
+    "Has genomes": {
+        "content": [
+            {
+                "0": [
+                    [
+                        "307456",
+                        "133904"
+                    ]
+                ],
+                "1": [
+                    [
+                        "GET_MEAN_ASSEMBLY_LENGTH",
+                        "python",
+                        "3.13.5"
+                    ]
+                ],
+                "2": [
+                    [
+                        "GET_MEAN_ASSEMBLY_LENGTH",
+                        "requests",
+                        "2.32.4"
+                    ]
+                ],
+                "families": [
+                    [
+                        "307456",
+                        "133904"
+                    ]
+                ]
+            }
+        ],
+        "meta": {
+            "nf-test": "0.9.2",
+            "nextflow": "25.04.6"
+        },
+        "timestamp": "2025-07-24T15:47:54.426828307"
+    },
+    "Parent has genomes": {
+        "content": [
+            {
+                "0": [
+                    [
+                        "Mamonoviridae",
+                        "244505"
+                    ]
+                ],
+                "1": [
+                    [
+                        "GET_MEAN_ASSEMBLY_LENGTH",
+                        "python",
+                        "3.13.5"
+                    ]
+                ],
+                "2": [
+                    [
+                        "GET_MEAN_ASSEMBLY_LENGTH",
+                        "requests",
+                        "2.32.4"
+                    ]
+                ],
+                "families": [
+                    [
+                        "Mamonoviridae",
+                        "244505"
+                    ]
+                ]
+            }
+        ],
+        "meta": {
+            "nf-test": "0.9.2",
+            "nextflow": "25.04.6"
+        },
+        "timestamp": "2025-07-24T15:55:33.903618117"
+    },
+    "Has NO genomes": {
+        "content": [
+            {
+                "0": [
+                    
+                ],
+                "1": [
+                    
+                ],
+                "2": [
+                    
+                ],
+                "families": [
+                    
+                ]
+            }
+        ],
+        "meta": {
+            "nf-test": "0.9.2",
+            "nextflow": "25.04.6"
+        },
+        "timestamp": "2025-07-24T15:48:01.896530627"
+    },
+    "Should run without failures": {
+        "content": [
+            {
+                "0": [
+                    [
+                        "307456",
+                        "133904"
+                    ]
+                ],
+                "1": [
+                    [
+                        "GET_MEAN_ASSEMBLY_LENGTH",
+                        "python",
+                        "3.13.5"
+                    ]
+                ],
+                "2": [
+                    [
+                        "GET_MEAN_ASSEMBLY_LENGTH",
+                        "requests",
+                        "2.32.4"
+                    ]
+                ],
+                "families": [
+                    [
+                        "307456",
+                        "133904"
+                    ]
+                ]
+            }
+        ],
+        "meta": {
+            "nf-test": "0.9.2",
+            "nextflow": "25.04.6"
+        },
+        "timestamp": "2025-07-24T15:47:05.783761999"
+    }
+}

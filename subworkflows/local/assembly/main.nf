@@ -1,5 +1,6 @@
 include { GET_BEST_NCBI_ASSEMBLY                     } from '../../../modules/local/get_best_ncbi_assembly'
-include { BLAST_BLASTN                          } from '../../../modules/local/blast/blastn'
+include { DOWNLOAD_NCBI_ASSEMBLY                     } from '../../../modules/local/download_ncbi_assembly'
+include { MEGAHIT                                    } from '../../../modules/nf-core/megahit'
 
 
 workflow ASSEMBLY {
@@ -15,6 +16,10 @@ workflow ASSEMBLY {
         .map { meta, reads -> [ meta, meta.taxid ]}
         .set { ch_taxids }
 
+    // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    // FETCH ACCESSIONS OF AVAILABLE ASSEMBLIES FROM NCBI
+    // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
     GET_BEST_NCBI_ASSEMBLY ( ch_taxids )
 
     ch_sra_reads
@@ -26,10 +31,40 @@ workflow ASSEMBLY {
         }
         .set { ch_branched_sra_reads }
 
+    ch_branched_sra_reads.to_download
+        .map { meta, reads, accession -> [ meta, accession ] }
+        .unique()
+        .set { ch_accessions_to_download }
 
+    ch_branched_sra_reads.to_assemble
+        .map { meta, reads, accession -> [ meta, reads ] }
+        .set { ch_sra_reads_to_assemble }
+
+    // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    // DOWNLOAD AVAILABLE ASSEMBLIES
+    // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    DOWNLOAD_NCBI_ASSEMBLY ( ch_accessions_to_download )
+
+    // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    // ASSEMBLE GENOMES WHENEVER NO ASSEMBLY IS AVAILABLE ON NCBI
+    // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    ch_sra_reads_to_assemble
+        .view { v -> "to assemble" + v }
+
+
+    MEGAHIT ( ch_sra_reads_to_assemble )
+
+    DOWNLOAD_NCBI_ASSEMBLY.out.assemblies
+        .mix ( MEGAHIT.out.contigs )
+        .set { ch_assemblies }
+
+    ch_versions = ch_versions
+                    .mix ( MEGAHIT.out.versions )
 
     emit:
-    hits                            = BLAST_BLASTN.out.txt
+    assemblies                      = ch_assemblies
     versions                        = ch_versions
 
 }

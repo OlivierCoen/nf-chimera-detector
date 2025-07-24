@@ -6,6 +6,7 @@
 
 include { FETCH_SRA_IDS                                                     } from '../subworkflows/local/fetch_sra_ids'
 include { FASTQ_DOWNLOAD_PREFETCH_FASTERQDUMP_SRATOOLS  as DOWNLOAD_SRA     } from '../subworkflows/local/fastq_download_prefetch_fasterqdump_sratools'
+include { ASSEMBLY                                                          } from '../subworkflows/local/assembly'
 include { POST_PROCESS_SRA                                                  } from '../subworkflows/local/post_process_sra'
 include { MMSEQS_WORKFLOW                                                   } from '../subworkflows/local/mmseqs'
 include { BLAST_WORKFLOW as BLAST_AGAINST_TE                                } from '../subworkflows/local/blast'
@@ -29,10 +30,10 @@ workflow VIRUSLTEFINDER {
 
     ch_versions = Channel.empty()
 
-    def te_fasta_file = file( params.te_fasta, checkExists: true )
-    ch_te_db = Channel.of([
-        [ id: te_fasta_file.baseName ],
-        te_fasta_file
+    def target_fasta_file = file( params.target_db, checkExists: true )
+    ch_target_db = Channel.of([
+        [ id: target_fasta_file.baseName ],
+        target_fasta_file
     ])
 
     GET_MEAN_ASSEMBLY_LENGTH ( ch_families )
@@ -57,13 +58,21 @@ workflow VIRUSLTEFINDER {
     // ------------------------------------------------------------------------------------
 
     DOWNLOAD_SRA ( FETCH_SRA_IDS.out.sra_ids )
+    DOWNLOAD_SRA.out.reads.set { ch_sra_reads }
+
+    // ------------------------------------------------------------------------------------
+    // DOWNLOAD ALL SRA DATA
+    // ------------------------------------------------------------------------------------
+
+    ASSEMBLY ( ch_sra_reads )
+    ASSEMBLY.out.assemblies.set { ch_assemblies }
 
     // ------------------------------------------------------------------------------------
     // COMBINE PAIRED READS AND CONVERT TO FASTA
     // ------------------------------------------------------------------------------------
 
-    POST_PROCESS_SRA ( DOWNLOAD_SRA.out.reads )
-    POST_PROCESS_SRA.out.single_reads.set { ch_sra_reads }
+    POST_PROCESS_SRA ( ch_sra_reads )
+    POST_PROCESS_SRA.out.single_reads.set { ch_processed_sra_reads }
 
     // ------------------------------------------------------------------------------------
     // PRE-FILTER CANDIDATE QUERY SEQUENCES
@@ -72,8 +81,8 @@ workflow VIRUSLTEFINDER {
     if ( !params.skip_mmseqs_prefiltering ) {
 
         MMSEQS_WORKFLOW (
-            ch_sra_reads,
-            ch_te_db
+            ch_processed_sra_reads,
+            ch_target_db
         )
 
         PARSE_MMSEQS_OUTPUT (
@@ -83,12 +92,12 @@ workflow VIRUSLTEFINDER {
 
         PARSE_MMSEQS_OUTPUT.out.status
             .filter { meta, status -> status == "PASS" }
-            .join( ch_sra_reads )
+            .join( ch_processed_sra_reads )
             .map {
                 meta, status, sra_read ->
                     [ meta, sra_read ]
             }
-            .set { ch_sra_reads }
+            .set { ch_processed_sra_reads }
 
         ch_versions = ch_versions.mix ( MMSEQS_WORKFLOW.out.versions )
 
@@ -99,8 +108,8 @@ workflow VIRUSLTEFINDER {
     // ------------------------------------------------------------------------------------
 
     BLAST_AGAINST_TE (
-        ch_sra_reads,
-        ch_te_db
+        ch_processed_sra_reads,
+        ch_target_db
     )
     BLAST_AGAINST_TE.out.hits.set { ch_blast_te_hits }
 

@@ -24,7 +24,14 @@ workflow FETCH_SRA_IDS {
     GET_SRA_METADATA ( ch_species_taxids )
 
     GET_SRA_METADATA.out.sra_id_files
-        .map { meta, file -> [ meta, file.splitText() ] }
+        .map {
+            meta, file ->
+                if ( params.max_srrs_per_taxid ) { // in dev, limiting the nb of SRR per taxid
+                    [ meta, file.splitText( limit: params.max_srrs_per_taxid ) ]
+                } else {
+                    [ meta, file.splitText() ]
+                }
+        }
         .transpose() // explodes each list
         .map {
             meta, sra_id ->

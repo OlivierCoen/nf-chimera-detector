@@ -1,0 +1,36 @@
+{
+    "Should run without failures": {
+        "content": [
+            {
+                "0": [
+                    [
+                        {
+                            "taxid": "wesh"
+                        },
+                        "GCF_000870065.1_ViralProj17669_genomic.fna:md5,0a3e94ee7ca26b109e27d6952f04879f"
+                    ]
+                ],
+                "1": [
+                    [
+                        "DOWNLOAD_NCBI_ASSEMBLY",
+                        "ncbi-datasets-cli",
+                        "18.5.0"
+                    ]
+                ],
+                "assembly": [
+                    [
+                        {
+                            "taxid": "wesh"
+                        },
+                        "GCF_000870065.1_ViralProj17669_genomic.fna:md5,0a3e94ee7ca26b109e27d6952f04879f"
+                    ]
+                ]
+            }
+        ],
+        "meta": {
+            "nf-test": "0.9.2",
+            "nextflow": "25.04.6"
+        },
+        "timestamp": "2025-07-24T10:01:12.804369681"
+    }
+}

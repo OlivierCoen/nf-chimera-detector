@@ -1,0 +1,116 @@
+{
+    "Many assemblies available": {
+        "content": [
+            {
+                "0": [
+                    [
+                        [
+                            
+                        ],
+                        "GCF_000870065.1"
+                    ]
+                ],
+                "1": [
+                    [
+                        [
+                            
+                        ],
+                        "assembly_report.json:md5,7709c25828c810c2eb31e19f7ed679e5"
+                    ]
+                ],
+                "2": [
+                    [
+                        "GET_BEST_NCBI_ASSEMBLY",
+                        "python",
+                        "3.13.5"
+                    ]
+                ],
+                "3": [
+                    [
+                        "GET_BEST_NCBI_ASSEMBLY",
+                        "requests",
+                        "2.32.4"
+                    ]
+                ],
+                "accession": [
+                    [
+                        [
+                            
+                        ],
+                        "GCF_000870065.1"
+                    ]
+                ],
+                "assembly_report": [
+                    [
+                        [
+                            
+                        ],
+                        "assembly_report.json:md5,7709c25828c810c2eb31e19f7ed679e5"
+                    ]
+                ]
+            }
+        ],
+        "meta": {
+            "nf-test": "0.9.2",
+            "nextflow": "25.04.6"
+        },
+        "timestamp": "2025-07-24T09:39:50.545950902"
+    },
+    "No assembly available": {
+        "content": [
+            {
+                "0": [
+                    [
+                        [
+                            
+                        ],
+                        "NONE"
+                    ]
+                ],
+                "1": [
+                    [
+                        [
+                            
+                        ],
+                        "assembly_report.json:md5,03ed5bf31c35414f6da7c526c1a67039"
+                    ]
+                ],
+                "2": [
+                    [
+                        "GET_BEST_NCBI_ASSEMBLY",
+                        "python",
+                        "3.13.5"
+                    ]
+                ],
+                "3": [
+                    [
+                        "GET_BEST_NCBI_ASSEMBLY",
+                        "requests",
+                        "2.32.4"
+                    ]
+                ],
+                "accession": [
+                    [
+                        [
+                            
+                        ],
+                        "NONE"
+                    ]
+                ],
+                "assembly_report": [
+                    [
+                        [
+                            
+                        ],
+                        "assembly_report.json:md5,03ed5bf31c35414f6da7c526c1a67039"
+                    ]
+                ]
+            }
+        ],
+        "meta": {
+            "nf-test": "0.9.2",
+            "nextflow": "25.04.6"
+        },
+        "timestamp": "2025-07-24T09:39:59.643510077"
+    }
+}

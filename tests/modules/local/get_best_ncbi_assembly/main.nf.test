@@ -1,0 +1,50 @@
+nextflow_process {
+
+    name "Test Process GET_BEST_NCBI_ASSEMBLY"
+    script "modules/local/get_best_ncbi_assembly/main.nf"
+    process "GET_BEST_NCBI_ASSEMBLY"
+    tag "get_best_assembly"
+
+    test("Many assemblies available") {
+
+        when {
+            process {
+                """
+                input[0] = [
+                    [ ],
+                    558016
+                ]
+                """
+            }
+        }
+
+        then {
+            assert process.success
+            assert snapshot(process.out).match()
+            assert process.out.accession == [[[], 'GCF_000870065.1']]
+        }
+
+    }
+
+    test("No assembly available") {
+
+        when {
+            process {
+                """
+                input[0] = [
+                    [ ],
+                    307457
+                ]
+                """
+            }
+        }
+
+        then {
+            assert process.success
+            assert snapshot(process.out).match()
+            assert process.out.accession == [[[], 'NONE']]
+        }
+
+    }
+
+}

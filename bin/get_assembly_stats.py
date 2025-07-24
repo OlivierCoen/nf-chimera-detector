@@ -149,7 +149,7 @@ def get_mean_assembly_length(taxid: int, attempt: int) -> float:
         parent_taxid = get_parent_taxid(taxid)
         logger.info(f"Parent taxid: {parent_taxid}")
         return get_mean_assembly_length(parent_taxid)
-    print(len(assembly_lengths))
+
     # returning mean of assembly lengths (as integer)
     return int(sum(assembly_lengths) / len(assembly_lengths))
 

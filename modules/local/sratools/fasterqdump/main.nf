@@ -1,5 +1,5 @@
 process SRATOOLS_FASTERQDUMP {
-    tag "${sra.name}"
+    tag "${meta.taxid} :: ${sra.name}"
     label 'process_medium'
 
     conda "${moduleDir}/environment.yml"
@@ -14,7 +14,7 @@ process SRATOOLS_FASTERQDUMP {
     output:
     tuple val(meta), path('*.fastq.gz'),                                                                        emit: reads
     tuple val("${task.process}"), val('sratools'), eval("fasterq-dump --version 2>&1 | grep -Eo '[0-9.]+'"),    topic: versions
-    tuple val("${task.process}"), val('curl'), eval("pigz --version 2>&1 | sed 's/pigz //g'"),                  topic: versions
+    tuple val("${task.process}"), val('pigz'), eval("pigz --version 2>&1 | sed 's/pigz //g'"),                  topic: versions
 
     when:
     task.ext.when == null || task.ext.when
@@ -28,6 +28,7 @@ process SRATOOLS_FASTERQDUMP {
 
     fasterq-dump \\
         $args \\
+        --split-files \\
         --threads $task.cpus \\
         --outfile ${prefix}.fastq \\
         ${sra}

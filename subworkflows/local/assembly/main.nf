@@ -2,6 +2,8 @@ include { GET_BEST_NCBI_ASSEMBLY                     } from '../../../modules/lo
 include { DOWNLOAD_NCBI_ASSEMBLY                     } from '../../../modules/local/download_ncbi_assembly'
 include { MEGAHIT                                    } from '../../../modules/nf-core/megahit'
 
+include { SRA_READS_PREPARATION                      } from '../sra_reads_preparation'
+
 
 workflow ASSEMBLY {
 
@@ -27,34 +29,42 @@ workflow ASSEMBLY {
         .branch {
             meta, reads, accession ->
                 to_download: accession != 'NONE'
+                    [ meta, accession ]
                 to_assemble: accession == 'NONE'
+                    [ meta, reads ]
         }
         .set { ch_branched_sra_reads }
-
-    ch_branched_sra_reads.to_download
-        .map { meta, reads, accession -> [ meta, accession ] }
-        .unique()
-        .set { ch_accessions_to_download }
-
-    ch_branched_sra_reads.to_assemble
-        .map { meta, reads, accession -> [ meta, reads ] }
-        .set { ch_sra_reads_to_assemble }
 
     // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     // DOWNLOAD AVAILABLE ASSEMBLIES
     // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    DOWNLOAD_NCBI_ASSEMBLY ( ch_accessions_to_download )
+    DOWNLOAD_NCBI_ASSEMBLY ( ch_branched_sra_reads.to_download.unique() )
 
     // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     // ASSEMBLE GENOMES WHENEVER NO ASSEMBLY IS AVAILABLE ON NCBI
     // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    ch_sra_reads_to_assemble
-        .view { v -> "to assemble" + v }
+    SRA_READS_PREPARATION ( ch_sra_reads )
 
+    SRA_READS_PREPARATION.out.prepared_sra_reads
+        .map {
+            meta, reads ->
+                if ( reads instanceof Path ) {
+                    [ meta, reads, [] ]
+                } else {
+                    def ( reads_1, reads_2 ) = reads
+                    [ meta, reads_1, reads_2 ]
+                }
+        }
+        .set { ch_sra_reads_to_assemble }
 
+    /*
     MEGAHIT ( ch_sra_reads_to_assemble )
+
+    // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    // GATHERING ALL ASSEMBLIES TOGETHER
+    // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     DOWNLOAD_NCBI_ASSEMBLY.out.assemblies
         .mix ( MEGAHIT.out.contigs )
@@ -62,7 +72,8 @@ workflow ASSEMBLY {
 
     ch_versions = ch_versions
                     .mix ( MEGAHIT.out.versions )
-
+    */
+    ch_assemblies = Channel.empty()
     emit:
     assemblies                      = ch_assemblies
     versions                        = ch_versions

@@ -1,0 +1,49 @@
+{
+    "Should run without failures": {
+        "content": [
+            {
+                "0": [
+                    [
+                        {
+                            "sra_id": "test"
+                        },
+                        [
+                            "DRR618977_1.head.sampled.fastq.gz:md5,b9eba741a4cceb44fbc62f534f7f4058",
+                            "DRR618977_2.head.sampled.fastq.gz:md5,88466f4c0f4c3467756ce9ad8d931e4d"
+                        ]
+                    ]
+                ],
+                "1": [
+                    [
+                        "SEQTK_SAMPLE",
+                        "seqtk",
+                        "Usage:\n1.1-r93-dirty\n\nCommand:"
+                    ]
+                ],
+                "2": [
+                    [
+                        "SEQTK_SAMPLE",
+                        "pigz",
+                        "2.8"
+                    ]
+                ],
+                "reads": [
+                    [
+                        {
+                            "sra_id": "test"
+                        },
+                        [
+                            "DRR618977_1.head.sampled.fastq.gz:md5,b9eba741a4cceb44fbc62f534f7f4058",
+                            "DRR618977_2.head.sampled.fastq.gz:md5,88466f4c0f4c3467756ce9ad8d931e4d"
+                        ]
+                    ]
+                ]
+            }
+        ],
+        "meta": {
+            "nf-test": "0.9.2",
+            "nextflow": "25.04.6"
+        },
+        "timestamp": "2025-07-25T11:57:02.40171326"
+    }
+}

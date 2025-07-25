@@ -1,5 +1,5 @@
 process SRATOOLS_PREFETCH {
-    tag "$sra_id"
+    tag "${meta.taxid} :: ${sra_id}"
     label 'process_low'
 
     errorStrategy = {

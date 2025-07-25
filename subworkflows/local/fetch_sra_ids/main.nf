@@ -33,6 +33,7 @@ workflow FETCH_SRA_IDS {
                 }
         }
         .transpose() // explodes each list
+        .unique() // there may be duplicates
         .map {
             meta, sra_id ->
                 def new_meta = meta + [ original_sra_id: sra_id.strip() ]

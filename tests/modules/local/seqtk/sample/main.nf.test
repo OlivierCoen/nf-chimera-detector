@@ -1,0 +1,30 @@
+nextflow_process {
+
+    name "Test Process SEQTK_SAMPLE"
+    script "modules/local/seqtk/sample/main.nf"
+    process "SEQTK_SAMPLE"
+    tag "seqtk_sample"
+
+    test("Should run without failures") {
+
+        when {
+
+            process {
+                """
+                input[0] = [
+                    [ sra_id: "test" ],
+                    file( '/home/olivier/repositories/nf-chimera-detector/tests/test_data/reads/DRR618977_*.head.fastq.gz', checkIfExists: true),
+                    0.1
+                ]
+                """
+            }
+        }
+
+        then {
+            assert process.success
+            assert snapshot(process.out).match()
+        }
+
+    }
+
+}

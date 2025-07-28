@@ -4,6 +4,7 @@
 
 import requests
 import sys
+import json
 import argparse
 import logging
 
@@ -29,8 +30,6 @@ NCBI_API_HEADERS = {
     "content-type": "application/json"
 }
 
-OUTFILE = "mean_assembly_length.txt"
-
 
 #####################################################
 #####################################################
@@ -47,6 +46,9 @@ def parse_args():
     parser.add_argument(
         "--family", type=str, required=True, help="Family name"
     )
+    parser.add_argument(
+        "--out", dest="outfile", type=str, required=True, help="Outfile name"
+    )
     return parser.parse_args()
 
 
@@ -62,9 +64,7 @@ def send_request_to_ncbi_genome_dataset_api(taxid: int):
     url += f"?{NCBI_GENOME_DATASET_REPORT_API_PARAMS}"
 
     response = requests.get(url, headers=NCBI_API_HEADERS)
-    # check status
-    if not response.ok:
-        raise RuntimeError(f"Error: {response.status_code}. {response.text}")
+    response.raise_for_status()
     return response.json()
 
 
@@ -80,9 +80,7 @@ def send_request_to_ncbi_taxonomy(taxon: str):
         "taxons": taxons
     }
     response = requests.post(NCBI_API_TAXONOMY_URL, headers=NCBI_API_HEADERS, json=data)
-    # check status
-    if not response.ok:
-        raise RuntimeError(f"Error: {response.status_code}. {response.text}")
+    response.raise_for_status()
     return response.json()
 
 
@@ -126,31 +124,48 @@ def get_parent_taxid(taxid: int):
     return node['taxonomy']['lineage'][-1]
 
 
-def get_mean_assembly_length(taxid: int) -> float:
+def get_assembly_stats(taxid: int) -> dict:
 
     result = send_request_to_ncbi_genome_dataset_api(taxid)
 
-    assembly_lengths = []
+    assembly_stats = {}
     if result.get('reports') and isinstance(result['reports'], list):
         for report in result['reports']:
-            if assembly_length := report.get('assembly_stats', {}).get('total_sequence_length'):
-                try:
-                    assembly_length = int(assembly_length)
-                except ValueError as err:
-                    logger.error(f"Could not parse assembly length {assembly_length}")
-                    continue
-                assembly_lengths.append(assembly_length)
+
+            accession = report['accession']
+            report_assembly_stats = report.get('assembly_stats', {})
+            assembly_stats[accession] = report_assembly_stats
 
     # if, for any reason, we could not get any assembly stat, we try with parent
-    if not assembly_lengths:
+    if not assembly_stats:
         logger.warning(f'Could not get assembly stats for children for taxid {taxid}. Trying with parent.')
         # recursive call with parent taxids
         parent_taxid = get_parent_taxid(taxid)
         logger.info(f"Parent taxid: {parent_taxid}")
-        return get_mean_assembly_length(parent_taxid)
+        return get_assembly_stats(parent_taxid)
 
+    # remove genbank assemblies whenever there is the equivalent refseq one
+    filter_assembly_stats = {}
+    for accession, report_assembl_stats in assembly_stats.items():
+        if accession.startswith('GCA'): # genbank
+            refseq_accession = accession.replace('GCA', 'GCF')
+            if refseq_accession in assembly_stats:
+                continue
+        filter_assembly_stats[accession] = report_assembl_stats
+
+    return filter_assembly_stats
+
+
+def get_mean_assembly_length(assembly_stats: dict) -> float:
+    assembly_lengths = [
+        report_assembly_stats.get('total_sequence_length')
+        for report_assembly_stats in assembly_stats.values()
+        if report_assembly_stats.get('total_sequence_length') is not None
+    ]
+    assembly_lengths = [int(length) for length in assembly_lengths]
     # returning mean of assembly lengths (as integer)
     return int(sum(assembly_lengths) / len(assembly_lengths))
+
 
 
 #####################################################
@@ -168,10 +183,18 @@ if __name__ == "__main__":
 
     logger.info(f"Getting assembly stats for children in taxid {family_taxid}")
 
-    mean_assembly_length = get_mean_assembly_length(family_taxid)
+    assembly_stats = get_assembly_stats(family_taxid)
+
+    mean_assembly_length = get_mean_assembly_length(assembly_stats)
     logger.info(f"Mean assembly length: {mean_assembly_length}")
 
-    with open(OUTFILE, 'w') as fout:
-        fout.write(str(mean_assembly_length))
+    summary_dict = {
+        "mean_assembly_length": mean_assembly_length,
+    }
+
+    output_dict = summary_dict | assembly_stats
+
+    with open(args.outfile, 'w') as fout:
+        json.dump(output_dict, fout)
 
     logger.info("Done")

@@ -49,11 +49,6 @@
                      "help_text": "Reads corresponding to species that do not have available assemblies are assembled using MEGAHIT. Before assembling, reads are subsampled in order to provide optimal input data to MEGAHIT.",
                      "fa_icon": "fas fa-chart-simple"
                  },
-                "skip_mmseqs_prefiltering": {
-                    "type": "boolean",
-                    "description": "Whether to pre-filter SRA reads using MMSEQS before submitting to BLASTN.",
-                    "fa_icon": "fas fa-folder-open"
-                },
                  "max_srrs_per_taxid": {
                      "type": "integer",
                      "minimum": 1,

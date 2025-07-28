@@ -27,8 +27,6 @@ NCBI_API_HEADERS = {
     "content-type": "application/json"
 }
 
-OUTFILE = "assembly_report.json"
-
 
 #####################################################
 #####################################################
@@ -43,6 +41,9 @@ def parse_args():
     )
     parser.add_argument(
         "--taxon-id", type=int, dest="taxid", required=True, help="Taxon ID on NCBI Taxonomy"
+    )
+    parser.add_argument(
+        "--out", dest="outfile", type=str, required=True, help="Outfile name"
     )
     return parser.parse_args()
 
@@ -121,7 +122,7 @@ if __name__ == "__main__":
         logger.error(f"Could not get any assembly for taxid {taxid}: {e}")
         reference_assembly_report = {"accession": "NONE"}
 
-    with open(OUTFILE, 'w') as fout:
+    with open(args.outfile, 'w') as fout:
         json.dump(reference_assembly_report, fout)
 
     logger.info("Done")

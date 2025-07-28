@@ -1,5 +1,19 @@
 include { BLAST_MAKEBLASTDB as MAKEBLASTDB             } from '../../../modules/nf-core/blast/makeblastdb'
 include { BLAST_BLASTN as BLASTN                       } from '../../../modules/local/blast/blastn'
+include { SEQTK_SUBSEQ                                 } from '../../../modules/local/seqtk/subseq'
+
+process EXTRACT_SEQ_IDS {
+    input:
+    tuple val(meta), path(tsv_file)
+
+    output:
+    tuple val(meta), path("${meta.id}_hits.txt"), emit: ids
+
+    script:
+    """
+    cut -f1 ${tsv_file} > ${meta.id}_hits.txt
+    """
+}
 
 
 workflow BLAST_AGAINST_TARGET {
@@ -12,7 +26,15 @@ workflow BLAST_AGAINST_TARGET {
 
     ch_versions = Channel.empty()
 
+    // ------------------------------------------------------------------------------------
+    // MAKE DB
+    // ------------------------------------------------------------------------------------
+
     MAKEBLASTDB ( ch_target_db )
+
+    // ------------------------------------------------------------------------------------
+    // BLASTN
+    // ------------------------------------------------------------------------------------
 
      // making all combinations of reads + target db
     ch_sra_reads
@@ -22,12 +44,28 @@ workflow BLAST_AGAINST_TARGET {
 
     BLASTN ( blastn_input )
 
+    // ------------------------------------------------------------------------------------
+    // EXTRACT SEQ IDS CORRESPONDING TO HITS
+    // ------------------------------------------------------------------------------------
+
+    EXTRACT_SEQ_IDS ( BLASTN.out.txt )
+
+    ch_sra_reads
+        .join ( EXTRACT_SEQ_IDS.out.ids )
+        .set { seqtk_subseq_input }
+
+    // ------------------------------------------------------------------------------------
+    // GET READS CORRESPONDING TO THESE SEQ IDS
+    // ------------------------------------------------------------------------------------
+
+    SEQTK_SUBSEQ ( seqtk_subseq_input )
+
     ch_versions
         .mix ( MAKEBLASTDB.out.versions )
         .set { ch_versions }
 
     emit:
-    hits                            = BLASTN.out.txt
+    hits                            = SEQTK_SUBSEQ.out.sequences
     versions                        = ch_versions
 
 }

@@ -11,7 +11,7 @@ process BLAST_BLASTN {
     tuple val(meta) , path(fasta), path(db)
 
     output:
-    tuple val(meta), path('*.txt'), emit: txt
+    tuple val(meta), path('*.txt'),                                                                              emit: txt
     tuple val("${task.process}"), val('blast'), eval("blastn -version 2>&1 | sed 's/^.*blastn: //; s/ .*\$//'"), topic: versions
 
     when:

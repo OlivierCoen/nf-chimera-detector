@@ -4,16 +4,18 @@
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
 
-include { FETCH_SRA_IDS                                                     } from '../subworkflows/local/fetch_sra_ids'
-include { FASTQ_DOWNLOAD_PREFETCH_FASTERQDUMP_SRATOOLS  as DOWNLOAD_SRA     } from '../subworkflows/local/fastq_download_prefetch_fasterqdump_sratools'
-include { ASSEMBLY                                                          } from '../subworkflows/local/assembly'
-include { POST_PROCESS_SRA                                                  } from '../subworkflows/local/post_process_sra'
-include { MMSEQS_WORKFLOW                                                   } from '../subworkflows/local/mmseqs'
-include { BLAST_WORKFLOW as BLAST_AGAINST_TE                                } from '../subworkflows/local/blast'
-include { MULTIQC_WORKFLOW                                                  } from '../subworkflows/local/multiqc'
+include { FETCH_SRA_IDS                                                             } from '../subworkflows/local/fetch_sra_ids'
+include { FASTQ_DOWNLOAD_PREFETCH_FASTERQDUMP_SRATOOLS  as DOWNLOAD_SRA             } from '../subworkflows/local/fastq_download_prefetch_fasterqdump_sratools'
+include { ASSEMBLY                                                                  } from '../subworkflows/local/assembly'
+include { POST_PROCESS_SRA                                                          } from '../subworkflows/local/post_process_sra'
+include { MMSEQS_WORKFLOW                                                           } from '../subworkflows/local/mmseqs'
+include { BLAST_AGAINST_TARGET                                                      } from '../subworkflows/local/blast_against_target'
+include { GET_READS_WITH_HITS                                                       } from '../subworkflows/local/get_reads_with_hits'
+include { BLAST_AGAINST_ASSEMBLIES                                                  } from '../subworkflows/local/blast_against_assemblies'
+include { MULTIQC_WORKFLOW                                                          } from '../subworkflows/local/multiqc'
 
-include { GET_MEAN_ASSEMBLY_LENGTH                                          } from '../modules/local/get_mean_assembly_length'
-include { PARSE_MMSEQS_OUTPUT                                               } from '../modules/local/parse_mmseqs_output'
+include { GET_MEAN_ASSEMBLY_LENGTH                                                  } from '../modules/local/get_mean_assembly_length'
+include { PARSE_MMSEQS_OUTPUT                                                       } from '../modules/local/parse_mmseqs_output'
 
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -104,30 +106,35 @@ workflow VIRUSLTEFINDER {
     }
 
     // ------------------------------------------------------------------------------------
-    // BLAST AGAINST TE representative sequences
+    // BLAST AGAINST TARGET
     // ------------------------------------------------------------------------------------
 
-    BLAST_AGAINST_TE (
+    BLAST_AGAINST_TARGET (
         ch_processed_sra_reads,
         ch_target_db
     )
-    BLAST_AGAINST_TE.out.hits.set { ch_blast_te_hits }
+    BLAST_AGAINST_TARGET.out.hits.set { ch_blast_target_hits }
 
-    /*
-    // filtering reads that had a hit
-    ch_sra_reads
-        .join ( ch_blast_te_hits )
-        .map { meta, reads, txt -> [ meta, reads ]}
+    // ------------------------------------------------------------------------------------
+    // FILTERING READS THAT HAD A HIT
+    // ------------------------------------------------------------------------------------
+
+    GET_READS_WITH_HITS (
+        ch_processed_sra_reads,
+        ch_blast_target_hits
+    )
+
+    // ------------------------------------------------------------------------------------
+    // BLAST AGAINST ASSEMBLIES
+    // ------------------------------------------------------------------------------------
+
+    BLAST_AGAINST_ASSEMBLIES (
+        GET_READS_WITH_HITS.out.reads,
+        ch_assemblies
+    )
+    BLAST_AGAINST_ASSEMBLIES.out.hits.set { ch_blast_assembly_hits }
 
 
-    ch_blast_te_hits.view()
-
-    def target_genome_fasta_file = file( params.genomes_fasta, checkExists: true )
-    ch_target_genome_db = Channel.of([
-        [ id: target_genome_fasta_file.baseName ],
-        target_genome_fasta_file
-    ])
-    */
 
     // ------------------------------------------------------------------------------------
     // MULTIQC
@@ -135,13 +142,14 @@ workflow VIRUSLTEFINDER {
 
     ch_versions
         .mix ( DOWNLOAD_SRA.out.versions )
-        .mix ( BLAST_AGAINST_TE.out.versions )
+        .mix ( BLAST_AGAINST_TARGET.out.versions )
         .set { ch_versions }
 
-    MULTIQC_WORKFLOW ( ch_versions )
-
+    //MULTIQC_WORKFLOW ( ch_versions )
+    ch_a = Channel.empty()
     emit:
-    multiqc_report = MULTIQC_WORKFLOW.out.multiqc_report
+    multiqc_report = ch_a
+    //multiqc_report = MULTIQC_WORKFLOW.out.multiqc_report
 
 }
 

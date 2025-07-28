@@ -45,6 +45,7 @@ workflow ASSEMBLY {
     // ASSEMBLE GENOMES WHENEVER NO ASSEMBLY IS AVAILABLE ON NCBI
     // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+    // SUBSAMPLE AND CLEAN READS
     SRA_READS_PREPARATION ( ch_sra_reads )
 
     SRA_READS_PREPARATION.out.prepared_sra_reads
@@ -59,7 +60,7 @@ workflow ASSEMBLY {
         }
         .set { ch_sra_reads_to_assemble }
 
-    /*
+    // ASSEMBLE
     MEGAHIT ( ch_sra_reads_to_assemble )
 
     // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -71,9 +72,9 @@ workflow ASSEMBLY {
         .set { ch_assemblies }
 
     ch_versions = ch_versions
+                    .mix ( SRA_READS_PREPARATION.out.versions )
                     .mix ( MEGAHIT.out.versions )
-    */
-    ch_assemblies = Channel.empty()
+
     emit:
     assemblies                      = ch_assemblies
     versions                        = ch_versions

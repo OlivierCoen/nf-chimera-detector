@@ -1,6 +1,6 @@
 include { SEQKIT_STATS                                              } from '../../../modules/nf-core/seqkit/stats'
 include { SEQTK_SAMPLE                                              } from '../../../modules/local/seqtk/sample/main'
-include { FASTP                                                     } from '../../../modules/nf-core/fastp'
+include { FASTP                                                     } from '../../../modules/local/fastp'
 
 
 workflow SRA_READS_PREPARATION {
@@ -29,7 +29,8 @@ workflow SRA_READS_PREPARATION {
         .map {
             meta, nb_reads, reads ->
                 def observed_coverage = nb_reads / meta.mean_assembly_length.toFloat()
-                def fraction_to_keep = params.read_coverage / observed_coverage
+                // fraction_to_keep should not be over 1
+                def fraction_to_keep = [ params.read_coverage / observed_coverage, 1 ].min()
                 [ meta, reads, fraction_to_keep ]
         }
         .set { seqtk_sample_input }
@@ -40,13 +41,9 @@ workflow SRA_READS_PREPARATION {
     // Trimming / Filtering
     // ---------------------------------------------------------------------
 
-    FASTP (
-        SEQTK_SAMPLE.out.reads,
-        [], false, false, true
-    )
+    FASTP ( SEQTK_SAMPLE.out.reads )
 
     ch_versions = ch_versions
-                     .mix ( FASTP.out.versions )
                      .mix ( SEQKIT_STATS.out.versions )
 
     emit:

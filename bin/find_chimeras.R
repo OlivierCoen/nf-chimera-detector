@@ -25,7 +25,8 @@ get_args <- function() {
 
     option_list <- list(
         make_option("--target-hits", dest = 'blast_hits_1', help = "Path to Blast output file for target database"),
-        make_option("--assembly-hits", dest = 'blast_hits_2', help = "Path to Blast output file for assembly")
+        make_option("--assembly-hits", dest = 'blast_hits_2', help = "Path to Blast output file for assembly"),
+        make_option("--out", dest = 'outfile', help = "Output file name")
     )
 
     args <- parse_args(OptionParser(
@@ -171,11 +172,10 @@ find_chimeras <- function (blast1, blast2) {
     blast2$Sp = "assembly"
     setnames(blast2, cols)
 
-
     # concatenate the output blast files into one data table
 
     CATblastn = rbind(blast1, blast2)
-    #setnames(CATblastn, c("readName", "subject", "identity", "alength", "mismatch", "indel", "qStart", "qEnd", "sStart", "sEnd", "score", "readLength", "sample"))
+    setnames(CATblastn, c("readName", "subject", "identity", "alength", "mismatch", "indel", "qStart", "qEnd", "sStart", "sEnd", "score", "readLength", "sample"))
 
 
     # remove alignments within the blast object that are overlaping for a same read, keeping the best score alignment
@@ -224,11 +224,13 @@ find_chimeras <- function (blast1, blast2) {
     # insert column showing the respective orientation (same or opposite) of the sequences involved in intra - genome chimeras
     chim_mCATblastn_noOverlap[,inv:= sign(sEnd - sStart) != sign(sEnd.s - sStart.s)]
 
+    return(chim_mCATblastn_noOverlap)
+
 }
 
 export_data <- function(df, filename) {
     cat(paste('Exporting data to:', filename, "\n"))
-    write.table(df, filename, sep = ',', row.names = TRUE, col.names = NA, quote = FALSE)
+    write.table(df, filename, sep = ',', row.names = FALSE, quote = FALSE)
 }
 
 #####################################################
@@ -243,6 +245,11 @@ args <- get_args()
 blast1 = fread(args$blast_hits_1)
 blast2 = fread(args$blast_hits_2)
 
+chim_mCATblastn_noOverlap <- find_chimeras(blast1, blast2)
 
-
-export_data(chim_mCATblastn_noOverlap, "chimeras.csv")
+if ( nrow(chim_mCATblastn_noOverlap) == 0 ) {
+    cat("\nNo chimeras found")
+} else {
+    cat(paste("\nFound ", nrow(chim_mCATblastn_noOverlap), " chimeras"))
+    export_data(chim_mCATblastn_noOverlap, args$outfile)
+}

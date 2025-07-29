@@ -21,9 +21,10 @@ process GET_CHILDREN_TAXIDS {
     tuple val(meta), val(family)
 
     output:
-    tuple val(meta), path("*.species_taxids.txt"),                                                                               emit: taxid_files
-    tuple val("${task.process}"), val('python'),   eval("python3 --version | sed 's/Python //'"),                                topic: versions
-    tuple val("${task.process}"), val('requests'), eval('python3 -c "import requests; print(requests.__version__)"'),            topic: versions
+    tuple val(meta), path("*.species_taxids.txt"),                                                                                              emit: taxid_files
+    tuple val("${task.process}"), val('python'),   eval("python3 --version | sed 's/Python //'"),                                               topic: versions
+    tuple val("${task.process}"), val('requests'), eval('python3 -c "import requests; print(requests.__version__)"'),                           topic: versions
+    tuple val("${task.process}"), val('tenacity'), eval('python3 -c "from importlib.metadata import version; print(version(\'tenacity\'))"'),   topic: versions
 
     when:
     task.ext.when == null || task.ext.when

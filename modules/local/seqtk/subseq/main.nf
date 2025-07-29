@@ -28,6 +28,6 @@ process SEQTK_SUBSEQ {
         $args \\
         $sequences \\
         $filter_list | \\
-        pigz --no-name > ${prefix}.${extension}.gz
+        pigz --no-name -p ${task.cpus} > ${prefix}.${extension}.gz
     """
 }

@@ -44,11 +44,13 @@ workflow BLAST_AGAINST_TARGET {
 
     BLASTN ( blastn_input )
 
+    BLASTN.out.txt.set { ch_hits }
+
     // ------------------------------------------------------------------------------------
     // EXTRACT SEQ IDS CORRESPONDING TO HITS
     // ------------------------------------------------------------------------------------
 
-    EXTRACT_SEQ_IDS ( BLASTN.out.txt )
+    EXTRACT_SEQ_IDS ( ch_hits )
 
     ch_sra_reads
         .join ( EXTRACT_SEQ_IDS.out.ids )
@@ -65,7 +67,8 @@ workflow BLAST_AGAINST_TARGET {
         .set { ch_versions }
 
     emit:
-    hits                            = SEQTK_SUBSEQ.out.sequences
+    hits                            = ch_hits
+    hit_sequences                   = SEQTK_SUBSEQ.out.sequences
     versions                        = ch_versions
 
 }

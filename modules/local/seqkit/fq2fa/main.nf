@@ -11,15 +11,15 @@ process SEQKIT_FQ2FA {
     tuple val(meta), path(fastq)
 
     output:
-    tuple val(meta), path("*.fa.gz"), emit: fasta
-    path "versions.yml"             , emit: versions
+    tuple val(meta), path("*.fa.gz"),                                                     emit: fasta
+    tuple val("${task.process}"), val('pigz'), eval("seqkit | sed '3!d; s/Version: //'"), topic: versions
 
     when:
     task.ext.when == null || task.ext.when
 
     script:
     def args = task.ext.args ?: ''
-    def prefix = task.ext.prefix ?: "${meta.id}"
+    def prefix = task.ext.prefix ?: "${fastq.simpleName}"
 
     """
     seqkit \\
@@ -28,21 +28,11 @@ process SEQKIT_FQ2FA {
         -j $task.cpus \\
         -o ${prefix}.fa.gz \\
         $fastq
-
-    cat <<-END_VERSIONS > versions.yml
-    "${task.process}":
-        seqkit: \$( seqkit | sed '3!d; s/Version: //' )
-    END_VERSIONS
     """
 
     stub:
-    def prefix = task.ext.prefix ?: "${meta.id}"
+    def prefix = task.ext.prefix ?: "${fastq.simpleName}"
     """
     echo "" | gzip > ${prefix}.fa.gz
-
-    cat <<-END_VERSIONS > versions.yml
-    "${task.process}":
-        seqkit: \$( seqkit | sed '3!d; s/Version: //' )
-    END_VERSIONS
     """
 }

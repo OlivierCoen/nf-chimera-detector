@@ -15,6 +15,7 @@ include { MULTIQC_WORKFLOW                                                      
 
 include { NCBI_ASSEMBLY_STATS                                                       } from '../modules/local/ncbi_assembly_stats'
 include { PARSE_MMSEQS_OUTPUT                                                       } from '../modules/local/parse_mmseqs_output'
+include { FIND_CHIMERAS                                                             } from '../modules/local/find_chimeras'
 
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -30,6 +31,7 @@ workflow VIRUSLTEFINDER {
     main:
 
     ch_versions = Channel.empty()
+    ch_multiqc_files = Channel.empty()
 
     def target_fasta_file = file( params.target_db, checkExists: true )
     ch_target_db = Channel.of([
@@ -110,21 +112,34 @@ workflow VIRUSLTEFINDER {
         ch_sra_reads,
         ch_target_db
     )
-    BLAST_AGAINST_TARGET.out.hits.set { ch_blast_target_hits }
 
     // ------------------------------------------------------------------------------------
     // BLAST AGAINST ASSEMBLIES
     // ------------------------------------------------------------------------------------
 
     BLAST_AGAINST_ASSEMBLIES (
-        ch_blast_target_hits,
+        BLAST_AGAINST_TARGET.out.hit_sequences,
         ch_assemblies
     )
-    BLAST_AGAINST_ASSEMBLIES.out.hits.set { ch_blast_assembly_hits }
+
+    // ------------------------------------------------------------------------------------
+    // FIND CHIMERAS
+    // ------------------------------------------------------------------------------------
+
+    BLAST_AGAINST_TARGET.out.hits
+        .join( BLAST_AGAINST_ASSEMBLIES.out.hits )
+        .set { find_chimeras_input }
+
+    FIND_CHIMERAS ( find_chimeras_input )
 
     // ------------------------------------------------------------------------------------
     // MULTIQC
     // ------------------------------------------------------------------------------------
+
+    ch_multiqc_files
+        .mix ( FIND_CHIMERAS.out.csv )
+        .set { ch_multiqc_files }
+
 
     ch_versions
         .mix ( DOWNLOAD_SRA.out.versions )
@@ -132,11 +147,10 @@ workflow VIRUSLTEFINDER {
         .mix ( MMSEQS_WORKFLOW.out.versions )
         .set { ch_versions }
 
-    //MULTIQC_WORKFLOW ( ch_versions )
-    ch_a = Channel.empty()
+    MULTIQC_WORKFLOW ( ch_multiqc_files, ch_versions )
+
     emit:
-    multiqc_report = ch_a
-    //multiqc_report = MULTIQC_WORKFLOW.out.multiqc_report
+    multiqc_report = MULTIQC_WORKFLOW.out.multiqc_report
 
 }
 

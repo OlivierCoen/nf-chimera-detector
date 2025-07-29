@@ -21,11 +21,12 @@ process NCBI_ASSEMBLY_STATS {
     val family
 
     output:
-    tuple val(family), eval('jq -r .mean_assembly_length *.stats.json'),                                                                    emit: mean_lengths
-    tuple val(family), path('*.stats.json'),                                                                                                emit: stats
-    tuple val("${task.process}"), val('python'),   eval("python3 --version | sed 's/Python //'"),                                           topic: versions
-    tuple val("${task.process}"), val('requests'), eval('python3 -c "import requests; print(requests.__version__)"'),                       topic: versions
-    tuple val("${task.process}"), val('jq'),       eval("jq --version | sed 's/jq-//g'"),                                                   topic: versions
+    tuple val(family), eval('jq -r .mean_assembly_length *.stats.json'),                                                                        emit: mean_lengths
+    tuple val(family), path('*.stats.json'),                                                                                                    emit: stats
+    tuple val("${task.process}"), val('python'),   eval("python3 --version | sed 's/Python //'"),                                               topic: versions
+    tuple val("${task.process}"), val('requests'), eval('python3 -c "import requests; print(requests.__version__)"'),                           topic: versions
+    tuple val("${task.process}"), val('tenacity'), eval('python3 -c "from importlib.metadata import version; print(version(\'tenacity\'))"'),   topic: versions
+    tuple val("${task.process}"), val('jq'),       eval("jq --version | sed 's/jq-//g'"),                                                       topic: versions
 
     when:
     task.ext.when == null || task.ext.when

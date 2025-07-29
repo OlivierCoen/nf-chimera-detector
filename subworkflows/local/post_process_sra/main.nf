@@ -1,5 +1,5 @@
 include { BBMAP_BBMERGE                         } from '../../../modules/nf-core/bbmap/bbmerge'
-include { SEQKIT_FQ2FA                          } from '../../../modules/nf-core/seqkit/fq2fa'
+include { SEQKIT_FQ2FA                          } from '../../../modules/local/seqkit/fq2fa'
 
 
 workflow POST_PROCESS_SRA {
@@ -33,7 +33,6 @@ workflow POST_PROCESS_SRA {
 
     ch_versions
         .mix ( BBMAP_BBMERGE.out.versions )
-        .mix ( SEQKIT_FQ2FA.out.versions )
         .set { ch_versions }
 
     emit:

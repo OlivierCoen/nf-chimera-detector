@@ -1,6 +1,6 @@
 include { GET_BEST_NCBI_ASSEMBLY                     } from '../../../modules/local/get_best_ncbi_assembly'
 include { DOWNLOAD_NCBI_ASSEMBLY                     } from '../../../modules/local/download_ncbi_assembly'
-include { MEGAHIT                                    } from '../../../modules/nf-core/megahit'
+include { MEGAHIT                                    } from '../../../modules/local/megahit'
 
 include { SRA_READS_PREPARATION                      } from '../sra_reads_preparation'
 
@@ -29,9 +29,7 @@ workflow ASSEMBLY {
         .branch {
             meta, reads, accession ->
                 to_download: accession != 'NONE'
-                    [ meta, accession ]
                 to_assemble: accession == 'NONE'
-                    [ meta, reads ]
         }
         .set { ch_branched_sra_reads }
 
@@ -39,14 +37,35 @@ workflow ASSEMBLY {
     // DOWNLOAD AVAILABLE ASSEMBLIES
     // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    DOWNLOAD_NCBI_ASSEMBLY ( ch_branched_sra_reads.to_download.unique() )
+    ch_branched_sra_reads.to_download
+        .map { meta, reads, accession -> [ [ taxid: meta.taxid ], accession ] }
+        .unique()
+        .set { accessions_to_download }
+
+    DOWNLOAD_NCBI_ASSEMBLY ( accessions_to_download )
+
+    // associating downloaded assemblies to their respective SRA reads
+    // there can be multiple SRRs for one single taxid (and hence downloaded assembly)
+    ch_branched_sra_reads.to_download
+        .map { meta, reads, accession -> [ meta, reads, meta.taxid ] }
+        .combine(
+            DOWNLOAD_NCBI_ASSEMBLY.out.assemblies.map { meta, assembly -> [ meta, assembly, meta.taxid ] },
+            by: 2 // combining by taxid
+        )
+        .map { taxid, meta, reads, meta_taxid, assembly -> [ meta, assembly ] }
+        .set { ch_downloaded_assemblies }
+
 
     // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     // ASSEMBLE GENOMES WHENEVER NO ASSEMBLY IS AVAILABLE ON NCBI
     // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     // SUBSAMPLE AND CLEAN READS
-    SRA_READS_PREPARATION ( ch_sra_reads )
+    ch_branched_sra_reads.to_assemble
+        .map { meta, reads, accession -> [ meta, reads ] }
+        .set { ch_sra_reads_to_prepare }
+
+    SRA_READS_PREPARATION ( ch_sra_reads_to_prepare )
 
     SRA_READS_PREPARATION.out.prepared_sra_reads
         .map {
@@ -67,13 +86,12 @@ workflow ASSEMBLY {
     // GATHERING ALL ASSEMBLIES TOGETHER
     // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    DOWNLOAD_NCBI_ASSEMBLY.out.assemblies
+     ch_downloaded_assemblies
         .mix ( MEGAHIT.out.contigs )
         .set { ch_assemblies }
-
+    //ch_assemblies.view()
     ch_versions = ch_versions
                     .mix ( SRA_READS_PREPARATION.out.versions )
-                    .mix ( MEGAHIT.out.versions )
 
     emit:
     assemblies                      = ch_assemblies

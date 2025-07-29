@@ -1,0 +1,93 @@
+{
+    "No chimera found": {
+        "content": [
+            {
+                "0": [
+                    
+                ],
+                "1": [
+                    [
+                        "FIND_CHIMERAS",
+                        "R",
+                        "4.2.1 (2022-06-23)"
+                    ]
+                ],
+                "2": [
+                    [
+                        "FIND_CHIMERAS",
+                        "data.table",
+                        "1.15.4"
+                    ]
+                ],
+                "csv": [
+                    
+                ]
+            }
+        ],
+        "meta": {
+            "nf-test": "0.9.2",
+            "nextflow": "25.04.6"
+        },
+        "timestamp": "2025-07-29T15:30:50.033908881"
+    },
+    "Should run without failures": {
+        "content": [
+            {
+                "0": [
+                    [
+                        {
+                            "taxid": 1234,
+                            "id": 5678
+                        },
+                        "5678_chimeras.csv:md5,d39c35b0e6dc831d0a84cf9225d736c7"
+                    ]
+                ],
+                "1": [
+                    [
+                        "FIND_CHIMERAS",
+                        "R",
+                        "4.2.1 (2022-06-23)"
+                    ]
+                ],
+                "2": [
+                    [
+                        "FIND_CHIMERAS",
+                        "data.table",
+                        "1.15.4"
+                    ]
+                ],
+                "chimeras": [
+                    [
+                        {
+                            "taxid": 1234,
+                            "id": 5678
+                        },
+                        "5678_chimeras.csv:md5,d39c35b0e6dc831d0a84cf9225d736c7"
+                    ]
+                ]
+            }
+        ],
+        "meta": {
+            "nf-test": "0.9.2",
+            "nextflow": "25.04.6"
+        },
+        "timestamp": "2025-07-29T08:49:57.866493083"
+    },
+    "1 chimera found": {
+        "content": [
+            {
+                "0": [
+                    
+                ],
+                "csv": [
+                    
+                ]
+            }
+        ],
+        "meta": {
+            "nf-test": "0.9.2",
+            "nextflow": "25.04.6"
+        },
+        "timestamp": "2025-07-29T15:58:19.167165596"
+    }
+}

@@ -1,0 +1,71 @@
+nextflow_process {
+
+    name "Test Process FIND_CHIMERAS"
+    script "modules/local/find_chimeras/main.nf"
+    process "FIND_CHIMERAS"
+    tag "find_chimeras"
+
+    test("1 chimera found") {
+
+        when {
+            process {
+                """
+                input[0] = [
+                    [ taxid: 1234, id: 5678 ],
+                     file( "${projectDir}/tests/test_data/blast_outputs/chimeras/blastOnTEs.txt", checkIfExists: true),
+                     file( "${projectDir}/tests/test_data/blast_outputs/chimeras/blastOnVirusGenome.txt", checkIfExists: true)
+                ]
+                """
+            }
+        }
+
+        then {
+            assert process.success
+            assert snapshot(process.out).match()
+        }
+
+    }
+
+    test("No chimera found") {
+
+        when {
+            process {
+                """
+                input[0] = [
+                    [ taxid: 1234, id: 5678 ],
+                     file( "${projectDir}/tests/test_data/blast_outputs/no_chimeras/blastOnTEs.txt", checkIfExists: true),
+                     file( "${projectDir}/tests/test_data/blast_outputs/no_chimeras/blastOnVirusGenome.txt", checkIfExists: true)
+                ]
+                """
+            }
+        }
+
+        then {
+            assert process.success
+            assert snapshot(process.out).match()
+        }
+
+    }
+
+    test("One file is empty") {
+
+        when {
+            process {
+                """
+                input[0] = [
+                    [ taxid: 1234, id: 5678 ],
+                     file( "${projectDir}/tests/test_data/blast_outputs/empty/blastOnTEs.txt", checkIfExists: true),
+                     file( "${projectDir}/tests/test_data/blast_outputs/empty/blastOnVirusGenome.txt", checkIfExists: true)
+                ]
+                """
+            }
+        }
+
+        then {
+            assert process.success
+            assert snapshot(process.out).match()
+        }
+
+    }
+
+}

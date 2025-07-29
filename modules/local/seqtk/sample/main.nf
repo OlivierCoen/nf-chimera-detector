@@ -1,5 +1,5 @@
 process SEQTK_SAMPLE {
-    tag "${meta.taxid} :: ${meta.sra_id}"
+    tag "${meta.taxid} :: ${meta.id}"
     label 'process_single'
 
     conda "${moduleDir}/environment.yml"
@@ -36,7 +36,7 @@ process SEQTK_SAMPLE {
             $args \\
             \$file \\
             $sample_size \\
-            | pigz --no-name > \${FILE_STEM}.sampled.fastq.gz
+            | pigz --no-name -p ${task.cpus} > \${FILE_STEM}.sampled.fastq.gz
     done
     """
 }

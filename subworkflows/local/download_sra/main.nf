@@ -34,6 +34,7 @@ workflow DOWNLOAD_SRA {
                 def new_meta = meta + [ id: sra.name ]
                 [ new_meta, sra ]
         }
+        .transpose() // when multiple SRRs are downloaded for a specific SRA ID, we split them
         .set { ch_sra }
 
     //

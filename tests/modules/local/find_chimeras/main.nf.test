@@ -68,4 +68,25 @@ nextflow_process {
 
     }
 
+    test("Gives NA values") {
+
+        when {
+            process {
+                """
+                input[0] = [
+                    [ taxid: 1234, id: 5678 ],
+                     file( "${projectDir}/tests/test_data/blast_outputs/na_candidates/blast_hits.against_target.txt", checkIfExists: true),
+                     file( "${projectDir}/tests/test_data/blast_outputs/na_candidates/blast_hits.against_assembly.txt", checkIfExists: true)
+                ]
+                """
+            }
+        }
+
+        then {
+            assert process.success
+            assert snapshot(process.out).match()
+        }
+
+    }
+
 }

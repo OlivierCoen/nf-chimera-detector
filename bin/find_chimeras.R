@@ -39,19 +39,32 @@ get_args <- function() {
 
 # functions used for the search and analysis of chimeric reads
 
-removeOverlapingAlignments = function(blast, overlap = 20) {	#among HSPs covering the same ≥20bp region of the same read, selects the one of higher score
+removeOverlappingAlignments = function(blast, overlap) {	#among HSPs covering the same ≥20bp region of the same read, selects the one of higher score
+
   dt = copy(blast)
   setorder(dt, readName, qStart, qEnd)							#sorts HSPs by coordinates
+
+  if (nrow(dt) == 1) {
+    return(dt)
+  }
+
   toDiscard = 1													#row(s) of HSP to discard
-  while(length(toDiscard)>0) {
+  while(length(toDiscard) > 0) {
     odd = 1:(nrow(dt) - 1) 										#HSPs at rows with odd numbers
     even = odd + 1 												#HSPs at rows with even numbers
     f = abs(dt$qStart[even] - dt$qEnd[odd]) + 1 > overlap & dt$readName[odd] ==  dt$readName[even]		#f is TRUE for consecutive HSPs that overlap by at least 20bp
     candidates = data.table(odds = odd[f], evens = even[f])											#puts consecutive overlapping HSPs in two columns of a data table (odd rows at the left)
-    toDiscard = candidates[,ifelse(dt$score[odds] < dt$score[evens], odds, evens)]					#determine the one to discard according to score
-    if(length(toDiscard)>0) dt = dt[ - unique(toDiscard),]											#and removes them from the blast results
-    cat("*")
+    toDiscard = candidates[, ifelse(dt$score[odds] < dt$score[evens], odds, evens)]					#determine the one to discard according to score
+
+    # checking if toDiscard is full of NA (resulting in infinite loop)
+    if ( all(is.na(toDiscard)) ) {
+        break
+    }
+    if(length(toDiscard) > 0) {
+        dt = dt[ - unique(toDiscard),]											#and removes them from the blast results
+    }
   }
+  
   dt
 }
 
@@ -67,7 +80,7 @@ mergeOneBlast = function(blast) {						#puts the 2 best HSPs on the same read (w
 }
 
 
-chimericReads = function(blast,minCov,minOverlap,maxOverlap,minOnly) { #finds Chimeric reads = those that partly blast on the virus and the host. The read has to partly align on the virus genome at the beginning and on the host at the end (or vice versa) with some  (low) overlap between the 2 regions that align. They also must have a region where they only align on the virus and another that only align on the host. Or else, it could just reflect some contamination with host DNA that partly resemble the virus DNA
+chimericReads = function(blast, minCov, minOverlap, maxOverlap, minOnly) { #finds Chimeric reads = those that partly blast on the virus and the host. The read has to partly align on the virus genome at the beginning and on the host at the end (or vice versa) with some  (low) overlap between the 2 regions that align. They also must have a region where they only align on the virus and another that only align on the host. Or else, it could just reflect some contamination with host DNA that partly resemble the virus DNA
   if(minCov <=  1) {
     minCov = minCov * blast$readLength
   } else {
@@ -104,7 +117,7 @@ overlap = function(dt) {								#determines the overlap = length of the microhom
 }
 
 
-chimericPoint = function(dt,dec = 30) {
+chimericPoint = function(dt, dec) {
   coordH = rep(NA,nrow(dt))
   dt$n = 1:nrow(dt)
   if (any(dt$interChimera,na.rm = T)) {
@@ -130,9 +143,9 @@ chimericPoint = function(dt,dec = 30) {
 }
 
 
-insertionCoord = function(dt, dec = 30, withOv = F) {  #finds insertion coordinates of host sequences in the virus genome. Dec is a guesstimation of half the insert size, to roughtly locate the junction point when it occured between paired reads
+insertionCoord = function(dt, dec = 30, withOv = F) {  #finds insertion coordinates of host sequences in the virus genome. Dec is a guesstimation of half the insert size, to roughly locate the junction point when it occurred between paired reads
   dt$n = 1:nrow(dt)
-  coord = rep(NA,nrow(dt))
+  coord = rep(NA, nrow(dt))
   if (any(dt$interChimera)) {
     plus = with(dt, !is.na(subject) & sEnd > sStart & interChimera)
     minus = with(dt, !is.na(subject) & sEnd < sStart & interChimera)
@@ -162,48 +175,8 @@ insertionCoord = function(dt, dec = 30, withOv = F) {  #finds insertion coordina
 }
 
 
-find_chimeras <- function (blast1, blast2) {
+generate_final_table <- function ( mCATblastn_noOverlap ) {
 
-    cols = c("readName", "subject", "identity", "alength", "mismatch", "indel", "qStart", "qEnd", "sStart", "sEnd", "score", "readLength", "Sp")
-
-    blast1$Sp = "target"
-    setnames(blast1, cols)
-
-    blast2$Sp = "assembly"
-    setnames(blast2, cols)
-
-    # concatenate the output blast files into one data table
-
-    CATblastn = rbind(blast1, blast2)
-    setnames(CATblastn, c("readName", "subject", "identity", "alength", "mismatch", "indel", "qStart", "qEnd", "sStart", "sEnd", "score", "readLength", "sample"))
-
-
-    # remove alignments within the blast object that are overlaping for a same read, keeping the best score alignment
-    blast1nooverlap = removeOverlapingAlignments(blast1)
-    blast2nooverlap = removeOverlapingAlignments(blast2)
-
-    CATblastn = rbind(blast1nooverlap, blast2nooverlap)
-    CATblastn_noOverlap = removeOverlapingAlignments(CATblastn)
-
-
-    # blastn_noOverlap is sorted according to 'readName' and 'score' columns
-    setorder(CATblastn_noOverlap, readName,  - score)
-
-    # for a given read only the 2 best - score hits are kept. The description lines of these two hits are then merged on the same row
-    mCATblastn_noOverlap = mergeOneBlast(CATblastn_noOverlap)
-
-    # insert column containing the length of each read. In this example all reads are 151 bp but reads can be of different lengths.
-    mCATblastn_noOverlap$readLength = 150
-
-    # find chimeric reads. Four parameters can be set:
-    # 1 - proportion of the read which is aligned, cumulating alignement length on the 2 genomes (here 0.9, meaning 90% of the read has to be aligned)
-    # 2 - maximum number of bases inserted between the 2 genomes at recombination point, reflecting non - templated nucleotide additions (here 5)
-    # 3 - maximum overlap in the alignement with the 2 genomes at the recombination points, reflects the presence of homology between the 2 genomes at the recombination point (here 20)
-    # 4 - minimum alignment length on one genome only. Here the read has to be aligned over at least 16 bp on the genome 1 only and over at least 16 bp on genome 2 only
-
-    mCATblastn_noOverlap$chimeric = chimericReads(mCATblastn_noOverlap, 0.9,  - 5, 20, 16)
-
-    # insert overlap column containing the number of nucleotides shared between the 2 genomes at the recombination point
     mCATblastn_noOverlap$overlap = overlap(mCATblastn_noOverlap)
 
     # generate data table containing only chimeric reads
@@ -216,10 +189,10 @@ find_chimeras <- function (blast1, blast2) {
     chim_mCATblastn_noOverlap[, PCRdup:= paste(qStart - sStart, qEnd - sEnd, subject, qStart.s - sStart.s, qEnd.s - sEnd.s, subject.s)]
 
     # insert column containing coordinate of the recombination point in one genome
-    chim_mCATblastn_noOverlap$chimericPoint = chimericPoint(chim_mCATblastn_noOverlap)
+    chim_mCATblastn_noOverlap$chimericPoint = chimericPoint(chim_mCATblastn_noOverlap, dec)
 
     # insert column containing coordinate of the recombination point in the other genome
-    chim_mCATblastn_noOverlap$insertionCoord = insertionCoord(chim_mCATblastn_noOverlap)
+    chim_mCATblastn_noOverlap$insertionCoord = insertionCoord(chim_mCATblastn_noOverlap, dec)
 
     # insert column showing the respective orientation (same or opposite) of the sequences involved in intra - genome chimeras
     chim_mCATblastn_noOverlap[,inv:= sign(sEnd - sStart) != sign(sEnd.s - sStart.s)]
@@ -228,8 +201,72 @@ find_chimeras <- function (blast1, blast2) {
 
 }
 
+find_chimeras <- function (blast1, blast2) {
+
+    # CONSTANTS
+    cols = c("readName", "subject", "identity", "alength", "mismatch", "indel", "qStart", "qEnd", "sStart", "sEnd", "score", "readLength", "Sp")
+    min_overlap_for_dropping <- 20
+    dec <- 30
+    read_length <- 150
+    minCov <- 0.9
+    minOverlap <- -5
+    maxOverlap <- 20
+    minOnly <- 16
+
+    # READING FILES
+    blast1$Sp = "target"
+    setnames(blast1, cols)
+
+    blast2$Sp = "genome"
+    setnames(blast2, cols)
+
+    # concatenate the output blast files into one data table
+
+    CATblastn = rbind(blast1, blast2)
+    setnames(CATblastn, c("readName", "subject", "identity", "alength", "mismatch", "indel", "qStart", "qEnd", "sStart", "sEnd", "score", "readLength", "sample"))
+
+
+    # remove alignments within the blast object that are overlapping for a same read, keeping the best score alignment
+    message("Removing overlapping alignments in Blast hits against target...")
+    blast1nooverlap = removeOverlappingAlignments(blast1, min_overlap_for_dropping)
+    message("Removing overlapping alignments in blast hits against genome...")
+    blast2nooverlap = removeOverlappingAlignments(blast2, min_overlap_for_dropping)
+
+    message("Concatenating both Blast hit dataframes...")
+    CATblastn = rbind(blast1nooverlap, blast2nooverlap)
+    message("Removing overlapping alignments in merged Blast hits...")
+    CATblastn_noOverlap = removeOverlappingAlignments(CATblastn, min_overlap_for_dropping)
+
+
+    # blastn_noOverlap is sorted according to 'readName' and 'score' columns
+    setorder(CATblastn_noOverlap, readName,  - score)
+
+    # for a given read only the 2 best - score hits are kept. The description lines of these two hits are then merged on the same row
+    message("Keeping the 2 best hits for each read...")
+    mCATblastn_noOverlap = mergeOneBlast(CATblastn_noOverlap)
+
+    # insert column containing the length of each read. In this example all reads are 151 bp but reads can be of different lengths.
+    message("Adding read length...")
+    mCATblastn_noOverlap$readLength = read_length
+
+    # find chimeric reads. Four parameters can be set:
+    # 1 - proportion of the read which is aligned, cumulating alignment length on the 2 genomes (here 0.9, meaning 90% of the read has to be aligned)
+    # 2 - maximum number of bases inserted between the 2 genomes at recombination point, reflecting non - templated nucleotide additions (here 5)
+    # 3 - maximum overlap in the alignment with the 2 genomes at the recombination points, reflects the presence of homology between the 2 genomes at the recombination point (here 20)
+    # 4 - minimum alignment length on one genome only. Here the read has to be aligned over at least 16 bp on the genome 1 only and over at least 16 bp on genome 2 only
+    message("Detecting chimeric reads...")
+    mCATblastn_noOverlap$chimeric = chimericReads(mCATblastn_noOverlap, minCov, minOverlap, maxOverlap, minOnly)
+
+    # insert overlap column containing the number of nucleotides shared between the 2 genomes at the recombination point
+    message("Building final table containing found overlaps...")
+    chim_mCATblastn_noOverlap <- generate_final_table(mCATblastn_noOverlap)
+
+    return(chim_mCATblastn_noOverlap)
+
+}
+
 export_data <- function(df, filename) {
-    cat(paste('Exporting data to:', filename, "\n"))
+    message(paste('Exporting data to:', filename, "\n"))
     write.table(df, filename, sep = ',', row.names = FALSE, quote = FALSE)
 }
 
@@ -245,11 +282,17 @@ args <- get_args()
 blast1 = fread(args$blast_hits_1)
 blast2 = fread(args$blast_hits_2)
 
+if ( nrow(blast1) == 0 || nrow(blast2) == 0 ) {
+    warning("At least one input file is empty. Aborting")
+    quit(save = "no", status = 0)
+}
+
 chim_mCATblastn_noOverlap <- find_chimeras(blast1, blast2)
 
 if ( nrow(chim_mCATblastn_noOverlap) == 0 ) {
-    cat("\nNo chimeras found")
+    message("\nNo chimeras found")
+    quit(save = "no", status = 0)
 } else {
-    cat(paste("\nFound ", nrow(chim_mCATblastn_noOverlap), " chimeras"))
+    message(paste("\nFound ", nrow(chim_mCATblastn_noOverlap), " chimeras"))
     export_data(chim_mCATblastn_noOverlap, args$outfile)
 }

@@ -12,7 +12,7 @@ process SEQTK_SAMPLE {
 
     output:
     tuple val(meta), path("*.sampled.fastq.gz"),                                                            emit: reads
-    tuple val("${task.process}"), val('seqtk'), eval("seqtk 2>&1 | awk 'NR==3 {print \$2}'"),               topic: versions
+    tuple val("${task.process}"), val('seqtk'), eval("seqtk 2>&1 | awk 'NR==3' | sed 's/Version: //g'"),    topic: versions
     tuple val("${task.process}"), val('pigz'), eval("pigz --version 2>&1 | sed 's/pigz //g'"),              topic: versions
 
     when:

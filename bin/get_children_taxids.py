@@ -61,9 +61,7 @@ def send_request_to_ncbi_taxonomy(taxid: str):
         "taxons": taxons
     }
     response = requests.post(NCBI_API_URL, headers=NCBI_API_HEADERS, json=data)
-    # check status
-    if not response.ok:
-        raise RuntimeError(f"Error: {response.status_code}. {response.text}")
+    response.raise_for_status()
     return response.json()
 
 

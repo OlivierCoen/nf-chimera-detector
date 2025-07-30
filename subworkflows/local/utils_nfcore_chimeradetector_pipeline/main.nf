@@ -217,5 +217,6 @@ def formatVersionsToYAML( ch_versions ) {
                     def toolVersions = toolInfo.collect { tool, version -> "    ${tool}: ${version}" }.join('\n')
                     "${processName}:\n${toolVersions}\n"
             }
+            .unique()
 }
 

@@ -60,9 +60,7 @@ def send_request_to_ncbi_genome_dataset_api(taxid: int):
     url += f"?{NCBI_GENOME_DATASET_REPORT_API_PARAMS}"
 
     response = requests.get(url, headers=NCBI_API_HEADERS)
-    # check status
-    if not response.ok:
-        raise RuntimeError(f"Error: {response.status_code}. {response.text}")
+    response.raise_for_status()
     return response.json()
 
 

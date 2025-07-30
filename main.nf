@@ -1,11 +1,4 @@
 #!/usr/bin/env nextflow
-/*
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    EGCE/virusltefinder
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    Github : https://github.com/EGCE/virusltefinder
-----------------------------------------------------------------------------------------
-*/
 
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -13,32 +6,11 @@
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
 
-include { VIRUSLTEFINDER  } from './workflows/virusltefinder'
-include { PIPELINE_INITIALISATION } from './subworkflows/local/utils_nfcore_virusltefinder_pipeline'
-include { PIPELINE_COMPLETION     } from './subworkflows/local/utils_nfcore_virusltefinder_pipeline'
+include { CHIMERADETECTOR  } from './workflows/chimeradetector'
+include { PIPELINE_INITIALISATION } from './subworkflows/local/utils_nfcore_chimeradetector_pipeline'
+include { PIPELINE_COMPLETION     } from './subworkflows/local/utils_nfcore_chimeradetector_pipeline'
 /*
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    NAMED WORKFLOWS FOR PIPELINE
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-*/
 
-//
-// WORKFLOW: Run main analysis pipeline depending on type of input
-//
-workflow EGCE_VIRUSLTEFINDER {
-
-    take:
-    families
-
-    main:
-
-    //
-    // WORKFLOW: Run pipeline
-    //
-    VIRUSLTEFINDER (
-        families
-    )
-}
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     RUN MAIN WORKFLOW
@@ -62,7 +34,7 @@ workflow {
     //
     // WORKFLOW: Run main workflow
     //
-    EGCE_VIRUSLTEFINDER (
+    CHIMERADETECTOR (
         PIPELINE_INITIALISATION.out.families
     )
     //

@@ -5,7 +5,7 @@ include { MEGAHIT                                    } from '../../../modules/lo
 include { SRA_READS_PREPARATION                      } from '../sra_reads_preparation'
 
 
-workflow ASSEMBLY {
+workflow GET_GENOMES {
 
     take:
     ch_sra_reads

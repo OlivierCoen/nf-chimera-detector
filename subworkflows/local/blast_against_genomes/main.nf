@@ -2,7 +2,7 @@ include { BLAST_MAKEBLASTDB as MAKEBLASTDB             } from '../../../modules/
 include { BLAST_BLASTN as BLASTN                       } from '../../../modules/local/blast/blastn'
 
 
-workflow BLAST_AGAINST_ASSEMBLIES {
+workflow BLAST_AGAINST_GENOMES {
 
     take:
     ch_sra_reads

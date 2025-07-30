@@ -25,7 +25,7 @@ get_args <- function() {
 
     option_list <- list(
         make_option("--target-hits", dest = 'blast_hits_1', help = "Path to Blast output file for target database"),
-        make_option("--assembly-hits", dest = 'blast_hits_2', help = "Path to Blast output file for assembly"),
+        make_option("--genome-hits", dest = 'blast_hits_2', help = "Path to Blast output file for genome"),
         make_option("--out", dest = 'outfile', help = "Output file name")
     )
 

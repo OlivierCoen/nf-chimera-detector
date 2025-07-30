@@ -19,12 +19,7 @@ process MEGAHIT {
     tuple val(meta), path(reads1), path(reads2)
 
     output:
-    tuple val(meta), path("*.contigs.fa.gz")                            , emit: contigs
-    tuple val(meta), path("intermediate_contigs/k*.contigs.fa.gz")      , emit: k_contigs
-    tuple val(meta), path("intermediate_contigs/k*.addi.fa.gz")         , emit: addi_contigs
-    tuple val(meta), path("intermediate_contigs/k*.local.fa.gz")        , emit: local_contigs
-    tuple val(meta), path("intermediate_contigs/k*.final.contigs.fa.gz"), emit: kfinal_contigs
-    tuple val(meta), path('*.log')                                      , emit: log
+    tuple val(meta), path("*.contigs.fa.gz"),                                                    emit: contigs
     tuple val("${task.process}"), val('megahit'), eval("megahit -v 2>&1 | sed 's/MEGAHIT v//'"), topic: versions
 
     when:

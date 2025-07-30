@@ -10,7 +10,7 @@ process FIND_CHIMERAS {
         'community.wave.seqera.io/library/r-base_r-data.table_r-optparse:574927877459455e' }"
 
     input:
-    tuple val(meta), path("blast_hits.against_target.txt"), path("blast_hits.against_assembly.txt")
+    tuple val(meta), path("blast_hits.against_target.txt"), path("blast_hits.against_genome.txt")
 
     output:
     tuple val(meta), path("*_chimeras.csv"),                                                                                  emit: csv, optional: true
@@ -24,7 +24,7 @@ process FIND_CHIMERAS {
 
     find_chimeras.R \\
         --target-hits blast_hits.against_target.txt \\
-        --assembly-hits blast_hits.against_assembly.txt \\
+        --genome-hits blast_hits.against_genome.txt \\
         --out ${prefix}.csv
     """
 

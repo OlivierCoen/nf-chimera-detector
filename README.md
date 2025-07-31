@@ -38,7 +38,8 @@ Now, you can run the pipeline using:
 ```bash
 nextflow run nf-chimera-detector \
    -profile <docker/singularity/.../institute> \
-   --input samplesheet.csv \
+   --families families.txt \
+   --target_db /path/to/target_db_fasta \
    --outdir <OUTDIR>
 ```
 

@@ -55,6 +55,13 @@
                      "default": null,
                      "description": "[ For dev purposes ] : if specified, sets the max number of SRRs per taxon ID to process.",
                      "fa_icon": "fas fa-chart-simple"
+                 },
+                "sra_registry": {
+                     "type": "string",
+                     "format": "file-path",
+                     "default": "sra_registry",
+                     "description": "Name of the directory containing records of SRA processing. The resulting folder will be located under outdir. It is essential to keep track of SRA IDs already processed, in order to avoid processing them again in case the pipeline is run again..",
+                     "fa_icon": "fas fa-folder-open"
                  }
             }
         },

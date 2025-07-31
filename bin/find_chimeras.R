@@ -283,16 +283,16 @@ blast1 = fread(args$blast_hits_1)
 blast2 = fread(args$blast_hits_2)
 
 if ( nrow(blast1) == 0 || nrow(blast2) == 0 ) {
-    warning("At least one input file is empty. Aborting")
-    quit(save = "no", status = 0)
+    warning("At least one input file is empty")
+    chim_mCATblastn_noOverlap <- data.table()
+} else {
+    chim_mCATblastn_noOverlap <- find_chimeras(blast1, blast2)
 }
-
-chim_mCATblastn_noOverlap <- find_chimeras(blast1, blast2)
 
 if ( nrow(chim_mCATblastn_noOverlap) == 0 ) {
     message("\nNo chimeras found")
-    quit(save = "no", status = 0)
 } else {
     message(paste("\nFound ", nrow(chim_mCATblastn_noOverlap), " chimeras"))
-    export_data(chim_mCATblastn_noOverlap, args$outfile)
 }
+
+export_data(chim_mCATblastn_noOverlap, args$outfile)

@@ -13,7 +13,7 @@ process FIND_CHIMERAS {
     tuple val(meta), path("blast_hits.against_target.txt"), path("blast_hits.against_genome.txt")
 
     output:
-    tuple val(meta), path("*_chimeras.csv"),                                                                                  emit: csv, optional: true
+    tuple val(meta), path("*_chimeras.csv"),                                                                                  emit: csv
     tuple val("${task.process}"), val('R'),          eval('Rscript -e "cat(R.version.string)" | sed "s/R version //"'),       topic: versions
     tuple val("${task.process}"), val('data.table'), eval('Rscript -e "cat(as.character(packageVersion(\'data.table\')))"'),  topic: versions
 

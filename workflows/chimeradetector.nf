@@ -14,6 +14,102 @@ include { BLAST_AGAINST_GENOMES                                                 
 include { NCBI_ASSEMBLY_STATS                                                       } from '../modules/local/ncbi_assembly_stats'
 include { FIND_CHIMERAS                                                             } from '../modules/local/find_chimeras'
 
+
+/*
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    FUNCTIONS
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+*/
+
+// STORING SRA IDS TO PROCESS
+def addToSraRegistry ( ch_sra_reads) {
+    ch_sra_reads
+        .collectFile (
+            {
+                meta, reads ->
+                    [
+                        "${meta.family}_${meta.taxid}_${meta.original_sra_id}_${meta.id}",
+                        reads instanceof List ? reads.collect { it.name }.join("\n") : reads.name
+                    ]
+            },
+            storeDir: "${params.outdir}/${params.sra_registry}/to_process/"
+        )
+}
+
+// STORING SRA IDS DONE
+def addDoneToSraRegistry ( ch_csv ) {
+    ch_csv
+        .collectFile (
+            {
+                meta, csv ->
+                    [
+                        "${meta.family}_${meta.taxid}_${meta.original_sra_id}_${meta.id}",
+                        csv.name
+                    ]
+            },
+            storeDir: "${params.outdir}/${params.sra_registry}/done/"
+        )
+}
+
+def parseSraFolder ( ch_prefix, folder ) {
+    return ch_prefix
+                .map {
+                    meta, prefix ->
+                        def new_meta = [ id: meta.original_sra_id ]
+                        def matchingFiles = folder
+                                                .listFiles()
+                                                .findAll { it.name.startsWith(prefix) }
+                        [ new_meta, matchingFiles ]
+                }
+                .groupTuple()
+}
+
+
+def groupFilesBySRR ( fileList ) {
+    // group by SRR ID
+    return fileList
+                .groupBy { it.name.split('_').last() }
+                .collect { prefix, files -> [ files ] }
+}
+
+// GET LIST OF SRA IDS THAT ALL NOT ALL DONE
+// A SRA ID IS CONSIDERED DONE WHEN ALL ITS UNDERLYING SRRS ARE MARKED AS DONE
+def getAllDoneSraIds ( ch_sra_ids ) {
+
+    ch_prefix = ch_sra_ids
+                    .map {
+                        meta, _ ->
+                            [ meta, "${meta.family}_${meta.taxid}_${meta.original_sra_id}" ]
+                    }
+
+    def to_process_folder = file ( "${params.outdir}/${params.sra_registry}/to_process/" )
+    def done_folder = file ( "${params.outdir}/${params.sra_registry}/done/" )
+
+    ch_to_process = parseSraFolder ( ch_prefix, to_process_folder )
+    ch_done = parseSraFolder ( ch_prefix, done_folder )
+
+    ch_grouped_to_process_done = ch_to_process
+                                    .mix( ch_done )
+                                    .groupTuple()
+
+    not_done_sra_ids = ch_grouped_to_process_done
+                            .map { meta, files -> [ meta, groupFilesBySRR ( files.flatten() ) ] }
+                            .transpose()
+                            .map { meta, files -> [ meta, files.flatten() ] }
+                            .filter { meta, files -> files.size() == 1 && files[0].toString().contains('to_process') }
+                            .map { meta, files -> [ meta.id ] }
+                            .collect()
+                            .map { ids -> [ids] }
+
+    return ch_grouped_to_process_done
+        .combine ( not_done_sra_ids )
+        .filter { meta, files, sra_id_list -> meta.id !in sra_id_list }
+        .map { meta, files, sra_id -> meta.id }
+        .collect()
+        .map { ids -> [ids] }
+
+}
+
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     RUN MAIN WORKFLOW
@@ -51,6 +147,7 @@ workflow CHIMERADETECTOR {
     // ------------------------------------------------------------------------------------
 
     FETCH_SRA_IDS ( ch_families )
+    FETCH_SRA_IDS.out.sra_ids.set { ch_sra_ids }
 
     // ------------------------------------------------------------------------------------
     // FILTERING OUT SRA IDS FOR WHICH WE ALREADY HAVE RESULTS
@@ -58,14 +155,22 @@ workflow CHIMERADETECTOR {
     // (IN CASE THE PIPELINE STOPPED AND HAD TO BE RESTARTED)
     // ------------------------------------------------------------------------------------
 
+    ch_all_done_sra_ids = getAllDoneSraIds ( ch_sra_ids )
 
+    ch_sra_ids
+        .combine( ch_all_done_sra_ids )
+        .filter { meta, sra_id, all_done_sra_ids -> meta.original_sra_id !in all_done_sra_ids }
+        .map { meta, sra_id, all_done_sra_ids -> [ meta, sra_id ] }
+        .set { ch_sra_ids }
 
     // ------------------------------------------------------------------------------------
     // DOWNLOAD ALL SRA DATA
     // ------------------------------------------------------------------------------------
 
-    DOWNLOAD_SRA ( FETCH_SRA_IDS.out.sra_ids )
+    DOWNLOAD_SRA ( ch_sra_ids )
     DOWNLOAD_SRA.out.reads.set { ch_sra_reads }
+
+    addToSraRegistry ( ch_sra_reads )
 
     // ------------------------------------------------------------------------------------
     // DOWNLOAD GENOME ASSEMBLY FROM NCBI IF AVAILABLE OR MAKE FROM SCRATCH OTHERWISE
@@ -108,6 +213,8 @@ workflow CHIMERADETECTOR {
         .set { find_chimeras_input }
 
     FIND_CHIMERAS ( find_chimeras_input )
+
+    addDoneToSraRegistry ( FIND_CHIMERAS.out.csv )
 
 }
 

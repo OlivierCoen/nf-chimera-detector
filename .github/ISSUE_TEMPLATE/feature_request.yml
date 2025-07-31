@@ -1,5 +1,5 @@
 name: Feature request
-description: Suggest an idea for the EGCE/virusltefinder pipeline
+description: Suggest an idea for the nf-chimera-detector pipeline
 labels: enhancement
 body:
   - type: textarea

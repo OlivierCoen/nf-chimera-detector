@@ -1,5 +1,5 @@
 //
-// Subworkflow with functionality specific to the EGCE/virusltefinder pipeline
+// Subworkflow with functionality specific to the nf-chimera-detector pipeline
 //
 
 /*

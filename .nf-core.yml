@@ -15,9 +15,9 @@ lint:
     - .prettierignore
     - .prettierignore
     - CODE_OF_CONDUCT.md
-    - assets/nf-core-virusltefinder_logo_light.png
-    - docs/images/nf-core-virusltefinder_logo_light.png
-    - docs/images/nf-core-virusltefinder_logo_dark.png
+    - assets/nf-core-nf-chimera-detector_logo_light.png
+    - docs/images/nf-core-nf-chimera-detector_logo_light.png
+    - docs/images/nf-core-nf-chimera-detector_logo_dark.png
     - .github/ISSUE_TEMPLATE/bug_report.yml
     - .github/CONTRIBUTING.md
     - .github/PULL_REQUEST_TEMPLATE.md
@@ -39,16 +39,16 @@ lint:
     - conf/igenomes_ignored.config
     - assets/multiqc_config.yml
     - CODE_OF_CONDUCT.md
-    - assets/nf-core-virusltefinder_logo_light.png
-    - docs/images/nf-core-virusltefinder_logo_light.png
-    - docs/images/nf-core-virusltefinder_logo_dark.png
+    - assets/nf-core-nf-chimera-detector_logo_light.png
+    - docs/images/nf-core-nf-chimera-detector_logo_light.png
+    - docs/images/nf-core-nf-chimera-detector_logo_dark.png
     - .github/ISSUE_TEMPLATE/config.yml
     - .github/workflows/awstest.yml
     - .github/workflows/awsfulltest.yml
 
 template:
-  org: EGCE
-  name: virusltefinder
+  org: OlivierCoen
+  name: nf-chimera-detector
   description: A pipeline whose purpose is to detect transposable elements in virus
     public genomic data
   author: Olivier Coen

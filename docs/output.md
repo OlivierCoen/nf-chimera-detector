@@ -1,4 +1,4 @@
-# EGCE/virusltefinder: Output
+# nf-chimera-detector: Output
 
 ## Introduction
 

@@ -1,7 +1,7 @@
 {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
-    "$id": "https://raw.githubusercontent.com/EGCE/virusltefinder/main/nextflow_schema.json",
-    "title": "EGCE/virusltefinder pipeline parameters",
+    "$id": "https://raw.githubusercontent.com/nf-chimera-detector/main/nextflow_schema.json",
+    "title": "nf-chimera-detector pipeline parameters",
     "description": "A pipeline whose purpose is to detect transposable elements in virus public genomic data",
     "type": "object",
     "$defs": {

@@ -1,4 +1,4 @@
-# EGCE/virusltefinder: Citations
+# nf-chimera-detector: Citations
 
 ## [nf-core](https://pubmed.ncbi.nlm.nih.gov/32055031/)
 

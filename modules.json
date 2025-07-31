@@ -1,6 +1,6 @@
 {
-    "name": "EGCE/virusltefinder",
-    "homePage": "https://github.com/EGCE/virusltefinder",
+    "name": "nf-chimera-detector",
+    "homePage": "https://github.com/nf-chimera-detector",
     "repos": {
         "https://github.com/nf-core/modules.git": {
             "modules": {

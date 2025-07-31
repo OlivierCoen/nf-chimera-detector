@@ -3,8 +3,8 @@ include { MULTIQC                                                 } from '../../
 include { paramsSummaryMap                                        } from 'plugin/nf-schema'
 include { paramsSummaryMultiqc                                    } from '../../nf-core/utils_nfcore_pipeline'
 include { softwareVersionsToYAML                                  } from '../../nf-core/utils_nfcore_pipeline'
-include { formatVersionsToYAML                                    } from '../utils_nfcore_virusltefinder_pipeline'
-include { methodsDescriptionText                                  } from '../utils_nfcore_virusltefinder_pipeline'
+include { formatVersionsToYAML                                    } from '../utils_nfcore_nf-chimera-detector_pipeline'
+include { methodsDescriptionText                                  } from '../utils_nfcore_nf-chimera-detector_pipeline'
 
 
 workflow MULTIQC_WORKFLOW {

@@ -55,11 +55,10 @@ def parseSraFolder ( ch_prefix, folder ) {
     return ch_prefix
                 .map {
                     meta, prefix ->
-                        def new_meta = [ id: meta.original_sra_id ]
                         def matchingFiles = folder
                                                 .listFiles()
                                                 .findAll { it.name.startsWith(prefix) }
-                        [ new_meta, matchingFiles ]
+                        [ meta, matchingFiles ]
                 }
                 .groupTuple()
 }
@@ -74,7 +73,7 @@ def groupFilesBySRR ( fileList ) {
 
 // GET LIST OF SRA IDS THAT ALL NOT ALL DONE
 // A SRA ID IS CONSIDERED DONE WHEN ALL ITS UNDERLYING SRRS ARE MARKED AS DONE
-def getAllDoneSraIds ( ch_sra_ids ) {
+def getSraIdsNotProcessed ( ch_sra_ids ) {
 
     ch_prefix = ch_sra_ids
                     .map {
@@ -88,25 +87,27 @@ def getAllDoneSraIds ( ch_sra_ids ) {
     ch_to_process = parseSraFolder ( ch_prefix, to_process_folder )
     ch_done = parseSraFolder ( ch_prefix, done_folder )
 
-    ch_grouped_to_process_done = ch_to_process
-                                    .mix( ch_done )
-                                    .groupTuple()
+    ch_grouped = ch_to_process
+                    .mix( ch_done )
+                    .groupTuple()
+                    .map { meta, files -> [ meta, files.flatten() ] }
 
-    not_done_sra_ids = ch_grouped_to_process_done
-                            .map { meta, files -> [ meta, groupFilesBySRR ( files.flatten() ) ] }
+    ch_started = ch_grouped.filter { meta, files -> files.size() > 0 }
+    ch_not_started = ch_grouped.filter { meta, files -> files.size() == 0 }
+
+    ch_started_not_done = ch_started
+                            .map { meta, files -> [ meta, groupFilesBySRR ( files ) ] }
                             .transpose()
                             .map { meta, files -> [ meta, files.flatten() ] }
-                            .filter { meta, files -> files.size() == 1 && files[0].toString().contains('to_process') }
-                            .map { meta, files -> [ meta.id ] }
-                            .collect()
-                            .map { ids -> [ids] }
+                            .filter {
+                                meta, files -> files.size() == 1 && files[0].toString().contains('to_process')
+                            }
 
-    return ch_grouped_to_process_done
-        .combine ( not_done_sra_ids )
-        .filter { meta, files, sra_id_list -> meta.id !in sra_id_list }
-        .map { meta, files, sra_id -> meta.id }
-        .collect()
-        .map { ids -> [ids] }
+
+    return ch_not_started
+            .mix ( ch_started_not_done )
+            .map { meta, files -> [ meta, meta.original_sra_id ] }
+
 
 }
 
@@ -155,19 +156,13 @@ workflow CHIMERADETECTOR {
     // (IN CASE THE PIPELINE STOPPED AND HAD TO BE RESTARTED)
     // ------------------------------------------------------------------------------------
 
-    ch_all_done_sra_ids = getAllDoneSraIds ( ch_sra_ids )
-
-    ch_sra_ids
-        .combine( ch_all_done_sra_ids )
-        .filter { meta, sra_id, all_done_sra_ids -> meta.original_sra_id !in all_done_sra_ids }
-        .map { meta, sra_id, all_done_sra_ids -> [ meta, sra_id ] }
-        .set { ch_sra_ids }
+    ch_not_processed_sra_ids = getSraIdsNotProcessed ( ch_sra_ids )
 
     // ------------------------------------------------------------------------------------
     // DOWNLOAD ALL SRA DATA
     // ------------------------------------------------------------------------------------
 
-    DOWNLOAD_SRA ( ch_sra_ids )
+    DOWNLOAD_SRA ( ch_not_processed_sra_ids )
     DOWNLOAD_SRA.out.reads.set { ch_sra_reads }
 
     addToSraRegistry ( ch_sra_reads )

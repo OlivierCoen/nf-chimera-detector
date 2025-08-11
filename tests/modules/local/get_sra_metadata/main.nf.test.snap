@@ -1,0 +1,73 @@
+{
+    "Too long request URI": {
+        "content": [
+            {
+                "0": [
+                    [
+                        {
+                            "family": "test"
+                        },
+                        "10244.sra_ids.txt:md5,30e57aa0ec169aaf9c56ebfb2c926455"
+                    ]
+                ],
+                "1": [
+                    [
+                        {
+                            "family": "test"
+                        },
+                        "10244.sra_metadata.json:md5,e672c38d6ee360e07f23825d5ab1ff91"
+                    ]
+                ],
+                "2": [
+                    [
+                        "GET_SRA_METADATA",
+                        "python",
+                        "3.13.5"
+                    ]
+                ],
+                "3": [
+                    [
+                        "GET_SRA_METADATA",
+                        "requests",
+                        "2.32.4"
+                    ]
+                ],
+                "4": [
+                    [
+                        "GET_SRA_METADATA",
+                        "xmltodict",
+                        "0.14.2"
+                    ]
+                ],
+                "5": [
+                    [
+                        "GET_SRA_METADATA",
+                        "tenacity",
+                        "9.1.2"
+                    ]
+                ],
+                "sra_id_files": [
+                    [
+                        {
+                            "family": "test"
+                        },
+                        "10244.sra_ids.txt:md5,30e57aa0ec169aaf9c56ebfb2c926455"
+                    ]
+                ],
+                "sra_metadata": [
+                    [
+                        {
+                            "family": "test"
+                        },
+                        "10244.sra_metadata.json:md5,e672c38d6ee360e07f23825d5ab1ff91"
+                    ]
+                ]
+            }
+        ],
+        "meta": {
+            "nf-test": "0.9.2",
+            "nextflow": "25.04.6"
+        },
+        "timestamp": "2025-08-11T17:53:40.013883873"
+    }
+}

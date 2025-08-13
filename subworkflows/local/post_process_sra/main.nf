@@ -19,9 +19,23 @@ workflow POST_PROCESS_SRA {
         }
         .set { ch_branched_sra_reads }
 
+    // in very rare cases (like SRX18097776), we obtain 3 files from fasterq-dump
+    // in suh cases, we keep only the ones having _1/_2 suffix (especially for convenience)
+    ch_branched_sra_reads.paired
+        .map {
+            meta, reads ->
+                if ( reads.size() == 3 ) {
+                    kept_reads = reads.findAll { it ==~ /.*_[12]\.f(ast)?q\.gz$/  }
+                    [ meta, kept_reads ]
+                } else {
+                    [ meta, reads ]
+                }
+        }
+        .set { ch_sra_paired_reads }
+
     def interleave = false
     BBMAP_BBMERGE (
-        ch_branched_sra_reads.paired,
+        ch_sra_paired_reads,
         interleave
     )
 

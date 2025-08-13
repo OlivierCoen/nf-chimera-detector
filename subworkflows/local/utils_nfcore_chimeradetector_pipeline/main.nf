@@ -69,6 +69,7 @@ workflow PIPELINE_INITIALISATION {
         .fromPath( params.families )
         .splitText()
         .map { family -> family.strip() }
+        .filter { family -> family != "" } // removes empty lines
         .set { ch_families }
 
     emit:

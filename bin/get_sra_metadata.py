@@ -56,8 +56,9 @@ class RateLimitException(Exception):
 
 @retry(
     retry=retry_if_exception_type((
+        RateLimitException,
         urllib3.exceptions.ReadTimeoutError,
-        RateLimitException
+        requests.exceptions.ConnectionError
     )),
     stop=stop_after_delay(600),
     wait=wait_exponential(multiplier=1, min=1, max=30),
@@ -82,7 +83,11 @@ def send_esearch_query(query: str, database: str):
 
 
 @retry(
-    retry=retry_if_exception_type(RateLimitException),
+    retry=retry_if_exception_type((
+        RateLimitException,
+        urllib3.exceptions.ReadTimeoutError,
+        requests.exceptions.ConnectionError
+    )),
     stop=stop_after_delay(600),
     wait=wait_exponential(multiplier=1, min=1, max=30),
     before_sleep=before_sleep_log(logger, logging.DEBUG),

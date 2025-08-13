@@ -48,14 +48,20 @@
                      "description": "Read coverage to keep when assembling with MEGAHIT.",
                      "help_text": "Reads corresponding to species that do not have available assemblies are assembled using MEGAHIT. Before assembling, reads are subsampled in order to provide optimal input data to MEGAHIT.",
                      "fa_icon": "fas fa-chart-simple"
-                 },
-                 "max_srrs_per_taxid": {
+                },
+                "max_srrs_per_taxid": {
                      "type": "integer",
                      "minimum": 1,
                      "default": null,
                      "description": "[ For dev purposes ] : if specified, sets the max number of SRRs per taxon ID to process.",
                      "fa_icon": "fas fa-chart-simple"
-                 },
+                },
+                "only_download_sra": {
+                     "type": "string",
+                     "default": null,
+                     "description": "[ For dev purposes ] : if specified, only the provided SRA accession will be downloaded.",
+                     "fa_icon": "fas fa-chart-simple"
+                },
                 "sra_registry": {
                      "type": "string",
                      "format": "file-path",

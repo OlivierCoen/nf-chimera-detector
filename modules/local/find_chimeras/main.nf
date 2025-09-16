@@ -25,6 +25,9 @@ process FIND_CHIMERAS {
     find_chimeras.R \\
         --target-hits blast_hits.against_target.txt \\
         --genome-hits blast_hits.against_genome.txt \\
+        --family ${meta.family} \\
+        --species ${meta.taxid} \\
+        --srr ${meta.id} \\
         --out ${prefix}.csv
     """
 

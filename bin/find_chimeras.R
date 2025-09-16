@@ -26,6 +26,9 @@ get_args <- function() {
     option_list <- list(
         make_option("--target-hits", dest = 'blast_hits_1', help = "Path to Blast output file for target database"),
         make_option("--genome-hits", dest = 'blast_hits_2', help = "Path to Blast output file for genome"),
+        make_option("--family", help = "Family name / Taxid"),
+        make_option("--species", help = "Species Taxid"),
+        make_option("--srr", dest = 'srr_id', help = "ID of the corresponding SRR"),
         make_option("--out", dest = 'outfile', help = "Output file name")
     )
 
@@ -265,7 +268,16 @@ find_chimeras <- function (blast1, blast2) {
 
 }
 
+add_metadata <- function(df, family, species, srr) {
+    message("Adding metadata")
+    df$family = family
+    df$species.taxid = species
+    df$srr = srr
+    return(df)
+}
+
 export_data <- function(df, filename) {
+    print(df)
     message(paste('Exporting data to:', filename, "\n"))
     write.table(df, filename, sep = ',', row.names = FALSE, quote = FALSE)
 }
@@ -284,15 +296,17 @@ blast2 = fread(args$blast_hits_2)
 
 if ( nrow(blast1) == 0 || nrow(blast2) == 0 ) {
     warning("At least one input file is empty")
-    chim_mCATblastn_noOverlap <- data.table()
+    chimera_df <- data.table()
 } else {
-    chim_mCATblastn_noOverlap <- find_chimeras(blast1, blast2)
+    chimera_df <- find_chimeras(blast1, blast2)
 }
 
-if ( nrow(chim_mCATblastn_noOverlap) == 0 ) {
+if ( nrow(chimera_df) == 0 ) {
     message("\nNo chimeras found")
 } else {
-    message(paste("\nFound ", nrow(chim_mCATblastn_noOverlap), " chimeras"))
+    message(paste("\nFound ", nrow(chimera_df), " chimeras"))
 }
 
-export_data(chim_mCATblastn_noOverlap, args$outfile)
+chimera_df <- add_metadata(chimera_df, args$family, args$species, args$srr)
+
+export_data(chimera_df, args$outfile)

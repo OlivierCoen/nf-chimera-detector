@@ -229,7 +229,7 @@ workflow CHIMERADETECTOR {
     // ------------------------------------------------------------------------------------
 
     MULTIQC_WORKFLOW (
-        ch_chimeras_csv,
+        ch_chimeras_csv.map { meta, file -> file },
         ch_versions
     )
 

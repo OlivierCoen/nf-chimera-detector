@@ -11,8 +11,6 @@ report_section_order:
   "nf-chimera-detector-summary":
     order: -1002
 
-
-
 export_plots: true
 
 disable_version_detection: true
@@ -28,9 +26,92 @@ custom_data:
     description: |
       Found chimeras
     plot_type: "table"
+    headers:
+      family:
+        title: "Family"
+        description: Family corresponding to the read
+      species.taxid:
+        title: "Species taxon ID"
+        description: Taxon ID of the species corresponding to the read
+      srr:
+        title: "SRR"
+        description: SRR accession corresponding to the read
+      readName:
+        title: "Read name"
+        description: Read ID in the original Fastq file
+      subject:
+        title: "Target sequence"
+        description: Name of the sequence that matched with this read in the target database
+      identity:
+        title: "% identity"
+        description: Percentage of identity
+        format: "{:,.1f}"
+      alength:
+        title: "Alignment length"
+      mismatch:
+        title: "# mismatches"
+      indel:
+        title: "# indels"
+      qStart:
+        title: "Start on read"
+      qEnd:
+        title: "End on read"
+      sStart:
+        title: "Start on target sequence"
+      sEnd:
+        title: "End on target sequence"
+      score:
+        title: "Alignment score"
+      readLength:
+        title: "Read length"
+      Sp:
+        title: "Sp"
+      subject.s:
+        title: "subject.s"
+      identity.s:
+        title: "identity.s"
+      alength.s:
+        title: "alength.s"
+      mismatch.s:
+        title: "mismatch.s"
+      indel.s:
+        title: "indel.s"
+      qStart.s:
+        title: "qStart.s"
+      qEnd.s:
+        title: "qEnd.s"
+      sStart.s:
+        title: "sStart.s"
+      sEnd.s:
+        title: "sEnd.s"
+      score.s:
+        title: "score.s"
+      readLength.s:
+        title: "readLength.s"
+      Sp.s:
+        title: "Sp.s"
+      overlap:
+        title: "Overlap"
+      chimType:
+        title: "Chimera type"
+        description: "Column showing the two species involved in the chimeras"
+      PCRdup:
+        title: "PCR duplicate"
+        description: "Column showing which chimeric reads may be PCR duplicates,i.e. which chimeric reads have identical alignement coordinates on both genomes"
+      chimericPoint:
+        title: "Chimeric point"
+        description: "Column containing coordinate of the recombination point in one genome"
+      insertionCoord:
+        title: "Insertion coordinate"
+        description: "Column containing coordinate of the recombination point in the other genome"
+      inv:
+        title: "Inverted"
+        description: "Column showing the respective orientation (same or opposite) of the sequences involved in intra - genome chimeras"
+
+
+
 
 
 sp:
   chimeras:
     fn: "*_chimeras.csv"
-

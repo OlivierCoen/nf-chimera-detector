@@ -50,7 +50,7 @@ workflow POST_PROCESS_SRA {
         .set { ch_versions }
 
     emit:
-    single_reads                    = SEQKIT_FQ2FA.out.fasta
+    merged_reads_fasta              = SEQKIT_FQ2FA.out.fasta
     versions                        = ch_versions
 
 }

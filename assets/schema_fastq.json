@@ -7,6 +7,17 @@
     "items": {
         "type": "object",
         "properties": {
+            "family": {
+                "type": "string",
+                "pattern": "^\\S+$",
+                "errorMessage": "Family name must be provided and cannot contain spaces",
+                "meta": ["family"]
+            },
+            "taxid": {
+                "type": "number",
+                "errorMessage": "Taxon ID (NCBI) must be provided and must be a number",
+                "meta": ["taxid"]
+            },
             "sample": {
                 "type": "string",
                 "pattern": "^\\S+$",
@@ -28,6 +39,6 @@
                 "errorMessage": "FastQ file for reads 2 cannot contain spaces and must have extension '.fq.gz' or '.fastq.gz'"
             }
         },
-        "required": ["sample", "fastq_1"]
+        "required": ["family", "taxid", "sample", "fastq_1"]
     }
 }

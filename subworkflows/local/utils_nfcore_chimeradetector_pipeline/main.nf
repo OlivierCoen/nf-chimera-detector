@@ -83,13 +83,20 @@ workflow PIPELINE_INITIALISATION {
     if ( params.fastq ) {
        Channel
         .fromList( samplesheetToList(params.fastq, "${projectDir}/assets/schema_fastq.json") )
+        .map { meta, file1, file2 = null ->
+            new_meta = meta + [ original_sra_id: meta.id ]
+            if (file2 != null) {
+                [ new_meta, [file1, file2] ]
+            } else {
+                [ new_meta, file1 ]
+            }
+        }
         .set { ch_fastq }
     }
 
-    ch_fastq.view()
-
     emit:
-    families = ch_families
+    families    = ch_families
+    fastq       = ch_fastq
     versions    = ch_versions
 }
 

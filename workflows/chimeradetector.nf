@@ -122,6 +122,7 @@ workflow CHIMERADETECTOR {
 
     take:
     ch_families
+    ch_fastq
 
     main:
 
@@ -179,26 +180,31 @@ workflow CHIMERADETECTOR {
 
     addToSraRegistry ( ch_sra_reads )
 
+    // mix with custom Fastq files
+    ch_sra_reads
+        .mix ( ch_fastq )
+        .set { ch_reads }
+
     // ------------------------------------------------------------------------------------
     // DOWNLOAD GENOME ASSEMBLY FROM NCBI IF AVAILABLE OR MAKE FROM SCRATCH OTHERWISE
     // ------------------------------------------------------------------------------------
 
-    GET_GENOMES  ( ch_sra_reads )
+    GET_GENOMES  ( ch_reads )
     GET_GENOMES .out.assemblies.set { ch_assemblies }
 
     // ------------------------------------------------------------------------------------
     // COMBINE PAIRED READS (IF NECESSARY) AND CONVERT FASTQ TO FASTA
     // ------------------------------------------------------------------------------------
 
-    POST_PROCESS_SRA ( ch_sra_reads )
-    POST_PROCESS_SRA.out.single_reads.set { ch_sra_reads }
+    POST_PROCESS_SRA ( ch_reads )
+    POST_PROCESS_SRA.out.merged_reads_fasta.set { ch_reads_fasta }
 
     // ------------------------------------------------------------------------------------
     // BLAST AGAINST TARGET
     // ------------------------------------------------------------------------------------
 
     BLAST_AGAINST_TARGET (
-        ch_sra_reads,
+        ch_reads_fasta,
         ch_target_db
     )
 

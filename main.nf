@@ -35,7 +35,8 @@ workflow {
     // WORKFLOW: Run main workflow
     //
     CHIMERADETECTOR (
-        PIPELINE_INITIALISATION.out.families
+        PIPELINE_INITIALISATION.out.families,
+        PIPELINE_INITIALISATION.out.fastq
     )
     //
     // SUBWORKFLOW: Run completion tasks

@@ -1,0 +1,2 @@
+family,taxid,sample,fastq_1,fastq_2
+test_family,1234,test_sample,tests/test_data/reads/DRR618977_1.head.fastq.gz,tests/test_data/reads/DRR618977_2.head.fastq.gz

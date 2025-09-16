@@ -13,6 +13,7 @@ include { BLAST_AGAINST_GENOMES                                                 
 
 include { NCBI_ASSEMBLY_STATS                                                       } from '../modules/local/ncbi_assembly_stats'
 include { FIND_CHIMERAS                                                             } from '../modules/local/find_chimeras'
+include { MULTIQC_WORKFLOW                                                          } from '../subworkflows/local/multiqc'
 
 
 /*
@@ -164,7 +165,10 @@ workflow CHIMERADETECTOR {
     // (IN CASE THE PIPELINE STOPPED AND HAD TO BE RESTARTED)
     // ------------------------------------------------------------------------------------
 
-    ch_not_processed_sra_ids = getSraIdsNotProcessed ( ch_sra_ids )
+    ch_sra_ids.set { ch_not_processed_sra_ids }
+    if ( !params.ignore_sra_registry ) {
+        ch_not_processed_sra_ids = getSraIdsNotProcessed ( ch_sra_ids )
+    }
 
     // ------------------------------------------------------------------------------------
     // DOWNLOAD ALL SRA DATA
@@ -216,8 +220,18 @@ workflow CHIMERADETECTOR {
         .set { find_chimeras_input }
 
     FIND_CHIMERAS ( find_chimeras_input )
+    FIND_CHIMERAS.out.csv.set { ch_chimeras_csv }
 
-    addDoneToSraRegistry ( FIND_CHIMERAS.out.csv )
+    addDoneToSraRegistry ( ch_chimeras_csv )
+
+    // ------------------------------------------------------------------------------------
+    // MULTIQC
+    // ------------------------------------------------------------------------------------
+
+    MULTIQC_WORKFLOW (
+        ch_chimeras_csv,
+        ch_versions
+    )
 
 }
 

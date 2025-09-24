@@ -112,6 +112,7 @@ def getSraIdsNotProcessed ( ch_sra_ids ) {
 
 }
 
+
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     RUN MAIN WORKFLOW
@@ -153,10 +154,10 @@ workflow CHIMERADETECTOR {
     FETCH_SRA_IDS.out.sra_ids.set { ch_sra_ids }
 
     // For dev purposes: test download of a specific SRA accession
-    if ( params.only_download_sra ) {
+    if ( params.only_download_srrs ) {
 
-        unique_sra_accession = params.only_download_sra.strip()
-        ch_sra_ids = ch_sra_ids.filter { meta, sra_id -> sra_id == unique_sra_accession }
+        unique_sra_accessions = params.only_download_srrs.strip().tokenize(',')
+        ch_sra_ids = ch_sra_ids.filter { meta, sra_id -> unique_sra_accessions.contains(sra_id) }
 
     }
 

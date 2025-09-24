@@ -95,10 +95,10 @@
                      "description": "[ For dev purposes ] : if specified, sets the max number of SRRs per taxon ID to process.",
                      "fa_icon": "fas fa-chart-simple"
                 },
-                "only_download_sra": {
+                "only_download_srrs": {
                      "type": "string",
                      "default": null,
-                     "description": "[ For dev purposes ] : if specified, only the provided SRA accession will be downloaded.",
+                     "description": "[ For dev purposes ] : if specified, only the provided SRA accessions (separated by a comma) will be downloaded.",
                      "fa_icon": "fas fa-chart-simple"
                 },
                 "ignore_sra_registry": {

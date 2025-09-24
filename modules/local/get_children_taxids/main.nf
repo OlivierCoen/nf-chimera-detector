@@ -26,9 +26,6 @@ process GET_CHILDREN_TAXIDS {
     tuple val("${task.process}"), val('requests'), eval('python3 -c "import requests; print(requests.__version__)"'),                           topic: versions
     tuple val("${task.process}"), val('tenacity'), eval('python3 -c "from importlib.metadata import version; print(version(\'tenacity\'))"'),   topic: versions
 
-    when:
-    task.ext.when == null || task.ext.when
-
     script:
     """
     get_children_taxids.py --family $family

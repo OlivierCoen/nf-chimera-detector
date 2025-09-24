@@ -33,9 +33,6 @@ process SRATOOLS_PREFETCH {
     tuple val("${task.process}"), val('sratools'), eval("prefetch --version 2>&1 | grep -Eo '[0-9.]+'"),         topic: versions
     tuple val("${task.process}"), val('curl'), eval("curl --version | head -n 1 | sed 's/^curl //; s/ .*\$//'"), topic: versions
 
-    when:
-    task.ext.when == null || task.ext.when
-
     script:
     args = task.ext.args ?: ''
     two_first_letters = sra_id[0..1]

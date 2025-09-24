@@ -22,9 +22,6 @@ process GET_SRA_METADATA {
     tuple val("${task.process}"), val('xmltodict'), eval('python3 -c "import xmltodict; print(xmltodict.__version__)"'),                        topic: versions
     tuple val("${task.process}"), val('tenacity'), eval('python3 -c "from importlib.metadata import version; print(version(\'tenacity\'))"'),   topic: versions
 
-    when:
-    task.ext.when == null || task.ext.when
-
     script:
     """
     get_sra_metadata.py --taxon-id $taxid

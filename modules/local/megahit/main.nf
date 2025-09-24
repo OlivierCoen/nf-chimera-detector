@@ -22,9 +22,6 @@ process MEGAHIT {
     tuple val(meta), path("*.contigs.fa.gz"),                                                    emit: contigs
     tuple val("${task.process}"), val('megahit'), eval("megahit -v 2>&1 | sed 's/MEGAHIT v//'"), topic: versions
 
-    when:
-    task.ext.when == null || task.ext.when
-
     script:
     def args = task.ext.args ?: ''
     def args2 = task.ext.args2 ?: ''

@@ -6,6 +6,23 @@ include { softwareVersionsToYAML                                  } from '../../
 include { formatVersionsToYAML                                    } from '../utils_nfcore_chimeradetector_pipeline'
 include { methodsDescriptionText                                  } from '../utils_nfcore_chimeradetector_pipeline'
 
+/*
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    FUNCTIONS
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+*/
+
+def getBlastDb( process_name ) {
+    return process_name.tokenize(':')[1].tokenize('_')[2]
+}
+
+
+/*
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    WORKFLOW
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+*/
+
 
 workflow MULTIQC_WORKFLOW {
 
@@ -64,8 +81,42 @@ workflow MULTIQC_WORKFLOW {
     // DATA
     // ------------------------------------------------------------------------------------
 
+    Channel.topic('blast_nb_hits')
+        .branch {
+            process, family, nb_hits ->
+                target: getBlastDb(process) == 'TARGET'
+                    [ family, nb_hits ]
+                genomes: getBlastDb(process) == 'GENOMES'
+                   [ family, nb_hits ]
+        }
+        .set { ch_blast_nb_hits }
+
+    Channel.of("family,nb_hits")
+        .concat( ch_blast_nb_hits.target )
+        .collectFile(
+            name: 'blast_nb_hits_target.csv',
+            newLine: true,
+            storeDir: params.outdir
+        ) {
+            item -> "${item[0]},${item[1]}"
+        }
+        .set { ch_blast_nb_hits_target_file }
+
+    Channel.of("family,nb_hits")
+        .concat( ch_blast_nb_hits.genomes )
+        .collectFile(
+            name: 'blast_nb_hits_genomes.csv',
+            newLine: true,
+            storeDir: params.outdir
+        ) {
+            item -> "${item[0]},${item[1]}"
+        }
+        .set { ch_blast_nb_hits_genomes_file }
+
     ch_multiqc_files
         .mix ( ch_chimeras_csv )
+        .mix ( ch_blast_nb_hits_target_file )
+        .mix ( ch_blast_nb_hits_genomes_file )
         .set { ch_multiqc_files }
 
     MULTIQC (

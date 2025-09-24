@@ -28,9 +28,6 @@ process NCBI_ASSEMBLY_STATS {
     tuple val("${task.process}"), val('tenacity'), eval('python3 -c "from importlib.metadata import version; print(version(\'tenacity\'))"'),   topic: versions
     tuple val("${task.process}"), val('jq'),       eval("jq --version | sed 's/jq-//g'"),                                                       topic: versions
 
-    when:
-    task.ext.when == null || task.ext.when
-
     script:
     def prefix = task.ext.prefix ?: "$family"
     """

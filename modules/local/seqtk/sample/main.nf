@@ -15,9 +15,6 @@ process SEQTK_SAMPLE {
     tuple val("${task.process}"), val('seqtk'), eval("seqtk 2>&1 | awk 'NR==3' | sed 's/Version: //g'"),    topic: versions
     tuple val("${task.process}"), val('pigz'), eval("pigz --version 2>&1 | sed 's/pigz //g'"),              topic: versions
 
-    when:
-    task.ext.when == null || task.ext.when
-
     script:
     def args   = task.ext.args ?: ''
     def prefix = task.ext.prefix ?: "${meta.id}"

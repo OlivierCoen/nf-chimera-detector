@@ -18,9 +18,6 @@ process PARSE_MMSEQS_OUTPUT {
     tuple val("${task.process}"), val('python'),   eval("python3 --version | sed 's/Python //'"),                          topic: versions
     tuple val("${task.process}"), val('pandas'), eval('python3 -c "import pandas; print(pandas.__version__)"'),            topic: versions
 
-    when:
-    task.ext.when == null || task.ext.when
-
     script:
     """
     parse_mmseqs_output.py \\

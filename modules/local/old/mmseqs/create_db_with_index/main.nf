@@ -15,9 +15,6 @@ process MMSEQS_CREATE_DB_WITH_INDEX {
     tuple val(meta), path("${prefix}/"),                                                                           emit: db
     tuple val("${task.process}"), val('mmseqs'), eval("mmseqs | grep 'Version' | sed 's/MMseqs2 Version: //'"),    topic: versions
 
-    when:
-    task.ext.when == null || task.ext.when
-
     script:
     def args = task.ext.args ?: ''
     def args2 = task.ext.args2 ?: ''

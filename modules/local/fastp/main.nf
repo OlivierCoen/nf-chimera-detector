@@ -18,7 +18,6 @@ process FASTP {
     input:
     tuple val(meta), path(reads)
 
-
     output:
     tuple val(meta), path('*.fastp.fastq.gz') , optional:true, emit: reads
     tuple val(meta), path('*.json')           , emit: json
@@ -27,9 +26,6 @@ process FASTP {
     tuple val(meta), path('*.fail.fastq.gz')  , optional:true, emit: reads_fail
     tuple val(meta), path('*.merged.fastq.gz'), optional:true, emit: reads_merged
     tuple val("${task.process}"), val('fastp'), eval('fastp --version 2>&1 | sed -e "s/fastp //g"'), topic: versions
-
-    when:
-    task.ext.when == null || task.ext.when
 
     script:
     def args = task.ext.args ?: ''

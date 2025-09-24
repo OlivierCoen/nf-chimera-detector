@@ -38,7 +38,7 @@ workflow GET_GENOMES {
     // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     ch_branched_sra_reads.to_download
-        .map { meta, reads, accession -> [ [ taxid: meta.taxid ], accession ] }
+        .map { meta, reads, accession -> [ [ family: meta.family, taxid: meta.taxid ], accession ] }
         .unique()
         .set { accessions_to_download }
 

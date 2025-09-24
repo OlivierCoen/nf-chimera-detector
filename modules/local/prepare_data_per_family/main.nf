@@ -1,4 +1,4 @@
-process PREPARE_BLAST_HIT_DATA {
+process PREPARE_DATA_PER_FAMILY {
 
     label 'process_single'
 
@@ -8,18 +8,18 @@ process PREPARE_BLAST_HIT_DATA {
         'community.wave.seqera.io/library/pandas:2.3.2--baef3004955c4a32' }"
 
     input:
-    path blast_hit_file
+    path data_file
 
     output:
-    path('*_transposed.csv'),                                                                                    emit: transposed_blast_hits
+    path('*_transposed.csv'),                                                                                    emit: csv
     tuple val("${task.process}"), val('python'),   eval("python3 --version | sed 's/Python //'"),                topic: versions
     tuple val("${task.process}"), val('pandas'), eval('python3 -c "import pandas; print(pandas.__version__)"'),  topic: versions
 
     script:
     def prefix = task.ext.prefix
     """
-    prepare_blast_hits.py \\
-        --hits $blast_hit_file \\
+    prepare_data_per_family.py \\
+        --data $data_file \\
         --out ${prefix}_transposed.csv
     """
 }

@@ -1,6 +1,8 @@
-include { MULTIQC                                                 } from '../../../modules/nf-core/multiqc'
-include { PREPARE_BLAST_HIT_DATA as PREPARE_BLAST_HIT_TARGET      } from '../../../modules/local/prepare_blast_hit_data'
-include { PREPARE_BLAST_HIT_DATA as PREPARE_BLAST_HIT_GENOMES     } from '../../../modules/local/prepare_blast_hit_data'
+include { MULTIQC                                                           } from '../../../modules/nf-core/multiqc'
+include { PREPARE_DATA_PER_FAMILY as PREPARE_DOWNLOADED_GENOME_SIZE         } from '../../../modules/local/prepare_data_per_family'
+include { PREPARE_DATA_PER_FAMILY as PREPARE_ASSEMBLED_GENOME_SIZE          } from '../../../modules/local/prepare_data_per_family'
+include { PREPARE_DATA_PER_FAMILY as PREPARE_BLAST_HIT_TARGET               } from '../../../modules/local/prepare_data_per_family'
+include { PREPARE_DATA_PER_FAMILY as PREPARE_BLAST_HIT_GENOMES              } from '../../../modules/local/prepare_data_per_family'
 
 include { paramsSummaryMap                                        } from 'plugin/nf-schema'
 include { paramsSummaryMultiqc                                    } from '../../nf-core/utils_nfcore_pipeline'
@@ -79,7 +81,41 @@ workflow MULTIQC_WORKFLOW {
                             .mix( ch_methods_description.collectFile( name: 'methods_description_mqc.yaml', sort: true ) )
 
     // ------------------------------------------------------------------------------------
-    // DISTRIBUTION OF NB OF BLAST HITS PER FAMILY
+    // DISTRIBUTION OF SIZE OF DOWNLAODED GENOMES PER FAMILY
+    // ------------------------------------------------------------------------------------
+
+    Channel.topic('downloaded_genome_size')
+        .collectFile(
+            name: 'downloaded_genome_size.csv',
+            seed: "family,data",
+            newLine: true,
+            storeDir: "${params.outdir}/assemblies/"
+        ) {
+            item -> "${item[0]},${item[1]}"
+        }
+        .set { ch_downloaded_genome_size_file }
+
+    PREPARE_DOWNLOADED_GENOME_SIZE ( ch_downloaded_genome_size_file )
+
+    // ------------------------------------------------------------------------------------
+    // DISTRIBUTION OF SIZE OF ASSEMBLED GENOMES PER FAMILY
+    // ------------------------------------------------------------------------------------
+
+    Channel.topic('assembled_genome_size')
+        .collectFile(
+            name: 'assembled_genome_size.csv',
+            seed: "family,data",
+            newLine: true,
+            storeDir: "${params.outdir}/assemblies/"
+        ) {
+            item -> "${item[0]},${item[1]}"
+        }
+        .set { ch_assembled_genome_size_file }
+
+    PREPARE_ASSEMBLED_GENOME_SIZE ( ch_assembled_genome_size_file )
+
+    // ------------------------------------------------------------------------------------
+    // DISTRIBUTION OF NB OF BLAST HITS AGAINST TARGET PER FAMILY
     // ------------------------------------------------------------------------------------
 
     Channel.topic('blast_nb_hits')
@@ -92,11 +128,10 @@ workflow MULTIQC_WORKFLOW {
         }
         .set { ch_blast_nb_hits }
 
-    // BLAST AGAINST TARGET
     ch_blast_nb_hits.target
         .collectFile(
             name: 'blast_nb_hits_target.csv',
-            seed: "family,nb_hits",
+            seed: "family,data",
             newLine: true,
             storeDir: "${params.outdir}/blastn/"
         ) {
@@ -106,11 +141,14 @@ workflow MULTIQC_WORKFLOW {
 
     PREPARE_BLAST_HIT_TARGET ( ch_blast_nb_hits_target_file )
 
-    // BLAST AGAINST GENOMES
+    // ------------------------------------------------------------------------------------
+    // DISTRIBUTION OF NB OF BLAST HITS AGAINST GENOMES PER FAMILY
+    // ------------------------------------------------------------------------------------
+
     ch_blast_nb_hits.genomes
         .collectFile(
             name: 'blast_nb_hits_genomes.csv',
-            seed: "family,nb_hits",
+            seed: "family,data",
             newLine: true,
             storeDir: "${params.outdir}/blastn/"
         ) {
@@ -127,8 +165,10 @@ workflow MULTIQC_WORKFLOW {
 
     ch_multiqc_files
         .mix ( ch_chimeras_csv )
-        .mix ( PREPARE_BLAST_HIT_TARGET.out.transposed_blast_hits )
-        .mix ( PREPARE_BLAST_HIT_GENOMES.out.transposed_blast_hits )
+        .mix ( PREPARE_DOWNLOADED_GENOME_SIZE.out.csv )
+        .mix ( PREPARE_ASSEMBLED_GENOME_SIZE.out.csv )
+        .mix ( PREPARE_BLAST_HIT_TARGET.out.csv )
+        .mix ( PREPARE_BLAST_HIT_GENOMES.out.csv )
         .set { ch_multiqc_files }
 
     MULTIQC (

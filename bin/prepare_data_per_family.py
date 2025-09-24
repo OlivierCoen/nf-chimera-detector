@@ -13,11 +13,9 @@ logger = logging.getLogger(__name__)
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(
-        description="Compute general statistics from count data for each sample"
-    )
+    parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--hits", type=Path, dest="blast_hits_file", required=True
+        "--data", type=Path, dest="data_file", required=True
     )
     parser.add_argument(
         "--out", type=Path, dest="outfile", required=True
@@ -28,26 +26,26 @@ def parse_args():
 if __name__ == "__main__":
 
     args = parse_args()
-    logger.info(f"Parsing {args.blast_hits_file}")
+    logger.info(f"Parsing {args.data_file}")
 
-    df = pd.read_csv(args.blast_hits_file)
+    df = pd.read_csv(args.data_file)
 
-    family_to_nb_hits = df.groupby("family")["nb_hits"].agg(list).to_dict()
+    family_to_data = df.groupby("family")["data"].agg(list).to_dict()
 
     # add None values when necessary
-    max_len = max(len(nb_hits_list) for nb_hits_list in family_to_nb_hits.values())
+    max_len = max(len(nb_hits_list) for nb_hits_list in family_to_data.values())
 
-    family_to_nb_hits_aligned = {
+    family_to_data_aligned = {
         family: nb_hits_list + [None] * (max_len - len(nb_hits_list))
-        for family, nb_hits_list in family_to_nb_hits.items()
+        for family, nb_hits_list in family_to_data.items()
     }
 
-    formatted_df = pd.DataFrame(family_to_nb_hits_aligned)
+    formatted_df = pd.DataFrame(family_to_data_aligned)
 
-    # in case families are all taxids, cas them to string
     with open(args.outfile, "w", newline="") as f:
+        # print header separately with quotes
         writer = csv.writer(f, quoting=csv.QUOTE_ALL)
         writer.writerow(formatted_df.columns)
 
-        formatted_df.to_csv(f, index=False)
+        formatted_df.to_csv(f, index=False, header=False)
         logger.info("Done")

@@ -1,4 +1,6 @@
-include { MULTIQC                                                 } from '../../../modules/nf-core/multiqc/main'
+include { MULTIQC                                                 } from '../../../modules/nf-core/multiqc'
+include { PREPARE_BLAST_HIT_DATA as PREPARE_BLAST_HIT_TARGET      } from '../../../modules/local/prepare_blast_hit_data'
+include { PREPARE_BLAST_HIT_DATA as PREPARE_BLAST_HIT_GENOMES     } from '../../../modules/local/prepare_blast_hit_data'
 
 include { paramsSummaryMap                                        } from 'plugin/nf-schema'
 include { paramsSummaryMultiqc                                    } from '../../nf-core/utils_nfcore_pipeline'
@@ -15,7 +17,6 @@ include { methodsDescriptionText                                  } from '../uti
 def getBlastDb( process_name ) {
     return process_name.tokenize(':')[1].tokenize('_')[2]
 }
-
 
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -78,7 +79,7 @@ workflow MULTIQC_WORKFLOW {
                             .mix( ch_methods_description.collectFile( name: 'methods_description_mqc.yaml', sort: true ) )
 
     // ------------------------------------------------------------------------------------
-    // DATA
+    // DISTRIBUTION OF NB OF BLAST HITS PER FAMILY
     // ------------------------------------------------------------------------------------
 
     Channel.topic('blast_nb_hits')
@@ -91,32 +92,43 @@ workflow MULTIQC_WORKFLOW {
         }
         .set { ch_blast_nb_hits }
 
-    Channel.of("family,nb_hits")
-        .concat( ch_blast_nb_hits.target )
+    // BLAST AGAINST TARGET
+    ch_blast_nb_hits.target
         .collectFile(
             name: 'blast_nb_hits_target.csv',
+            seed: "family,nb_hits",
             newLine: true,
-            storeDir: params.outdir
+            storeDir: "${params.outdir}/blastn/"
         ) {
             item -> "${item[0]},${item[1]}"
         }
         .set { ch_blast_nb_hits_target_file }
 
-    Channel.of("family,nb_hits")
-        .concat( ch_blast_nb_hits.genomes )
+    PREPARE_BLAST_HIT_TARGET ( ch_blast_nb_hits_target_file )
+
+    // BLAST AGAINST GENOMES
+    ch_blast_nb_hits.genomes
         .collectFile(
             name: 'blast_nb_hits_genomes.csv',
+            seed: "family,nb_hits",
             newLine: true,
-            storeDir: params.outdir
+            storeDir: "${params.outdir}/blastn/"
         ) {
             item -> "${item[0]},${item[1]}"
         }
         .set { ch_blast_nb_hits_genomes_file }
 
+    PREPARE_BLAST_HIT_GENOMES ( ch_blast_nb_hits_genomes_file )
+
+
+    // ------------------------------------------------------------------------------------
+    // LAUNCH MULTIQC
+    // ------------------------------------------------------------------------------------
+
     ch_multiqc_files
         .mix ( ch_chimeras_csv )
-        .mix ( ch_blast_nb_hits_target_file )
-        .mix ( ch_blast_nb_hits_genomes_file )
+        .mix ( PREPARE_BLAST_HIT_TARGET.out.transposed_blast_hits )
+        .mix ( PREPARE_BLAST_HIT_GENOMES.out.transposed_blast_hits )
         .set { ch_multiqc_files }
 
     MULTIQC (

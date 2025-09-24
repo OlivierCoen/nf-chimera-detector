@@ -19,8 +19,9 @@ run_modules:
   - custom_content
 
 custom_data:
+
   chimeras:
-    section_name: "chimeras"
+    section_name: "Chimeras"
     file_format: "csv"
     sort_rows: false
     description: |
@@ -108,10 +109,31 @@ custom_data:
         title: "Inverted"
         description: "Column showing the respective orientation (same or opposite) of the sequences involved in intra - genome chimeras"
 
+  nb_hits_target:
+    section_name: "Number of hits against target database per family"
+    file_format: "csv"
+    pconfig:
+      ylab: family
+      sort_samples: true
+    description: |
+      Distribution of number of Blast hits against target database per family
+    plot_type: "boxplot"
 
+  nb_hits_genomes:
+    section_name: "Number of hits against genomes database per family"
+    file_format: "csv"
+    pconfig:
+      sort_samples: true
+    description: |
+      Distribution of number of Blast hits against genome per family
+    plot_type: "boxplot"
 
 
 
 sp:
   chimeras:
     fn: "*_chimeras.csv"
+  nb_hits_target:
+    fn: "*blast_hits_against_target_transposed.csv"
+  nb_hits_genomes:
+    fn: "*blast_hits_against_genomes_transposed.csv"

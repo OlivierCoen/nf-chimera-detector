@@ -11,8 +11,9 @@ process SEQKIT_FQ2FA {
     tuple val(meta), path(fastq)
 
     output:
-    tuple val(meta), path("*.fa.gz"),                                                     emit: fasta
-    tuple val("${task.process}"), val('pigz'), eval("seqkit | sed '3!d; s/Version: //'"), topic: versions
+    tuple val(meta), path("*.fa.gz"),                                                                        emit: fasta
+    tuple val("${meta.family}"), eval("seqkit stats *.fa.gz | tail -1 | tr -s '[:space:]' '\\t' | cut -f5"), topic: fastq_size
+    tuple val("${task.process}"), val('pigz'), eval("seqkit | sed '3!d; s/Version: //'"),                    topic: versions
 
     script:
     def args = task.ext.args ?: ''

@@ -191,7 +191,7 @@ workflow CHIMERADETECTOR {
     // ------------------------------------------------------------------------------------
 
     GET_GENOMES  ( ch_reads )
-    GET_GENOMES .out.assemblies.set { ch_assemblies }
+    GET_GENOMES.out.assemblies.set { ch_assemblies }
 
     // ------------------------------------------------------------------------------------
     // COMBINE PAIRED READS (IF NECESSARY) AND CONVERT FASTQ TO FASTA

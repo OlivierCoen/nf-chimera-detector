@@ -14,7 +14,7 @@ process SRATOOLS_FASTERQDUMP {
     output:
     tuple val(meta), path('*.fastq.gz'),                                                                        emit: reads
     tuple val("${task.process}"), val('sratools'), eval("fasterq-dump --version 2>&1 | grep -Eo '[0-9.]+'"),    topic: versions
-    tuple val("${task.process}"), val('pigz'), eval("pigz --version 2>&1 | sed 's/pigz //g'"),                  topic: versions
+    tuple val("${task.process}"), val('pigz'),     eval("pigz --version 2>&1 | sed 's/pigz //g'"),              topic: versions
 
     script:
     def args = task.ext.args ?: ''
@@ -30,6 +30,7 @@ process SRATOOLS_FASTERQDUMP {
         --outfile ${prefix}.fastq \\
         ${sra}
 
+    # compressing
     pigz \\
         $args2 \\
         --no-name \\

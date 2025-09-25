@@ -1,4 +1,5 @@
 include { MULTIQC                                                           } from '../../../modules/nf-core/multiqc'
+include { PREPARE_DATA_PER_FAMILY as PREPARE_FASTQ_SIZE                     } from '../../../modules/local/prepare_data_per_family'
 include { PREPARE_DATA_PER_FAMILY as PREPARE_DOWNLOADED_GENOME_SIZE         } from '../../../modules/local/prepare_data_per_family'
 include { PREPARE_DATA_PER_FAMILY as PREPARE_ASSEMBLED_GENOME_SIZE          } from '../../../modules/local/prepare_data_per_family'
 include { PREPARE_DATA_PER_FAMILY as PREPARE_BLAST_HIT_TARGET               } from '../../../modules/local/prepare_data_per_family'
@@ -81,7 +82,24 @@ workflow MULTIQC_WORKFLOW {
                             .mix( ch_methods_description.collectFile( name: 'methods_description_mqc.yaml', sort: true ) )
 
     // ------------------------------------------------------------------------------------
-    // DISTRIBUTION OF SIZE OF DOWNLAODED GENOMES PER FAMILY
+    // DISTRIBUTION OF SIZE OF DOWNLOADED FASTQ FILES (IN NB OF BASES) PER FAMILY
+    // ------------------------------------------------------------------------------------
+
+    Channel.topic('fastq_size')
+        .collectFile(
+            name: 'fastq_size.csv',
+            seed: "family,data",
+            newLine: true,
+            storeDir: "${params.outdir}/sratools/"
+        ) {
+            item -> "${item[0]},${item[1]}"
+        }
+        .set { ch_fastq_size_file }
+
+    PREPARE_FASTQ_SIZE ( ch_fastq_size_file )
+
+    // ------------------------------------------------------------------------------------
+    // DISTRIBUTION OF SIZE OF DOWNLOADED GENOMES PER FAMILY
     // ------------------------------------------------------------------------------------
 
     Channel.topic('downloaded_genome_size')
@@ -165,6 +183,7 @@ workflow MULTIQC_WORKFLOW {
 
     ch_multiqc_files
         .mix ( ch_chimeras_csv )
+        .mix ( PREPARE_FASTQ_SIZE.out.csv )
         .mix ( PREPARE_DOWNLOADED_GENOME_SIZE.out.csv )
         .mix ( PREPARE_ASSEMBLED_GENOME_SIZE.out.csv )
         .mix ( PREPARE_BLAST_HIT_TARGET.out.csv )

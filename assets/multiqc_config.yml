@@ -146,6 +146,15 @@ custom_data:
       Size distribution of the assembled genomes per family
     plot_type: "boxplot"
 
+  fastq_size:
+    section_name: "Size of downloaded fastq files"
+    file_format: "csv"
+    pconfig:
+      sort_samples: true
+    description: |
+      Size distribution of the fastq files per family
+    plot_type: "boxplot"
+
 
 
 sp:
@@ -159,3 +168,5 @@ sp:
     fn: "*downloaded_genome_size_transposed.csv"
   assembled_genome_size:
     fn: "*assembled_genome_size_transposed.csv"
+  fastq_size:
+    fn: "*fastq_size_transposed.csv"

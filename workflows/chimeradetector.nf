@@ -235,23 +235,9 @@ workflow CHIMERADETECTOR {
     // MULTIQC
     // ------------------------------------------------------------------------------------
 
-    ch_chimeras_csv
-        .filter {
-            meta, csv_file ->
-               try {
-                    def firstLine = csv_file.readLines().get(0)
-                    return firstLine.contains("readName")
-               } catch (Exception e) {
-                    log.warn "Could not read first line of ${csv_file.name}: ${e.message}"
-                    return false
-               }
-        }
-        .map { meta, file -> file }
-        .set { ch_chimeras_data_mqc }
-
 
     MULTIQC_WORKFLOW (
-        ch_chimeras_data_mqc,
+        ch_chimeras_csv,
         ch_versions
     )
 

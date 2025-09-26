@@ -301,11 +301,15 @@ if ( nrow(blast1) == 0 || nrow(blast2) == 0 ) {
     chimera_df <- find_chimeras(blast1, blast2)
 }
 
-if ( nrow(chimera_df) == 0 ) {
+nb_chimeras <- nrow(chimera_df)
+if ( nb_chimeras == 0 ) {
     message("\nNo chimeras found")
 } else {
-    message(paste("\nFound ", nrow(chimera_df), " chimeras"))
+    message(paste("\nFound ", nb_chimeras, " chimeras"))
 }
+
+# writing the names of the chimeric reads in a file
+write(chimera_df$readName, file = "chimeric_reads.txt", ncolumns = 1)
 
 chimera_df <- add_metadata(chimera_df, args$family, args$species, args$srr)
 

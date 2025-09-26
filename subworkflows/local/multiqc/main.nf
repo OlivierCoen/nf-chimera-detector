@@ -104,6 +104,7 @@ workflow MULTIQC_WORKFLOW {
         .mix ( PREPARE_MULTIQC_DATA.out.assembled_genome_sizes )
         .mix ( PREPARE_MULTIQC_DATA.out.nb_blast_hits_target )
         .mix ( PREPARE_MULTIQC_DATA.out.nb_blast_hits_genomes )
+        .mix ( PREPARE_MULTIQC_DATA.out.nb_chimeras )
         .set { ch_multiqc_files }
 
     MULTIQC (

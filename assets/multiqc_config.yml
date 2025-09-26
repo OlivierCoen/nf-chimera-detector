@@ -128,6 +128,16 @@ custom_data:
           not_inverted:
             - s_eq: "FALSE"
 
+  nb_chimeras:
+    section_name: "Number of chimeras per family"
+    file_format: "csv"
+    pconfig:
+      ylab: family
+      sort_samples: true
+    description: |
+      Distribution of number chimeras per family
+    plot_type: "boxplot"
+
   nb_hits_target:
     section_name: "Number of hits against target database per family"
     file_format: "csv"
@@ -179,6 +189,8 @@ custom_data:
 sp:
   chimeras:
     fn: "*_chimeras.csv"
+  nb_chimeras:
+    fn: "*nb_chimeras_transposed.csv"
   nb_hits_target:
     fn: "*blast_hits_against_target_transposed.csv"
   nb_hits_genomes:

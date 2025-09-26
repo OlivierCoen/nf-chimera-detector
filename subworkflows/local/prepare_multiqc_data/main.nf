@@ -3,6 +3,7 @@ include { PREPARE_DATA_PER_FAMILY as PREPARE_DOWNLOADED_GENOME_SIZE         } fr
 include { PREPARE_DATA_PER_FAMILY as PREPARE_ASSEMBLED_GENOME_SIZE          } from '../../../modules/local/prepare_data_per_family'
 include { PREPARE_DATA_PER_FAMILY as PREPARE_BLAST_HIT_TARGET               } from '../../../modules/local/prepare_data_per_family'
 include { PREPARE_DATA_PER_FAMILY as PREPARE_BLAST_HIT_GENOMES              } from '../../../modules/local/prepare_data_per_family'
+include { PREPARE_DATA_PER_FAMILY as PREPARE_NB_CHIMERAS                    } from '../../../modules/local/prepare_data_per_family'
 
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -123,6 +124,23 @@ workflow PREPARE_MULTIQC_DATA {
 
     PREPARE_BLAST_HIT_GENOMES ( ch_blast_nb_hits_genomes_file )
 
+    // ------------------------------------------------------------------------------------
+    // DISTRIBUTION OF NB OF CHIMERAS PER FAMILY
+    // ------------------------------------------------------------------------------------
+
+    Channel.topic('nb_chimeras')
+        .collectFile(
+            name: 'nb_chimeras.csv',
+            seed: "family,data",
+            newLine: true,
+            storeDir: "${params.outdir}/chimeras/"
+        ) {
+            item -> "${item[0]},${item[1]}"
+        }
+        .set { ch_nb_chimeras_file }
+
+    PREPARE_NB_CHIMERAS ( ch_nb_chimeras_file )
+
 
     emit:
     fastq_sizes                     = PREPARE_FASTQ_SIZE.out.csv
@@ -130,5 +148,6 @@ workflow PREPARE_MULTIQC_DATA {
     assembled_genome_sizes          = PREPARE_ASSEMBLED_GENOME_SIZE.out.csv
     nb_blast_hits_target            = PREPARE_BLAST_HIT_TARGET.out.csv
     nb_blast_hits_genomes           = PREPARE_BLAST_HIT_GENOMES.out.csv
+    nb_chimeras                     = PREPARE_NB_CHIMERAS.out.csv
 }
 

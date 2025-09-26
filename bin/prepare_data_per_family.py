@@ -28,7 +28,7 @@ if __name__ == "__main__":
     args = parse_args()
     logger.info(f"Parsing {args.data_file}")
 
-    df = pd.read_csv(args.data_file)
+    df = pd.read_csv(args.data_file, sep='\t')
 
     family_to_data = df.groupby("family")["data"].agg(list).to_dict()
 
@@ -44,8 +44,8 @@ if __name__ == "__main__":
 
     with open(args.outfile, "w", newline="") as f:
         # print header separately with quotes
-        writer = csv.writer(f, quoting=csv.QUOTE_ALL)
+        writer = csv.writer(f, quoting=csv.QUOTE_ALL, delimiter ='\t')
         writer.writerow(formatted_df.columns)
 
-        formatted_df.to_csv(f, index=False, header=False)
+        formatted_df.to_csv(f, index=False, header=False, sep='\t')
         logger.info("Done")

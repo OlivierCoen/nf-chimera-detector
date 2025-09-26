@@ -35,12 +35,12 @@ workflow PREPARE_MULTIQC_DATA {
 
     Channel.topic('fastq_size')
         .collectFile(
-            name: 'fastq_size.csv',
-            seed: "family,data",
+            name: 'fastq_size.tsv',
+            seed: "family\tdata",
             newLine: true,
             storeDir: "${params.outdir}/sratools/"
         ) {
-            item -> "${item[0]},${item[1]}"
+            item -> "${item[0]}\t${item[1]}"
         }
         .set { ch_fastq_size_file }
 
@@ -52,12 +52,12 @@ workflow PREPARE_MULTIQC_DATA {
 
     Channel.topic('downloaded_genome_size')
         .collectFile(
-            name: 'downloaded_genome_size.csv',
-            seed: "family,data",
+            name: 'downloaded_genome_size.tsv',
+            seed: "family\tdata",
             newLine: true,
             storeDir: "${params.outdir}/assemblies/"
         ) {
-            item -> "${item[0]},${item[1]}"
+            item -> "${item[0]}\t${item[1]}"
         }
         .set { ch_downloaded_genome_size_file }
 
@@ -69,12 +69,12 @@ workflow PREPARE_MULTIQC_DATA {
 
     Channel.topic('assembled_genome_size')
         .collectFile(
-            name: 'assembled_genome_size.csv',
-            seed: "family,data",
+            name: 'assembled_genome_size.tsv',
+            seed: "family\tdata",
             newLine: true,
             storeDir: "${params.outdir}/assemblies/"
         ) {
-            item -> "${item[0]},${item[1]}"
+            item -> "${item[0]}\t${item[1]}"
         }
         .set { ch_assembled_genome_size_file }
 
@@ -96,12 +96,12 @@ workflow PREPARE_MULTIQC_DATA {
 
     ch_blast_nb_hits.target
         .collectFile(
-            name: 'blast_nb_hits_target.csv',
-            seed: "family,data",
+            name: 'blast_nb_hits_target.tsv',
+            seed: "family\tdata",
             newLine: true,
             storeDir: "${params.outdir}/blastn/"
         ) {
-            item -> "${item[0]},${item[1]}"
+            item -> "${item[0]}\t${item[1]}"
         }
         .set { ch_blast_nb_hits_target_file }
 
@@ -113,12 +113,12 @@ workflow PREPARE_MULTIQC_DATA {
 
     ch_blast_nb_hits.genomes
         .collectFile(
-            name: 'blast_nb_hits_genomes.csv',
-            seed: "family,data",
+            name: 'blast_nb_hits_genomes.tsv',
+            seed: "family\tdata",
             newLine: true,
             storeDir: "${params.outdir}/blastn/"
         ) {
-            item -> "${item[0]},${item[1]}"
+            item -> "${item[0]}\t${item[1]}"
         }
         .set { ch_blast_nb_hits_genomes_file }
 
@@ -130,12 +130,12 @@ workflow PREPARE_MULTIQC_DATA {
 
     Channel.topic('nb_chimeras')
         .collectFile(
-            name: 'nb_chimeras.csv',
-            seed: "family,data",
+            name: 'nb_chimeras.tsv',
+            seed: "family\tdata",
             newLine: true,
             storeDir: "${params.outdir}/chimeras/"
         ) {
-            item -> "${item[0]},${item[1]}"
+            item -> "${item[0]}\t${item[1]}"
         }
         .set { ch_nb_chimeras_file }
 
@@ -143,11 +143,11 @@ workflow PREPARE_MULTIQC_DATA {
 
 
     emit:
-    fastq_sizes                     = PREPARE_FASTQ_SIZE.out.csv
-    downloaded_genome_sizes         = PREPARE_DOWNLOADED_GENOME_SIZE.out.csv
-    assembled_genome_sizes          = PREPARE_ASSEMBLED_GENOME_SIZE.out.csv
-    nb_blast_hits_target            = PREPARE_BLAST_HIT_TARGET.out.csv
-    nb_blast_hits_genomes           = PREPARE_BLAST_HIT_GENOMES.out.csv
-    nb_chimeras                     = PREPARE_NB_CHIMERAS.out.csv
+    fastq_sizes                     = PREPARE_FASTQ_SIZE.out.tsv
+    downloaded_genome_sizes         = PREPARE_DOWNLOADED_GENOME_SIZE.out.tsv
+    assembled_genome_sizes          = PREPARE_ASSEMBLED_GENOME_SIZE.out.tsv
+    nb_blast_hits_target            = PREPARE_BLAST_HIT_TARGET.out.tsv
+    nb_blast_hits_genomes           = PREPARE_BLAST_HIT_GENOMES.out.tsv
+    nb_chimeras                     = PREPARE_NB_CHIMERAS.out.tsv
 }
 

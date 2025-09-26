@@ -130,7 +130,7 @@ custom_data:
 
   nb_chimeras:
     section_name: "Number of chimeras per family"
-    file_format: "csv"
+    file_format: "tsv"
     pconfig:
       ylab: family
       sort_samples: true
@@ -140,7 +140,7 @@ custom_data:
 
   nb_hits_target:
     section_name: "Number of hits against target database per family"
-    file_format: "csv"
+    file_format: "tsv"
     pconfig:
       ylab: family
       sort_samples: true
@@ -150,7 +150,7 @@ custom_data:
 
   nb_hits_genomes:
     section_name: "Number of hits against genomes database per family"
-    file_format: "csv"
+    file_format: "tsv"
     pconfig:
       sort_samples: true
     description: |
@@ -159,7 +159,7 @@ custom_data:
 
   downloaded_genome_size:
     section_name: "Size of downloaded genomes"
-    file_format: "csv"
+    file_format: "tsv"
     pconfig:
       sort_samples: true
     description: |
@@ -168,7 +168,7 @@ custom_data:
 
   assembled_genome_size:
     section_name: "Size of assembled genomes"
-    file_format: "csv"
+    file_format: "tsv"
     pconfig:
       sort_samples: true
     description: |
@@ -177,7 +177,7 @@ custom_data:
 
   fastq_size:
     section_name: "Size of downloaded fastq files"
-    file_format: "csv"
+    file_format: "tsv"
     pconfig:
       sort_samples: true
     description: |
@@ -190,14 +190,14 @@ sp:
   chimeras:
     fn: "*_chimeras.csv"
   nb_chimeras:
-    fn: "*nb_chimeras_transposed.csv"
+    fn: "*nb_chimeras_transposed.tsv"
   nb_hits_target:
-    fn: "*blast_hits_against_target_transposed.csv"
+    fn: "*blast_hits_against_target_transposed.tsv"
   nb_hits_genomes:
-    fn: "*blast_hits_against_genomes_transposed.csv"
+    fn: "*blast_hits_against_genomes_transposed.tsv"
   downloaded_genome_size:
-    fn: "*downloaded_genome_size_transposed.csv"
+    fn: "*downloaded_genome_size_transposed.tsv"
   assembled_genome_size:
-    fn: "*assembled_genome_size_transposed.csv"
+    fn: "*assembled_genome_size_transposed.tsv"
   fastq_size:
-    fn: "*fastq_size_transposed.csv"
+    fn: "*fastq_size_transposed.tsv"

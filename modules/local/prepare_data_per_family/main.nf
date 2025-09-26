@@ -11,7 +11,7 @@ process PREPARE_DATA_PER_FAMILY {
     path data_file
 
     output:
-    path('*_transposed.csv'),                                                                                    emit: csv
+    path('*_transposed.tsv'),                                                                                    emit: tsv
     tuple val("${task.process}"), val('python'),   eval("python3 --version | sed 's/Python //'"),                topic: versions
     tuple val("${task.process}"), val('pandas'), eval('python3 -c "import pandas; print(pandas.__version__)"'),  topic: versions
 
@@ -20,6 +20,6 @@ process PREPARE_DATA_PER_FAMILY {
     """
     prepare_data_per_family.py \\
         --data $data_file \\
-        --out ${prefix}_transposed.csv
+        --out ${prefix}_transposed.tsv
     """
 }

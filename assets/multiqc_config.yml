@@ -18,7 +18,21 @@ disable_version_detection: true
 run_modules:
   - custom_content
 
+
+table_cond_formatting_colours:
+  - inverted: "#3665D1"
+  - not_inverted: "#E0A01F"
+
 custom_data:
+
+  chimeras_general_stats:
+    section_name: "Summary"
+    file_format: "csv"
+    sort_rows: false
+    description: |
+      Summary
+    plot_type: "generalstats"
+    headers:
 
   chimeras:
     section_name: "Chimeras"
@@ -108,6 +122,11 @@ custom_data:
       inv:
         title: "Inverted"
         description: "Column showing the respective orientation (same or opposite) of the sequences involved in intra - genome chimeras"
+        cond_formatting_rules:
+          inverted:
+            - s_eq: "TRUE"
+          not_inverted:
+            - s_eq: "FALSE"
 
   nb_hits_target:
     section_name: "Number of hits against target database per family"

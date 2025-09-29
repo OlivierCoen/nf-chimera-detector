@@ -1,3 +1,4 @@
+include { SEQKIT_PAIR                           } from '../../../modules/nf-core/seqkit/pair'
 include { BBMAP_BBMERGE                         } from '../../../modules/nf-core/bbmap/bbmerge'
 include { SEQKIT_FQ2FA                          } from '../../../modules/local/seqkit/fq2fa'
 
@@ -33,9 +34,19 @@ workflow POST_PROCESS_SRA {
         }
         .set { ch_sra_paired_reads }
 
+    // ------------------------------------------------------------------------------------
+    // FILTER OUT UNPAIRED READS
+    // ------------------------------------------------------------------------------------
+
+    SEQKIT_PAIR ( ch_sra_paired_reads )
+
+    // ------------------------------------------------------------------------------------
+    // MERGE PAIRED READS INTO A SINGLE FASTQ FILE
+    // ------------------------------------------------------------------------------------
+
     def interleave = false
     BBMAP_BBMERGE (
-        ch_sra_paired_reads,
+        SEQKIT_PAIR.out.reads,
         interleave
     )
 
@@ -43,9 +54,14 @@ workflow POST_PROCESS_SRA {
         .mix ( BBMAP_BBMERGE.out.merged )
         .set { ch_sra_single_reads }
 
+    // ------------------------------------------------------------------------------------
+    // FASTQ TO FASTA
+    // ------------------------------------------------------------------------------------
+
     SEQKIT_FQ2FA ( ch_sra_single_reads )
 
     ch_versions
+        .mix ( SEQKIT_PAIR.out.versions )
         .mix ( BBMAP_BBMERGE.out.versions )
         .set { ch_versions }
 

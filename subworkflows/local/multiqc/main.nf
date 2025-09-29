@@ -20,6 +20,8 @@ workflow MULTIQC_WORKFLOW {
 
     take:
     ch_chimeras_csv
+    ch_reads_fasta
+    ch_species_taxids
     ch_versions
 
     main:
@@ -88,6 +90,42 @@ workflow MULTIQC_WORKFLOW {
         .set { ch_chimeras_data_mqc }
 
     // ------------------------------------------------------------------------------------
+    // GETTING NB OF SPECIES PER FAMILY
+    // ------------------------------------------------------------------------------------
+
+    ch_species_taxids
+        .map { meta, taxid -> [ meta.family, taxid ] }
+        .groupTuple()
+        .map { meta, taxids -> [ meta, taxids.size() ] }
+        .collectFile(
+            name: 'nb_species_per_family.tsv',
+            seed: "family\tnb_species",
+            newLine: true,
+            storeDir: "${params.outdir}/species_taxids/"
+        ) {
+            item -> "${item[0]}\t${item[1]}"
+        }
+        .set { ch_nb_species_per_family_file }
+
+    // ------------------------------------------------------------------------------------
+    // GETTING NB SRRS PER FAMILY
+    // ------------------------------------------------------------------------------------
+
+    ch_reads_fasta
+        .map { meta, file -> [ meta.family, file ] }
+        .groupTuple()
+        .map { meta, files -> [ meta, files.size() ] }
+        .collectFile(
+            name: 'nb_srrs_per_family.tsv',
+            seed: "family\tnb_srrs",
+            newLine: true,
+            storeDir: "${params.outdir}/sratools/"
+        ) {
+            item -> "${item[0]}\t${item[1]}"
+        }
+        .set { ch_nb_srrs_per_family_file }
+
+    // ------------------------------------------------------------------------------------
     // PREPARE MULTIQC DATA FAMILY PER FAMILY
     // ------------------------------------------------------------------------------------
 
@@ -99,6 +137,8 @@ workflow MULTIQC_WORKFLOW {
 
     ch_multiqc_files
         .mix ( ch_chimeras_data_mqc )
+        .mix ( ch_nb_species_per_family_file )
+        .mix ( ch_nb_srrs_per_family_file )
         .mix ( PREPARE_MULTIQC_DATA.out.summary_chimeras_per_family )
         .mix ( PREPARE_MULTIQC_DATA.out.summary_chimeras_per_species )
         .mix ( PREPARE_MULTIQC_DATA.out.fastq_sizes )

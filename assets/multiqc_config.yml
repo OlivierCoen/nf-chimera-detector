@@ -25,15 +25,6 @@ table_cond_formatting_colours:
 
 custom_data:
 
-  chimeras_general_stats:
-    section_name: "Summary"
-    file_format: "csv"
-    sort_rows: false
-    description: |
-      Summary
-    plot_type: "generalstats"
-    headers:
-
   chimeras:
     section_name: "Chimeras"
     file_format: "csv"
@@ -128,6 +119,93 @@ custom_data:
           not_inverted:
             - s_eq: "FALSE"
 
+  stat_chimeras_per_family:
+    section_name: "Average chimera statistics per family"
+    file_format: "csv"
+    sort_rows: false
+    description: |
+      Table representing mean values among all chimeras found in each family.
+    plot_type: "table"
+    headers:
+      family:
+        title: "Family"
+        description: Family corresponding to the read
+      identity:
+        title: "% identity"
+        description: Percentage of identity
+        format: "{:,.1f}"
+      alength:
+        title: "Alignment length"
+      mismatch:
+        title: "# mismatches"
+      indel:
+        title: "# indels"
+      score:
+        title: "Alignment score"
+      readLength:
+        title: "Read length"
+      identity.s:
+        title: "identity.s"
+      alength.s:
+        title: "alength.s"
+      mismatch.s:
+        title: "mismatch.s"
+      indel.s:
+        title: "indel.s"
+      score.s:
+        title: "score.s"
+      readLength.s:
+        title: "readLength.s"
+      overlap:
+        title: "Overlap"
+      inv:
+        title: "% inverted"
+        description: "Percentage of chimeras showing respective orientation (same or opposite) of the sequences involved in intra - genome chimeras"
+
+  stat_chimeras_per_species:
+    section_name: "Average chimera statistics per species"
+    file_format: "csv"
+    sort_rows: false
+    description: |
+      Table representing mean values among all chimeras found in each species.
+    plot_type: "table"
+    headers:
+      species.taxid:
+        title: "Species taxon ID"
+        description: Taxon ID of the species corresponding to the read
+      identity:
+        title: "% identity"
+        description: Percentage of identity
+        format: "{:,.1f}"
+      alength:
+        title: "Alignment length"
+      mismatch:
+        title: "# mismatches"
+      indel:
+        title: "# indels"
+      score:
+        title: "Alignment score"
+      readLength:
+        title: "Read length"
+      identity.s:
+        title: "identity.s"
+      alength.s:
+        title: "alength.s"
+      mismatch.s:
+        title: "mismatch.s"
+      indel.s:
+        title: "indel.s"
+      score.s:
+        title: "score.s"
+      readLength.s:
+        title: "readLength.s"
+      overlap:
+        title: "Overlap"
+      inv:
+        title: "% inverted"
+        description: "Percentage of chimeras showing respective orientation (same or opposite) of the sequences involved in intra - genome chimeras"
+
+
   nb_chimeras:
     section_name: "Number of chimeras per family"
     file_format: "tsv"
@@ -189,6 +267,10 @@ custom_data:
 sp:
   chimeras:
     fn: "*_chimeras.csv"
+  stat_chimeras_per_family:
+    fn: "*family_chimeras_summary.csv"
+  stat_chimeras_per_species:
+    fn: "*species_chimeras_summary.csv"
   nb_chimeras:
     fn: "*nb_chimeras_transposed.tsv"
   nb_hits_target:

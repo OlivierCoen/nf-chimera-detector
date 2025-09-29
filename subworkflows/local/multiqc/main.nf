@@ -91,7 +91,7 @@ workflow MULTIQC_WORKFLOW {
     // PREPARE MULTIQC DATA FAMILY PER FAMILY
     // ------------------------------------------------------------------------------------
 
-    PREPARE_MULTIQC_DATA ()
+    PREPARE_MULTIQC_DATA ( ch_chimeras_data_mqc )
 
     // ------------------------------------------------------------------------------------
     // LAUNCH MULTIQC
@@ -99,6 +99,8 @@ workflow MULTIQC_WORKFLOW {
 
     ch_multiqc_files
         .mix ( ch_chimeras_data_mqc )
+        .mix ( PREPARE_MULTIQC_DATA.out.summary_chimeras_per_family )
+        .mix ( PREPARE_MULTIQC_DATA.out.summary_chimeras_per_species )
         .mix ( PREPARE_MULTIQC_DATA.out.fastq_sizes )
         .mix ( PREPARE_MULTIQC_DATA.out.downloaded_genome_sizes )
         .mix ( PREPARE_MULTIQC_DATA.out.assembled_genome_sizes )

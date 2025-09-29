@@ -4,6 +4,8 @@ include { PREPARE_DATA_PER_FAMILY as PREPARE_ASSEMBLED_GENOME_SIZE          } fr
 include { PREPARE_DATA_PER_FAMILY as PREPARE_BLAST_HIT_TARGET               } from '../../../modules/local/prepare_data_per_family'
 include { PREPARE_DATA_PER_FAMILY as PREPARE_BLAST_HIT_GENOMES              } from '../../../modules/local/prepare_data_per_family'
 include { PREPARE_DATA_PER_FAMILY as PREPARE_NB_CHIMERAS                    } from '../../../modules/local/prepare_data_per_family'
+include { MAKE_SUMMARY as MAKE_SUMMARY_PER_FAMILY                           } from '../../../modules/local/make_summary'
+include { MAKE_SUMMARY as MAKE_SUMMARY_PER_SPECIES                          } from '../../../modules/local/make_summary'
 
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -25,9 +27,28 @@ def getBlastDb( process_name ) {
 workflow PREPARE_MULTIQC_DATA {
 
     take:
+    ch_chimeras_data_mqc
 
 
     main:
+
+    // ------------------------------------------------------------------------------------
+    // SUMMARY OF CHIMERAS STATISTICS PER FAMILY
+    // ------------------------------------------------------------------------------------
+
+    MAKE_SUMMARY_PER_FAMILY (
+        ch_chimeras_data_mqc.collect(),
+        'family'
+    )
+
+    // ------------------------------------------------------------------------------------
+    // SUMMARY OF CHIMERAS STATISTICS PER SPECIES
+    // ------------------------------------------------------------------------------------
+
+    MAKE_SUMMARY_PER_SPECIES (
+        ch_chimeras_data_mqc.collect(),
+        'species'
+    )
 
     // ------------------------------------------------------------------------------------
     // DISTRIBUTION OF SIZE OF DOWNLOADED FASTQ FILES (IN NB OF BASES) PER FAMILY
@@ -143,6 +164,8 @@ workflow PREPARE_MULTIQC_DATA {
 
 
     emit:
+    summary_chimeras_per_family     = MAKE_SUMMARY_PER_FAMILY.out.csv
+    summary_chimeras_per_species    = MAKE_SUMMARY_PER_SPECIES.out.csv
     fastq_sizes                     = PREPARE_FASTQ_SIZE.out.tsv
     downloaded_genome_sizes         = PREPARE_DOWNLOADED_GENOME_SIZE.out.tsv
     assembled_genome_sizes          = PREPARE_ASSEMBLED_GENOME_SIZE.out.tsv

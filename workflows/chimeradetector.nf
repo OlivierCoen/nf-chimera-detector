@@ -152,6 +152,7 @@ workflow CHIMERADETECTOR {
 
     FETCH_SRA_IDS ( ch_families )
     FETCH_SRA_IDS.out.sra_ids.set { ch_sra_ids }
+    FETCH_SRA_IDS.out.taxids.set { ch_species_taxids }
 
     // For dev purposes: test download of a specific SRA accession
     if ( params.only_download_srrs ) {
@@ -235,9 +236,10 @@ workflow CHIMERADETECTOR {
     // MULTIQC
     // ------------------------------------------------------------------------------------
 
-
     MULTIQC_WORKFLOW (
         ch_chimeras_csv,
+        ch_reads_fasta,
+        ch_species_taxids,
         ch_versions
     )
 

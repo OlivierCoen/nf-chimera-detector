@@ -23,6 +23,10 @@ workflow FETCH_SRA_IDS {
 
     GET_SRA_METADATA ( ch_species_taxids )
 
+    // ------------------------------------------------------------------------------------
+    // FOR DEV PURPOSES : RESTRICTING SELECTED SRRS
+    // ------------------------------------------------------------------------------------
+
     GET_SRA_METADATA.out.sra_id_files
         .map {
             meta, file ->
@@ -32,6 +36,12 @@ workflow FETCH_SRA_IDS {
                     [ meta, file.splitText() ]
                 }
         }
+        .set { ch_sra_id_files }
+
+    // ------------------------------------------------------------------------------------
+    // ------------------------------------------------------------------------------------
+
+    ch_sra_id_files
         .transpose() // explodes each list
         .unique() // there may be duplicates
         .map {
@@ -42,6 +52,7 @@ workflow FETCH_SRA_IDS {
         .set { ch_sra_ids }
 
     emit:
-    sra_ids = ch_sra_ids
+    sra_ids           = ch_sra_ids
+    taxids            = ch_species_taxids
 }
 

@@ -262,6 +262,24 @@ custom_data:
       Size distribution of the fastq files per family
     plot_type: "boxplot"
 
+  nb_srrs_per_family:
+    section_name: "Number of SRRs per family"
+    file_format: "tsv"
+    pconfig:
+      sort_samples: true
+    description: |
+      Bar plot showing the number of processed SRRs for each family
+    plot_type: "barplot"
+
+  nb_species_per_family:
+    section_name: "Number of species per family"
+    file_format: "tsv"
+    pconfig:
+      sort_samples: true
+    description: |
+      Bar plot showing the number of species found on NCBI for each family
+    plot_type: "barplot"
+
 
 
 sp:
@@ -283,3 +301,8 @@ sp:
     fn: "*assembled_genome_size_transposed.tsv"
   fastq_size:
     fn: "*fastq_size_transposed.tsv"
+  nb_srrs_per_family:
+    fn: "*nb_srrs_per_family.tsv"
+  nb_species_per_family:
+    fn: "*nb_species_per_family.tsv"
+

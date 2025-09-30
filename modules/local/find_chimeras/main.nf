@@ -22,8 +22,8 @@ process FIND_CHIMERAS {
     def prefix = task.ext.prefix ?: "${meta.id}_chimeras"
     """
     find_chimeras.R \\
-        --target-hits blast_hits.against_target.txt \\
-        --genome-hits blast_hits.against_genome.txt \\
+        --hits-1 blast_hits.against_target.txt \\
+        --hits-2 blast_hits.against_genome.txt \\
         --family ${meta.family} \\
         --species ${meta.taxid} \\
         --srr ${meta.id} \\

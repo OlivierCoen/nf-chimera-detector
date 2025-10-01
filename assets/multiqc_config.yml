@@ -19,205 +19,320 @@ run_modules:
   - custom_content
 
 
-table_cond_formatting_colours:
-  - inverted: "#3665D1"
-  - not_inverted: "#E0A01F"
 
 custom_data:
 
-  chimeras:
-    section_name: "Chimeras"
+  chimera_families:
+    fn: "*_chimeras.csv"
+    section_name: "Chimera statistics"
     file_format: "csv"
     sort_rows: false
     description: |
-      Found chimeras
-    plot_type: "table"
+      Statistics distributions of chimeras detected among families
+    plot_type: "violin"
     headers:
       family:
         title: "Family"
         description: Family corresponding to the read
-      species.taxid:
-        title: "Species taxon ID"
-        description: Taxon ID of the species corresponding to the read
-      srr:
-        title: "SRR"
-        description: SRR accession corresponding to the read
-      readName:
-        title: "Read name"
-        description: Read ID in the original Fastq file
-      subject:
-        title: "Target sequence"
-        description: Name of the sequence that matched with this read in the target database
-      identity:
-        title: "% identity"
-        description: Percentage of identity
-        format: "{:,.1f}"
-      alength:
-        title: "Alignment length"
-      mismatch:
-        title: "# mismatches"
-      indel:
-        title: "# indels"
-      qStart:
-        title: "Start on read"
-      qEnd:
-        title: "End on read"
-      sStart:
-        title: "Start on target sequence"
-      sEnd:
-        title: "End on target sequence"
-      score:
-        title: "Alignment score"
-      readLength:
-        title: "Read length"
-      Sp:
-        title: "Sp"
-      subject.s:
-        title: "subject.s"
-      identity.s:
-        title: "identity.s"
-      alength.s:
-        title: "alength.s"
-      mismatch.s:
-        title: "mismatch.s"
-      indel.s:
-        title: "indel.s"
-      qStart.s:
-        title: "qStart.s"
-      qEnd.s:
-        title: "qEnd.s"
-      sStart.s:
-        title: "sStart.s"
-      sEnd.s:
-        title: "sEnd.s"
-      score.s:
-        title: "score.s"
-      readLength.s:
-        title: "readLength.s"
-      Sp.s:
-        title: "Sp.s"
-      overlap:
-        title: "Overlap"
-      chimType:
-        title: "Chimera type"
-        description: "Column showing the two species involved in the chimeras"
-      PCRdup:
-        title: "PCR duplicate"
-        description: "Column showing which chimeric reads may be PCR duplicates,i.e. which chimeric reads have identical alignement coordinates on both genomes"
-      chimericPoint:
-        title: "Chimeric point"
-        description: "Column containing coordinate of the recombination point in one genome"
-      insertionCoord:
-        title: "Insertion coordinate"
-        description: "Column containing coordinate of the recombination point in the other genome"
-      inv:
-        title: "Inverted"
-        description: "Column showing the respective orientation (same or opposite) of the sequences involved in intra - genome chimeras"
-        cond_formatting_rules:
-          inverted:
-            - s_eq: "TRUE"
-          not_inverted:
-            - s_eq: "FALSE"
+        color: "rgb(186,43,32)"
+      qlen_1:
+        title: "Read length in bp"
+        color: "rgb(64, 122, 22)"
+      slen_1:
+        title: "Subject length (TE) in bp"
+        color: "rgb(41, 107, 35)"
+      slen_2:
+        title: "Subject length (genome) in bp"
+        color: "rgb(30, 133, 23)"
+      overlap_length:
+        title: "Overlap length in bp"
+        color: "rgb(36, 173, 93)"
+      total_coverage:
+        title: "Total coverage of read (TE + genome) in bp"
+        color: "rgb(36, 173, 171)"
+      coverage_1_only:
+        title: "Coverage on TE only in bp"
+        color: "rgb(36, 125, 173)"
+      coverage_2_only:
+        title: "Coverage on genome only in bp"
+        color: "rgb(57, 101, 204)"
+      inverted:
+        title: "Inverted orientation?"
+        color: "rgb(108, 122, 161)"
+      pident_1:
+        title: "% identity to TE"
+        color: "rgb(149, 79, 176)"
+      pident_2:
+        title: "% identity to genome"
+        color: "rgb(132, 21, 158)"
+      length_1:
+        title: "Alignment length (on TE) in bp"
+        color: "rgb(227, 210, 36)"
+      length_2:
+        title: "Alignment length (on genome) in bp"
+        color: "rgb(207, 168, 33)"
+      mismatch_1:
+        title: "# mismatches (compared to TE)"
+        color: "rgb(219, 72, 26)"
+      mismatch_2:
+        title: "# mismatches (compared to genome)"
+        color: "rgb(201, 20, 20)"
+      gapopen_1:
+        title: "# indels (compared to TE)"
+        color: "rgb(30, 148, 64)"
+      gapopen_2:
+        title: "# indels (compared to genome)"
+        color: "rgb(74, 194, 105)"
+      evalue_1:
+        title: "E-value (on TE)"
+        color: "rgb(217, 165, 39)"
+      evalue_2:
+        title: "E-value (on genome)"
+        color: "rgb(163, 149, 23)"
+      qstart_1:
+        title: "Start position on read (hit on TE)"
+        color: "rgb(85, 23, 166)"
+      qstart_2:
+        title: "Start position on read (hit on genome)"
+        color: "rgb(118, 48, 209)"
+      qend_1:
+        title: "End position on read (hit on TE)"
+        color: "rgb(109, 50, 117)"
+      qend_2:
+        title: "End position on read (hit on genome)"
+        color: "rgb(148, 76, 158)"
+      sstart_1:
+        title: "Start position on TE"
+        color: "rgb(62, 97, 194)"
+      sstart_2:
+        title: "Start position on genome"
+        color: "rgb(22, 49, 122)"
+      send_1:
+        title: "End position on TE"
+        color: "rgb(28, 104, 140)"
+      send_2:
+        title: "End position on genome"
+        color: "rgb(10, 77, 110)"
+
+
+
 
   stat_chimeras_per_family:
-    section_name: "Average chimera statistics per family"
+    section_name: "Average of chimera statistics per family"
+    parent_id: chimera_stat_average
+    parent_name: "Averages of chimera statistics"
+    parent_description: "Average of various statistics about found chimeras, family per family"
     file_format: "csv"
     sort_rows: false
     description: |
       Table representing mean values among all chimeras found in each family.
     plot_type: "table"
+    pconfig:
+      col1_header: "Family"
     headers:
-      family:
-        title: "Family"
-        description: Family corresponding to the read
-      identity:
-        title: "% identity"
-        description: Percentage of identity
-        format: "{:,.1f}"
-      alength:
-        title: "Alignment length"
-      mismatch:
-        title: "# mismatches"
-      indel:
-        title: "# indels"
-      score:
-        title: "Alignment score"
-      readLength:
+      qlen_1:
         title: "Read length"
-      identity.s:
-        title: "identity.s"
-      alength.s:
-        title: "alength.s"
-      mismatch.s:
-        title: "mismatch.s"
-      indel.s:
-        title: "indel.s"
-      score.s:
-        title: "score.s"
-      readLength.s:
-        title: "readLength.s"
-      overlap:
-        title: "Overlap"
-      inv:
-        title: "% inverted"
-        description: "Percentage of chimeras showing respective orientation (same or opposite) of the sequences involved in intra - genome chimeras"
+        description: "Query length (read) in bp"
+      slen_1:
+        title: "Subject length (TE)"
+        description: "Subject length (TE) in bp"
+      slen_2:
+        title: "Subject length (genome)"
+        description: "Subject length (genome) in bp"
+      total_coverage:
+        title: "Total coverage of read (TE + genome)"
+        description: "Total coverage of read (TE + genome) in bp"
+      overlap_length:
+        title: "Overlap length"
+        description: "Overlap length (between TE and genome) in bp"
+      coverage_1_only:
+        title: "Coverage on TE only in bp"
+        description: "Coverage of chimera read on TE only in bp"
+      coverage_2_only:
+        title: "Coverage on genome only in bp"
+        description: "Coverage of chimera read on genome only in bp"
+      inverted:
+        title: "Inverted orientation?"
+        description: "Is the chimera in the same orientation as the sequences?"
+      pident_1:
+        title: "% identity on TE"
+        description: "Percentage of identity (on TE)"
+        format: "{:,.1f}"
+      pident_2:
+        title: "% identity on genome"
+        description: "Percentage of identity on genome"
+        format: "{:,.1f}"
+      length_1:
+        title: "Alignment length (on TE) in bp"
+      length_2:
+        title: "Alignment length (on genome) in bp"
+      mismatch_1:
+        title: "# mismatches (on TE)"
+      mismatch_2:
+        title: "# mismatches (on genome)"
+      gapopen_1:
+        title: "# indels (on TE)"
+      gapopen_2:
+        title: "# indels (on genome)"
+      evalue_1:
+        title: "E-value (on TE)"
+      evalue_2:
+        title: "E-value (on genome)"
+      qstart_1:
+        title: "Start position on read (hit on TE)"
+      qstart_2:
+        title: "Start position on read (hit on genome)"
+      qend_1:
+        title: "End position on read (hit on TE)"
+      qend_2:
+        title: "End position on read (hit on genome)"
+      sstart_1:
+        title: "Start position on TE"
+      sstart_2:
+        title: "Start position on genome"
+      send_1:
+        title: "End position on TE"
+      send_2:
+        title: "End position on genome"
+
+
 
   stat_chimeras_per_species:
-    section_name: "Average chimera statistics per species"
+    section_name: "Average of chimera statistics per species"
+    parent_id: chimera_stat_average
+    parent_name: "Averages of chimera statistics"
+    parent_description: "Average of various statistics about found chimeras, family per family"
     file_format: "csv"
     sort_rows: false
     description: |
       Table representing mean values among all chimeras found in each species.
     plot_type: "table"
+    pconfig:
+      col1_header: "Species taxon ID"
     headers:
-      species.taxid:
-        title: "Species taxon ID"
-        description: Taxon ID of the species corresponding to the read
-      identity:
-        title: "% identity"
-        description: Percentage of identity
-        format: "{:,.1f}"
-      alength:
-        title: "Alignment length"
-      mismatch:
-        title: "# mismatches"
-      indel:
-        title: "# indels"
-      score:
-        title: "Alignment score"
-      readLength:
+      qlen_1:
         title: "Read length"
-      identity.s:
-        title: "identity.s"
-      alength.s:
-        title: "alength.s"
-      mismatch.s:
-        title: "mismatch.s"
-      indel.s:
-        title: "indel.s"
-      score.s:
-        title: "score.s"
-      readLength.s:
-        title: "readLength.s"
-      overlap:
-        title: "Overlap"
-      inv:
-        title: "% inverted"
-        description: "Percentage of chimeras showing respective orientation (same or opposite) of the sequences involved in intra - genome chimeras"
+        description: "Query length (read) in bp"
+        scale: "Greens"
+      slen_1:
+        title: "Subject length (TE)"
+        description: "Subject length (TE) in bp"
+      slen_2:
+        title: "Subject length (genome)"
+        description: "Subject length (genome) in bp"
+      total_coverage:
+        title: "Total coverage of read (TE + genome)"
+        description: "Total coverage of read (TE + genome) in bp"
+      overlap_length:
+        title: "Overlap length"
+        description: "Overlap length (between TE and genome) in bp"
+      coverage_1_only:
+        title: "Coverage on TE only in bp"
+        description: "Coverage of chimera read on TE only in bp"
+      coverage_2_only:
+        title: "Coverage on genome only in bp"
+        description: "Coverage of chimera read on genome only in bp"
+      inverted:
+        title: "Inverted orientation?"
+        description: "Is the chimera in the same orientation as the sequences?"
+      pident_1:
+        title: "% identity on TE"
+        description: "Percentage of identity (on TE)"
+        format: "{:,.1f}"
+      pident_2:
+        title: "% identity on genome"
+        description: "Percentage of identity on genome"
+        format: "{:,.1f}"
+      length_1:
+        title: "Alignment length (on TE) in bp"
+      length_2:
+        title: "Alignment length (on genome) in bp"
+      mismatch_1:
+        title: "# mismatches (on TE)"
+      mismatch_2:
+        title: "# mismatches (on genome)"
+      gapopen_1:
+        title: "# indels (on TE)"
+      gapopen_2:
+        title: "# indels (on genome)"
+      evalue_1:
+        title: "E-value (on TE)"
+      evalue_2:
+        title: "E-value (on genome)"
+      qstart_1:
+        title: "Start position on read (hit on TE)"
+      qstart_2:
+        title: "Start position on read (hit on genome)"
+      qend_1:
+        title: "End position on read (hit on TE)"
+      qend_2:
+        title: "End position on read (hit on genome)"
+      sstart_1:
+        title: "Start position on TE"
+      sstart_2:
+        title: "Start position on genome"
+      send_1:
+        title: "End position on TE"
+      send_2:
+        title: "End position on genome"
+
+
 
 
   nb_chimeras:
     section_name: "Number of chimeras per family"
+    parent_id: family_statistics
+    parent_name: "Statistics per family"
+    parent_description: "Various distributions computed family per family"
     file_format: "tsv"
     pconfig:
       ylab: family
       sort_samples: true
+      colour: "rgb(118, 48, 209)"
+      tt_decimals: 0
+      logswitch: true
     description: |
       Distribution of number chimeras per family
     plot_type: "boxplot"
+    color: "rgb(118, 48, 209)"
+
+  nb_srrs_per_family:
+    section_name: "Number of SRRs per family"
+    parent_id: family_statistics
+    parent_name: "Statistics per family"
+    parent_description: "Various distributions computed family per family"
+    file_format: "tsv"
+    pconfig:
+      sort_samples: true
+      tt_decimals: 0
+      logswitch: true
+    description: |
+      Bar plot showing the number of processed SRRs for each family
+    plot_type: "barplot"
+
+  nb_species_per_family:
+    section_name: "Number of species per family"
+    parent_id: family_statistics
+    parent_name: "Statistics per family"
+    parent_description: "Various distributions computed family per family"
+    file_format: "tsv"
+    pconfig:
+      sort_samples: true
+      tt_decimals: 0
+      logswitch: true
+    description: |
+      Bar plot showing the number of species found on NCBI for each family
+    plot_type: "barplot"
+
+
+
+
 
   nb_hits_target:
-    section_name: "Number of hits against target database per family"
+    section_name: "Number of hits per family [against TEs]"
+    parent_id: nb_hits
+    parent_name: "Number of Blast hits per family"
+    parent_description: "Distributions of number of Blast hits."
     file_format: "tsv"
     pconfig:
       ylab: family
@@ -227,7 +342,10 @@ custom_data:
     plot_type: "boxplot"
 
   nb_hits_genomes:
-    section_name: "Number of hits against genomes database per family"
+    section_name: "Number of hits per family [against genome]"
+    parent_id: nb_hits
+    parent_name: "Number of Blast hits per family"
+    parent_description: "Distributions of number of Blast hits."
     file_format: "tsv"
     pconfig:
       sort_samples: true
@@ -235,8 +353,15 @@ custom_data:
       Distribution of number of Blast hits against genome per family
     plot_type: "boxplot"
 
+
+
+
+
   downloaded_genome_size:
-    section_name: "Size of downloaded genomes"
+    section_name: "Downloaded genomes"
+    parent_id: data_size
+    parent_name: "Data size"
+    parent_description: "Data size distributions by family"
     file_format: "tsv"
     pconfig:
       sort_samples: true
@@ -245,7 +370,10 @@ custom_data:
     plot_type: "boxplot"
 
   assembled_genome_size:
-    section_name: "Size of assembled genomes"
+    section_name: "Assembled genomes"
+    parent_id: data_size
+    parent_name: "Data size"
+    parent_description: "Data size distributions by family"
     file_format: "tsv"
     pconfig:
       sort_samples: true
@@ -255,6 +383,9 @@ custom_data:
 
   fastq_size:
     section_name: "Size of downloaded fastq files"
+    parent_id: data_size
+    parent_name: "Data size"
+    parent_description: "Data size distributions by family"
     file_format: "tsv"
     pconfig:
       sort_samples: true
@@ -262,29 +393,38 @@ custom_data:
       Size distribution of the fastq files per family
     plot_type: "boxplot"
 
-  nb_srrs_per_family:
-    section_name: "Number of SRRs per family"
-    file_format: "tsv"
-    pconfig:
-      sort_samples: true
-    description: |
-      Bar plot showing the number of processed SRRs for each family
-    plot_type: "barplot"
 
-  nb_species_per_family:
-    section_name: "Number of species per family"
-    file_format: "tsv"
-    pconfig:
-      sort_samples: true
-    description: |
-      Bar plot showing the number of species found on NCBI for each family
-    plot_type: "barplot"
 
 
 
 sp:
-  chimeras:
+  chimera_families:
     fn: "*_chimeras.csv"
+  chimeras_overlap_coverage:
+    fn: "*_chimeras.csv"
+  chimeras_pident:
+    fn: "*_chimeras.csv"
+  chimeras_aln_length:
+    fn: "*_chimeras.csv"
+  chimeras_mismatches:
+    fn: "*_chimeras.csv"
+  chimeras_gapopen:
+    fn: "*_chimeras.csv"
+  chimeras_qstart:
+    fn: "*_chimeras.csv"
+  chimeras_qend:
+    fn: "*_chimeras.csv"
+  chimeras_sstart:
+    fn: "*_chimeras.csv"
+  chimeras_send:
+    fn: "*_chimeras.csv"
+  chimeras_evalue:
+    fn: "*_chimeras.csv"
+  chimeras_qlen:
+    fn: "*_chimeras.csv"
+  chimeras_slen:
+    fn: "*_chimeras.csv"
+
   stat_chimeras_per_family:
     fn: "*family_chimeras_summary.csv"
   stat_chimeras_per_species:

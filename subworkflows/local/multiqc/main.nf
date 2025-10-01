@@ -80,7 +80,7 @@ workflow MULTIQC_WORKFLOW {
             meta, csv_file ->
                try {
                     def firstLine = csv_file.readLines().get(0)
-                    return firstLine.contains("readName")
+                    return firstLine.contains("qseqid")
                } catch (Exception e) {
                     log.warn "Could not read first line of ${csv_file.name}: ${e.message}"
                     return false

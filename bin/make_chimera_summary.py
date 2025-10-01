@@ -18,17 +18,16 @@ GROUPBY_COLS = {
 COLS_TO_REMOVE = [
     'species.taxid',
     'family',
-    'chimeric',
-    'qStart',
-    'qEnd',
-    'sStart',
-    'sEnd',
-    'qStart.s',
-    'qEnd.s',
-    'sStart.s',
-    'sEnd.s',
-    'insertionCoord',
-    'chimericPoint'
+    'qstart_1',
+    'qend_1',
+    'sstart_1',
+    'send_1',
+    'qstart_2',
+    'qend_2',
+    'sstart_2',
+    'send_2',
+    'coordinate_in_1',
+    'coordinate_in_2'
 ]
 
 

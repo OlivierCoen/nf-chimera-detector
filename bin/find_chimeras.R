@@ -1,5 +1,5 @@
 #!/usr/bin/env Rscript
-#options(error = traceback)
+options(error = traceback)
 ######################################################################################################
 ################## Finding chimeras in short high - throughtput sequencing reads #######################
 ######################################################################################################
@@ -340,6 +340,9 @@ parse_blast_hit_file <- function(blast_hits_file, sseqid_type) {
     # see https://www.metagenomics.wiki/tools/blast/blastn-output-format-6
 
     blast_hits_df = fread(blast_hits_file)
+    if ( nrow(blast_hits_df) == 0 ) {
+        return(blast_hits_df)
+    }
     # columns defined in conf/modules/blast.config
     BLAST_OUTFMT6_COLS <- c("qseqid", "sseqid", "pident", "length", "mismatch", "gapopen", "qstart", "qend", "sstart", "send", "qlen", "slen", "evalue", "bitevalue")
     setnames(blast_hits_df, BLAST_OUTFMT6_COLS)

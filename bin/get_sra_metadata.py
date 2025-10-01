@@ -121,11 +121,13 @@ def parse_ids_from_xml(xml_string: str):
 def parse_sra_accessions_from_xml(xml_string: str) -> list[dict]:
     xml_dict = xmltodict.parse(xml_string)
     experiments = xml_dict['EXPERIMENT_PACKAGE_SET']['EXPERIMENT_PACKAGE']
+    # if type is dict, turn into a list of dict (of one element)
+    if isinstance(experiments, dict):
+        experiments = [experiments]
     return [
         experiment_dict['EXPERIMENT'] for experiment_dict in experiments
         if isinstance(experiment_dict, dict)
     ]
-
 
 
 def get_sra_ids_from_taxid(taxid: str, dna_only: bool) -> list[str]:

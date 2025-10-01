@@ -58,9 +58,10 @@ class RateLimitException(Exception):
     retry=retry_if_exception_type((
         RateLimitException,
         urllib3.exceptions.ReadTimeoutError,
-        requests.exceptions.ConnectionError
+        requests.exceptions.ConnectionError,
+        requests.exceptions.ReadTimeout
     )),
-    stop=stop_after_delay(600),
+    stop=stop_after_delay(3600),
     wait=wait_exponential(multiplier=1, min=1, max=30),
     before_sleep=before_sleep_log(logger, logging.WARNING),
 )

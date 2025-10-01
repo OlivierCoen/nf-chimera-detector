@@ -5,6 +5,48 @@ nextflow_process {
     process "GET_SRA_METADATA"
     tag "get_sra_metadata"
 
+    test("One single experiment [Pithoviridae]") {
+
+        when {
+
+            process {
+                """
+                input[0] = [
+                    [ family: "test" ],
+                    2716914
+                ]
+                """
+            }
+        }
+
+        then {
+            assert process.success
+            assert snapshot(process.out).match()
+        }
+
+    }
+
+    test("Two experiments [Pithoviridae]") {
+
+        when {
+
+            process {
+                """
+                input[0] = [
+                    [ family: "test" ],
+                    1450746
+                ]
+                """
+            }
+        }
+
+        then {
+            assert process.success
+            assert snapshot(process.out).match()
+        }
+
+    }
+
     test("Too long request URI") {
 
         when {

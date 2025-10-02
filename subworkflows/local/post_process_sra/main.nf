@@ -1,5 +1,6 @@
 include { SEQKIT_PAIR                           } from '../../../modules/nf-core/seqkit/pair'
 include { BBMAP_BBMERGE as BBMERGE              } from '../../../modules/nf-core/bbmap/bbmerge'
+include { FLASH                                 } from '../../../modules/local/flash'
 include { SEQKIT_FQ2FA                          } from '../../../modules/local/seqkit/fq2fa'
 
 
@@ -45,37 +46,56 @@ workflow POST_PROCESS_SRA {
     // MERGE OVERLAPPING PAIRED READS INTO A SINGLE FASTQ FILE
     // ------------------------------------------------------------------------------------
 
-    def interleave = false
-    BBMERGE (
-        SEQKIT_PAIR.out.reads,
-        interleave
-    )
+    if ( params.read_merger == "flash" ) {
 
-    // putting together merged and unmerged reads
-    BBMERGE.out.merged
-        .join( BBMERGE.out.unmerged )
-        .map{
-            meta, merged, unmerged ->
-                def reads = [ merged, unmerged ]
-                [ meta, reads.flatten() ]
-        }
-        .set { ch_processed_paired_reads }
+        FLASH ( SEQKIT_PAIR.out.reads )
+
+        // putting together merged and unmerged reads
+        FLASH.out.merged
+            .join( FLASH.out.notcombined )
+            .map{
+                meta, merged, unmerged ->
+                    def reads = [ merged, unmerged ]
+                    [ meta, reads.flatten() ]
+            }
+            .set { ch_processed_paired_reads }
+
+    } else if ( params.read_merger == "bbmerge" ) {
+
+        def interleave = false
+        BBMERGE (
+            SEQKIT_PAIR.out.reads,
+            interleave
+        )
+
+        // putting together merged and unmerged reads
+        BBMERGE.out.merged
+            .join( BBMERGE.out.unmerged )
+            .map{
+                meta, merged, unmerged ->
+                    def reads = [ merged, unmerged ]
+                    [ meta, reads.flatten() ]
+            }
+            .set { ch_processed_paired_reads }
+
+        ch_versions.mix ( BBMERGE.out.versions ).set { ch_versions }
+
+    }
+
+    // ------------------------------------------------------------------------------------
+    // FASTQ TO FASTA
+    // ------------------------------------------------------------------------------------
 
     // putting together single reads and processed paired reads
     ch_branched_sra_reads.single
         .mix ( ch_processed_paired_reads )
         .set { ch_reads }
 
-    // ------------------------------------------------------------------------------------
-    // FASTQ TO FASTA
-    // ------------------------------------------------------------------------------------
-
     SEQKIT_FQ2FA ( ch_reads )
 
 
     ch_versions
         .mix ( SEQKIT_PAIR.out.versions )
-        .mix ( BBMERGE.out.versions )
         .set { ch_versions }
 
     emit:

@@ -75,6 +75,7 @@ workflow MULTIQC_WORKFLOW {
     // PREPARING CHIMERAS DATA
     // ------------------------------------------------------------------------------------
 
+    // removing empty chimera tables (ie. those that contain only metadata and not columns like "qseqid")
     ch_chimeras_csv
         .filter {
             meta, csv_file ->
@@ -129,7 +130,10 @@ workflow MULTIQC_WORKFLOW {
     // PREPARE MULTIQC DATA FAMILY PER FAMILY
     // ------------------------------------------------------------------------------------
 
-    PREPARE_MULTIQC_DATA ( ch_chimeras_data_mqc )
+    PREPARE_MULTIQC_DATA (
+        ch_reads_fasta,
+        ch_chimeras_data_mqc
+    )
 
     // ------------------------------------------------------------------------------------
     // LAUNCH MULTIQC
@@ -139,14 +143,12 @@ workflow MULTIQC_WORKFLOW {
         .mix ( ch_chimeras_data_mqc )
         .mix ( ch_nb_species_per_family_file )
         .mix ( ch_nb_srrs_per_family_file )
-        .mix ( PREPARE_MULTIQC_DATA.out.summary_chimeras_per_family )
-        .mix ( PREPARE_MULTIQC_DATA.out.summary_chimeras_per_species )
-        .mix ( PREPARE_MULTIQC_DATA.out.fastq_sizes )
-        .mix ( PREPARE_MULTIQC_DATA.out.downloaded_genome_sizes )
-        .mix ( PREPARE_MULTIQC_DATA.out.assembled_genome_sizes )
-        .mix ( PREPARE_MULTIQC_DATA.out.nb_blast_hits_target )
-        .mix ( PREPARE_MULTIQC_DATA.out.nb_blast_hits_genomes )
-        .mix ( PREPARE_MULTIQC_DATA.out.nb_chimeras )
+        .mix ( PREPARE_MULTIQC_DATA.out.chimeras_summary )
+        .mix ( PREPARE_MULTIQC_DATA.out.prepared_data )
+        .mix ( Channel.topic('fastp_multiqc') )
+        .mix ( Channel.topic('megahit_multiqc') )
+        .mix ( Channel.topic('flash_multiqc') )
+        .mix ( Channel.topic('flash_histogram_multiqc') )
         .set { ch_multiqc_files }
 
     MULTIQC (

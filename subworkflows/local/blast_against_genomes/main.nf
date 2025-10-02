@@ -12,14 +12,26 @@ workflow BLAST_AGAINST_GENOMES {
 
     ch_versions = Channel.empty()
 
+    // ------------------------------------------------------------------------------------
+    // BUILD BLAST DB FOR EACH GENOME
+    // ------------------------------------------------------------------------------------
+
     MAKEBLASTDB ( ch_assemblies )
 
+    // ------------------------------------------------------------------------------------
+    // BLASTN OF READ FASTA FILES AGAINST THEIR RESPECTIVE GENOME DB
+    // ------------------------------------------------------------------------------------
+
     // associating reads to their respective assembly
+    // join by id (SRR ID)
     ch_sra_reads
-        .join( MAKEBLASTDB.out.db )
+        .combine( MAKEBLASTDB.out.db )
+        .filter { meta, read_fasta, meta_db, db -> meta.id == meta_db.id }
+        .map { meta, read_fasta, meta_db, db -> [ meta, read_fasta, db ] }
         .set { blastn_input }
 
     BLASTN ( blastn_input )
+
 
     ch_versions
         .mix ( MAKEBLASTDB.out.versions )

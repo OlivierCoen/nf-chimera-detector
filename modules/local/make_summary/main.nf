@@ -9,7 +9,7 @@ process MAKE_SUMMARY {
 
     input:
     path chimeras_files
-    val col_for_grouping
+    each category
 
     output:
     path('*_chimeras_summary.csv'),                                                                              emit: csv
@@ -21,7 +21,7 @@ process MAKE_SUMMARY {
     """
     make_chimera_summary.py \\
         --files "$chimeras_files" \\
-        --groupby $col_for_grouping \\
-        --out ${col_for_grouping}_chimeras_summary.csv
+        --groupby $category \\
+        --out ${category}_chimeras_summary.csv
     """
 }

@@ -11,13 +11,13 @@ process SEQKIT_FQ2FA {
     tuple val(meta), path(fastq)
 
     output:
-    tuple val(meta), path("*.fa.gz"),                                                                                      emit: fasta
-    tuple val("${meta.family}"), eval("seqkit stats *.fa.gz | tail -1 | tr -s '[:space:]' '\t' | cut -f5 | sed 's/,//g'"), topic: fastq_size
-    tuple val("${task.process}"), val('pigz'), eval("seqkit | sed '3!d; s/Version: //'"),                                  topic: versions
+    tuple val(meta), path("*.fa.gz"),                                                           emit: fasta
+    tuple val("${meta.family}"), val("${meta.id}"), env("READ_FASTA_NB_BASES"),                 topic: read_fasta_nb_bases
+    tuple val("${task.process}"), val('seqkit'), eval("seqkit | sed '3!d; s/Version: //'"),     topic: versions
 
     script:
     def args = task.ext.args ?: ''
-    def prefix = task.ext.prefix ?: "${fastq.simpleName}"
+    def prefix = task.ext.prefix ?: "${meta.id}"
 
     """
     seqkit \\
@@ -26,6 +26,8 @@ process SEQKIT_FQ2FA {
         -j $task.cpus \\
         -o ${prefix}.fa.gz \\
         $fastq
+
+    READ_FASTA_NB_BASES=\$(seqkit stats *.fa.gz | tail -1 | tr -s '[:space:]' '\t' | cut -f5 | sed 's/,//g')
     """
 
     stub:

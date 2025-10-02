@@ -57,28 +57,19 @@
                      "help_text": "Reads corresponding to species that do not have available assemblies are assembled using MEGAHIT. Before assembling, reads are subsampled in order to provide optimal input data to MEGAHIT.",
                      "fa_icon": "fas fa-chart-simple"
                 },
+                "read_merger": {
+                    "type": "string",
+                    "description": "Tool to use for merging overlapping reads",
+                    "enum": ["flash", "bbmerge"],
+                    "default": "flash",
+                    "fa_icon": "fas fa-hand-scissors"
+                },
                 "sra_registry": {
                      "type": "string",
                      "format": "file-path",
                      "default": "sra_registry",
                      "description": "Name of the directory containing records of SRA processing. The resulting folder will be located under outdir. It is essential to keep track of SRA IDs already processed, in order to avoid processing them again in case the pipeline is run again..",
                      "fa_icon": "fas fa-folder-open"
-                 }
-            }
-        },
-        "stat_options": {
-            "title": "Statistical options",
-            "type": "object",
-            "fa_icon": "fas fa-terminal",
-            "description": "Statistical options.",
-            "required": ["max_mmseqs_evalue"],
-            "properties": {
-                "max_mmseqs_evalue": {
-                    "type": "number",
-                    "minimum": 0,
-                    "default": 1E-3,
-                    "description": "Maximum (inclusive) allowed evalue for considering SRA data as candidates and giving them to BLAST.",
-                    "fa_icon": "fas fa-chart-simple"
                 }
             }
         },
@@ -267,9 +258,6 @@
         },
         {
             "$ref": "#/$defs/dev_options"
-        },
-        {
-            "$ref": "#/$defs/stat_options"
         },
         {
             "$ref": "#/$defs/institutional_config_options"

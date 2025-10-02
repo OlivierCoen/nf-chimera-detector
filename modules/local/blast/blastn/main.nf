@@ -11,9 +11,9 @@ process BLAST_BLASTN {
     tuple val(meta) , path(fasta), path(db)
 
     output:
-    tuple val(meta), path('*.txt'),                                                                              emit: txt
-    tuple val("${task.process}"), val("${meta.family}"), eval("wc -l *.txt | cut -d' ' -f 1"),                   topic: blast_nb_hits
-    tuple val("${task.process}"), val('blast'), eval("blastn -version 2>&1 | sed 's/^.*blastn: //; s/ .*\$//'"), topic: versions
+    tuple val(meta), path('*.txt'),                                                                               emit: txt
+    tuple val("${task.process}"), val("${meta.family}"), val("${meta.id}"), eval("wc -l *.txt | cut -d' ' -f 1"), topic: blast_nb_hits
+    tuple val("${task.process}"), val('blast'), eval("blastn -version 2>&1 | sed 's/^.*blastn: //; s/ .*\$//'"),  topic: versions
 
     script:
     def args = task.ext.args ?: ''

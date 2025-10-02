@@ -14,7 +14,7 @@ process DOWNLOAD_NCBI_ASSEMBLY {
 
     output:
     tuple val(meta), path('*.{fasta,fa,fna}'),                                                                          emit: assemblies
-    tuple val("${meta.family}"), env('GENOME_SIZE'),                                                                    topic: downloaded_genome_size
+    tuple val("${meta.family}"), val("${meta.taxid}"), env('GENOME_NB_BASES'),                                          topic: downloaded_genome_nb_bases
     tuple val("${task.process}"), val('ncbi-datasets-cli'), eval("datasets --version | sed 's/datasets version: //g'"), topic: versions
 
     script:
@@ -26,8 +26,7 @@ process DOWNLOAD_NCBI_ASSEMBLY {
 
     # compute total genome size
     download_file=\$(find . -maxdepth 1 -name "*.fasta" -o -name "*.fa" -o -name "*.fna")
-    GENOME_SIZE=\$(grep -v "^>" \$download_file | tr -d "\n" | wc -m)
+    GENOME_NB_BASES=\$(grep -v "^>" \$download_file | tr -d "\n" | wc -m)
     """
-
 
 }

@@ -34,7 +34,7 @@ workflow DOWNLOAD_SRA {
     SRATOOLS_PREFETCH.out.sra
         .map {
             meta, sra ->
-                def new_meta = meta + [ id: sra.name ]
+                def new_meta = [ id: sra.name ] + meta
                 [ new_meta, sra ]
         }
         .transpose() // when multiple SRRs are downloaded for a specific SRA ID, we split them

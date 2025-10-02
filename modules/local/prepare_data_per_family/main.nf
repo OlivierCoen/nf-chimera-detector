@@ -16,7 +16,7 @@ process PREPARE_DATA_PER_FAMILY {
     tuple val("${task.process}"), val('pandas'), eval('python3 -c "import pandas; print(pandas.__version__)"'),  topic: versions
 
     script:
-    def prefix = task.ext.prefix
+    def prefix = "${data_file.baseName}"
     """
     prepare_data_per_family.py \\
         --data $data_file \\

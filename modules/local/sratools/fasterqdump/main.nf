@@ -4,17 +4,18 @@ process SRATOOLS_FASTERQDUMP {
 
     conda "${moduleDir}/environment.yml"
     container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
-        'https://community-cr-prod.seqera.io/docker/registry/v2/blobs/sha256/37/37aacd127aa32161d8b38a83efb18df01a8ab1d769a93e88f80342d27801b548/data' :
-        'community.wave.seqera.io/library/sra-tools_pigz:4a694d823f6f7fcf' }"
+        'https://community-cr-prod.seqera.io/docker/registry/v2/blobs/sha256/41/41cb64e962a993ad12270759922b4c4d6cc03dd977f2d32e044552c3a8a91c98/data' :
+        'community.wave.seqera.io/library/seqkit_sra-tools_awk_pigz:885a0bc209e70207' }"
 
     input:
     tuple val(meta), path(sra)
     path ncbi_settings
 
     output:
-    tuple val(meta), path('*.fastq.gz'),                                                                        emit: reads
-    tuple val("${task.process}"), val('sratools'), eval("fasterq-dump --version 2>&1 | grep -Eo '[0-9.]+'"),    topic: versions
-    tuple val("${task.process}"), val('pigz'),     eval("pigz --version 2>&1 | sed 's/pigz //g'"),              topic: versions
+    tuple val(meta), path('*.fastq.gz'),                                                                      emit: reads
+    tuple val("${meta.family}"), val("${meta.id}"), env("TOTAL_NB_BASES"),                                    topic: fastq_sum_len
+    tuple val("${task.process}"), val('sratools'), eval("fasterq-dump --version 2>&1 | grep -Eo '[0-9.]+'"),  topic: versions
+    tuple val("${task.process}"), val('pigz'),     eval("pigz --version 2>&1 | sed 's/pigz //g'"),            topic: versions
 
     script:
     def args = task.ext.args ?: ''
@@ -36,6 +37,8 @@ process SRATOOLS_FASTERQDUMP {
         --no-name \\
         --processes $task.cpus \\
         *.fastq
+
+    TOTAL_NB_BASES=\$(seqkit stats --tabular --quiet *.fastq.gz | awk 'NR>1 {sum += \$5} END {print sum}')
     """
 
     stub:

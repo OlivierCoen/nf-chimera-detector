@@ -1,11 +1,5 @@
-include { PREPARE_DATA_PER_FAMILY as PREPARE_FASTQ_SIZE                     } from '../../../modules/local/prepare_data_per_family'
-include { PREPARE_DATA_PER_FAMILY as PREPARE_DOWNLOADED_GENOME_SIZE         } from '../../../modules/local/prepare_data_per_family'
-include { PREPARE_DATA_PER_FAMILY as PREPARE_ASSEMBLED_GENOME_SIZE          } from '../../../modules/local/prepare_data_per_family'
-include { PREPARE_DATA_PER_FAMILY as PREPARE_BLAST_HIT_TARGET               } from '../../../modules/local/prepare_data_per_family'
-include { PREPARE_DATA_PER_FAMILY as PREPARE_BLAST_HIT_GENOMES              } from '../../../modules/local/prepare_data_per_family'
-include { PREPARE_DATA_PER_FAMILY as PREPARE_NB_CHIMERAS                    } from '../../../modules/local/prepare_data_per_family'
-include { MAKE_SUMMARY as MAKE_SUMMARY_PER_FAMILY                           } from '../../../modules/local/make_summary'
-include { MAKE_SUMMARY as MAKE_SUMMARY_PER_SPECIES                          } from '../../../modules/local/make_summary'
+include { PREPARE_DATA_PER_FAMILY                           } from '../../../modules/local/prepare_data_per_family'
+include { MAKE_SUMMARY                                      } from '../../../modules/local/make_summary'
 
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -27,150 +21,170 @@ def getBlastDb( process_name ) {
 workflow PREPARE_MULTIQC_DATA {
 
     take:
+    ch_reads_fasta
     ch_chimeras_data_mqc
 
 
     main:
 
+    ch_data_per_family = Channel.empty()
+
     // ------------------------------------------------------------------------------------
-    // SUMMARY OF CHIMERAS STATISTICS PER FAMILY
+    // SUMMARY OF CHIMERAS STATISTICS PER FAMILY / SPECIES
     // ------------------------------------------------------------------------------------
 
-    MAKE_SUMMARY_PER_FAMILY (
+    MAKE_SUMMARY (
         ch_chimeras_data_mqc.collect(),
-        'family'
+        ['family', 'species']
     )
 
     // ------------------------------------------------------------------------------------
-    // SUMMARY OF CHIMERAS STATISTICS PER SPECIES
+    // MAKING GENERAL STAT TABLE PER SRR (ID)
     // ------------------------------------------------------------------------------------
 
-    MAKE_SUMMARY_PER_SPECIES (
-        ch_chimeras_data_mqc.collect(),
-        'species'
-    )
+
+    Channel.topic('downloaded_genome_nb_bases')
+        .combine( ch_reads_fasta )
+        .filter { family, taxid, nb_bases, meta, fasta -> taxid == meta.taxid }
+        .map { family, taxid, nb_bases, meta, fasta -> [ meta.id, nb_bases] }
+        .set { ch_downloaded_genome_nb_bases }
+
+
+    Channel.topic('assembled_genome_nb_bases').view{ v -> "assembled_genome_nb_bases " + v}
+    Channel.topic('read_fasta_nb_bases').view{ v -> "read_fasta_nb_bases " + v}
+    Channel.topic('fastq_sum_len').view{ v -> "fastq_sum_len " + v}
 
     // ------------------------------------------------------------------------------------
-    // DISTRIBUTION OF SIZE OF DOWNLOADED FASTQ FILES (IN NB OF BASES) PER FAMILY
+    // COLLECTING NB OF BASES SIZE OF DOWNLOADED FASTQ FILES PER FAMILY
     // ------------------------------------------------------------------------------------
 
-    Channel.topic('fastq_size')
+    Channel.topic('fastq_sum_len') // family, id, sum_len
         .collectFile(
-            name: 'fastq_size.tsv',
+            name: 'fastq_nb_bases.tsv',
             seed: "family\tdata",
             newLine: true,
             storeDir: "${params.outdir}/sratools/"
         ) {
-            item -> "${item[0]}\t${item[1]}"
+            item -> "${item[0]}\t${item[2]}"
         }
         .set { ch_fastq_size_file }
 
-    PREPARE_FASTQ_SIZE ( ch_fastq_size_file )
-
     // ------------------------------------------------------------------------------------
-    // DISTRIBUTION OF SIZE OF DOWNLOADED GENOMES PER FAMILY
+    // COLLECTING NB OF BASES SIZE OF PROCESSED READ FASTA FILES PER FAMILY
     // ------------------------------------------------------------------------------------
 
-    Channel.topic('downloaded_genome_size')
+    Channel.topic('read_fasta_nb_bases') // family, id, sum_len
+        .collectFile(
+            name: 'read_fasta_nb_bases.tsv',
+            seed: "family\tdata",
+            newLine: true,
+            storeDir: "${params.outdir}/sratools/"
+        ) {
+            item -> "${item[0]}\t${item[2]}"
+        }
+        .set { ch_read_fasta_size_file }
+
+    // ------------------------------------------------------------------------------------
+    // COLLECTING NB OF BASES OF DOWNLOADED GENOMES PER FAMILY
+    // ------------------------------------------------------------------------------------
+
+    Channel.topic('downloaded_genome_nb_bases') // family, taxid, nb_bases
         .collectFile(
             name: 'downloaded_genome_size.tsv',
             seed: "family\tdata",
             newLine: true,
             storeDir: "${params.outdir}/assemblies/"
         ) {
-            item -> "${item[0]}\t${item[1]}"
+            item -> "${item[0]}\t${item[2]}"
         }
         .set { ch_downloaded_genome_size_file }
 
-    PREPARE_DOWNLOADED_GENOME_SIZE ( ch_downloaded_genome_size_file )
-
     // ------------------------------------------------------------------------------------
-    // DISTRIBUTION OF SIZE OF ASSEMBLED GENOMES PER FAMILY
+    // COLLECTING NB OF BASES OF ASSEMBLED GENOMES PER FAMILY
     // ------------------------------------------------------------------------------------
 
-    Channel.topic('assembled_genome_size')
+    Channel.topic('assembled_genome_size') // family, id, nb_bases
         .collectFile(
             name: 'assembled_genome_size.tsv',
             seed: "family\tdata",
             newLine: true,
             storeDir: "${params.outdir}/assemblies/"
         ) {
-            item -> "${item[0]}\t${item[1]}"
+            item -> "${item[0]}\t${item[2]}"
         }
         .set { ch_assembled_genome_size_file }
 
-    PREPARE_ASSEMBLED_GENOME_SIZE ( ch_assembled_genome_size_file )
-
     // ------------------------------------------------------------------------------------
-    // DISTRIBUTION OF NB OF BLAST HITS AGAINST TARGET PER FAMILY
+    // COLLECTING NB OF BLAST HITS AGAINST TARGET / GENOME PER FAMILY
     // ------------------------------------------------------------------------------------
 
     Channel.topic('blast_nb_hits')
         .branch {
-            process, family, nb_hits ->
+            process, family, id, nb_hits ->
                 target: getBlastDb(process) == 'TARGET'
-                    [ family, nb_hits ]
+                    [ family, id, nb_hits ]
                 genomes: getBlastDb(process) == 'GENOMES'
-                   [ family, nb_hits ]
+                   [ family, id, nb_hits ]
         }
         .set { ch_blast_nb_hits }
 
-    ch_blast_nb_hits.target
+    ch_blast_nb_hits.target // family, id, nb_hits
         .collectFile(
             name: 'blast_nb_hits_target.tsv',
             seed: "family\tdata",
             newLine: true,
             storeDir: "${params.outdir}/blastn/"
         ) {
-            item -> "${item[0]}\t${item[1]}"
+            item -> "${item[0]}\t${item[2]}"
         }
         .set { ch_blast_nb_hits_target_file }
 
-    PREPARE_BLAST_HIT_TARGET ( ch_blast_nb_hits_target_file )
 
-    // ------------------------------------------------------------------------------------
-    // DISTRIBUTION OF NB OF BLAST HITS AGAINST GENOMES PER FAMILY
-    // ------------------------------------------------------------------------------------
-
-    ch_blast_nb_hits.genomes
+    ch_blast_nb_hits.genomes // family, id, nb_hits
         .collectFile(
             name: 'blast_nb_hits_genomes.tsv',
             seed: "family\tdata",
             newLine: true,
             storeDir: "${params.outdir}/blastn/"
         ) {
-            item -> "${item[0]}\t${item[1]}"
+            item -> "${item[0]}\t${item[2]}"
         }
         .set { ch_blast_nb_hits_genomes_file }
 
-    PREPARE_BLAST_HIT_GENOMES ( ch_blast_nb_hits_genomes_file )
-
     // ------------------------------------------------------------------------------------
-    // DISTRIBUTION OF NB OF CHIMERAS PER FAMILY
+    // COLLECTING NB OF CHIMERAS PER FAMILY
     // ------------------------------------------------------------------------------------
 
-    Channel.topic('nb_chimeras')
+    Channel.topic('nb_chimeras')  // family, id, nb_chimeras
         .collectFile(
             name: 'nb_chimeras.tsv',
             seed: "family\tdata",
             newLine: true,
             storeDir: "${params.outdir}/chimeras/"
         ) {
-            item -> "${item[0]}\t${item[1]}"
+            item -> "${item[0]}\t${item[2]}"
         }
         .set { ch_nb_chimeras_file }
 
-    PREPARE_NB_CHIMERAS ( ch_nb_chimeras_file )
+    ch_data_per_family
+        .mix ( ch_fastq_size_file )
+        .mix ( ch_read_fasta_size_file )
+        .mix ( ch_downloaded_genome_size_file )
+        .mix ( ch_assembled_genome_size_file )
+        .mix ( ch_blast_nb_hits_target_file )
+        .mix ( ch_blast_nb_hits_genomes_file )
+        .mix ( ch_nb_chimeras_file )
+        .set { ch_data_per_family }
+
+    // ------------------------------------------------------------------------------------
+    // PIVOTING AND TRANSPOSING DATA FOR MULTIQC
+    // ------------------------------------------------------------------------------------
+
+    PREPARE_DATA_PER_FAMILY ( ch_data_per_family )
 
 
     emit:
-    summary_chimeras_per_family     = MAKE_SUMMARY_PER_FAMILY.out.csv
-    summary_chimeras_per_species    = MAKE_SUMMARY_PER_SPECIES.out.csv
-    fastq_sizes                     = PREPARE_FASTQ_SIZE.out.tsv
-    downloaded_genome_sizes         = PREPARE_DOWNLOADED_GENOME_SIZE.out.tsv
-    assembled_genome_sizes          = PREPARE_ASSEMBLED_GENOME_SIZE.out.tsv
-    nb_blast_hits_target            = PREPARE_BLAST_HIT_TARGET.out.tsv
-    nb_blast_hits_genomes           = PREPARE_BLAST_HIT_GENOMES.out.tsv
-    nb_chimeras                     = PREPARE_NB_CHIMERAS.out.tsv
+    chimeras_summary                = MAKE_SUMMARY.out.csv
+    prepared_data                   = PREPARE_DATA_PER_FAMILY.out.tsv
 }
 

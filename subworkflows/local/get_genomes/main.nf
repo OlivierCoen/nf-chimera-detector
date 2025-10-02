@@ -44,17 +44,19 @@ workflow GET_GENOMES {
 
     DOWNLOAD_NCBI_ASSEMBLY ( accessions_to_download )
 
-    // associating downloaded assemblies to their respective SRA reads
-    // there can be multiple SRRs for one single taxid (and hence downloaded assembly)
-    ch_branched_sra_reads.to_download
-        .map { meta, reads, accession -> [ meta, reads, meta.taxid ] }
-        .combine(
-            DOWNLOAD_NCBI_ASSEMBLY.out.assemblies.map { meta, assembly -> [ meta, assembly, meta.taxid ] },
-            by: 2 // combining by taxid
-        )
-        .map { taxid, meta, reads, meta_taxid, assembly -> [ meta, assembly ] }
+    // associating downloaded assemblies to all possible corresponding SRRs
+    // there can be multiple SRRs for one single taxid (and hence one single downloaded assembly)
+    // in this case, we create a channel with one assembly per SRR
+    // we link the assemblies with their SRRs through meta
+    DOWNLOAD_NCBI_ASSEMBLY.out.assemblies
+        .map { meta, assembly -> [ meta, assembly, meta.taxid ] }
         .set { ch_downloaded_assemblies }
 
+    ch_branched_sra_reads.to_download
+        .map { meta, reads, accession -> [ meta, reads, meta.taxid ] }
+        .combine( ch_downloaded_assemblies, by: 2 ) // combining by taxid
+        .map { taxid, meta_reads, reads, meta_assembly, assembly -> [ meta_reads + meta_assembly, assembly ] } // combining meta maps
+        .set { ch_downloaded_assemblies }
 
     // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     // ASSEMBLE GENOMES WHENEVER NO ASSEMBLY IS AVAILABLE ON NCBI
@@ -67,12 +69,13 @@ workflow GET_GENOMES {
 
     SRA_READS_PREPARATION ( ch_sra_reads_to_prepare )
 
+    // arranging channel : some are single reads and some other are paired reads
     SRA_READS_PREPARATION.out.prepared_sra_reads
         .map {
             meta, reads ->
                 if ( reads instanceof Path ) {
                     [ meta, reads, [] ]
-                } else {
+                } else { // List
                     def ( reads_1, reads_2 ) = reads
                     [ meta, reads_1, reads_2 ]
                 }
@@ -89,7 +92,7 @@ workflow GET_GENOMES {
      ch_downloaded_assemblies
         .mix ( MEGAHIT.out.contigs )
         .set { ch_assemblies }
-    //ch_assemblies.view()
+
     ch_versions = ch_versions
                     .mix ( SRA_READS_PREPARATION.out.versions )
 

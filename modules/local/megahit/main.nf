@@ -20,7 +20,8 @@ process MEGAHIT {
 
     output:
     tuple val(meta), path("*.contigs.fa.gz"),                                                    emit: contigs
-    tuple val("${meta.family}"), env('GENOME_SIZE'),                                             topic: assembled_genome_size
+    tuple val("${meta.family}"), val("${meta.id}"), env('GENOME_NB_BASES'),                      topic: assembled_genome_nb_bases
+    path("*.log"),                                                                               topic: megahit_multiqc
     tuple val("${task.process}"), val('megahit'), eval("megahit -v 2>&1 | sed 's/MEGAHIT v//'"), topic: versions
 
     script:
@@ -41,7 +42,7 @@ process MEGAHIT {
     [ -s \$assembly ] || exit 100
 
     # compute total genome size
-    GENOME_SIZE=\$(grep -v "^>" \$assembly | tr -d "\n" | wc -m)
+    GENOME_NB_BASES=\$(grep -v "^>" \$assembly | tr -d "\n" | wc -m)
 
     pigz \\
         --no-name \\

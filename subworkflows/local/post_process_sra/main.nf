@@ -1,5 +1,5 @@
 include { SEQKIT_PAIR                           } from '../../../modules/nf-core/seqkit/pair'
-include { BBMAP_BBMERGE                         } from '../../../modules/nf-core/bbmap/bbmerge'
+include { BBMAP_BBMERGE as BBMERGE              } from '../../../modules/nf-core/bbmap/bbmerge'
 include { SEQKIT_FQ2FA                          } from '../../../modules/local/seqkit/fq2fa'
 
 
@@ -21,7 +21,7 @@ workflow POST_PROCESS_SRA {
         .set { ch_branched_sra_reads }
 
     // in very rare cases (like SRX18097776), we obtain 3 files from fasterq-dump
-    // in suh cases, we keep only the ones having _1/_2 suffix (especially for convenience)
+    // in such cases, we keep only the ones having _1/_2 suffix (especially for convenience)
     ch_branched_sra_reads.paired
         .map {
             meta, reads ->
@@ -34,35 +34,48 @@ workflow POST_PROCESS_SRA {
         }
         .set { ch_sra_paired_reads }
 
+
     // ------------------------------------------------------------------------------------
-    // FILTER OUT UNPAIRED READS
+    // FILTER OUT UNPAIRED READS (NECESSARY FOR BBMERGE)
     // ------------------------------------------------------------------------------------
 
     SEQKIT_PAIR ( ch_sra_paired_reads )
 
     // ------------------------------------------------------------------------------------
-    // MERGE PAIRED READS INTO A SINGLE FASTQ FILE
+    // MERGE OVERLAPPING PAIRED READS INTO A SINGLE FASTQ FILE
     // ------------------------------------------------------------------------------------
 
     def interleave = false
-    BBMAP_BBMERGE (
+    BBMERGE (
         SEQKIT_PAIR.out.reads,
         interleave
     )
 
+    // putting together merged and unmerged reads
+    BBMERGE.out.merged
+        .join( BBMERGE.out.unmerged )
+        .map{
+            meta, merged, unmerged ->
+                def reads = [ merged, unmerged ]
+                [ meta, reads.flatten() ]
+        }
+        .set { ch_processed_paired_reads }
+
+    // putting together single reads and processed paired reads
     ch_branched_sra_reads.single
-        .mix ( BBMAP_BBMERGE.out.merged )
-        .set { ch_sra_single_reads }
+        .mix ( ch_processed_paired_reads )
+        .set { ch_reads }
 
     // ------------------------------------------------------------------------------------
     // FASTQ TO FASTA
     // ------------------------------------------------------------------------------------
 
-    SEQKIT_FQ2FA ( ch_sra_single_reads )
+    SEQKIT_FQ2FA ( ch_reads )
+
 
     ch_versions
         .mix ( SEQKIT_PAIR.out.versions )
-        .mix ( BBMAP_BBMERGE.out.versions )
+        .mix ( BBMERGE.out.versions )
         .set { ch_versions }
 
     emit:

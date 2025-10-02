@@ -28,6 +28,7 @@ workflow POST_PROCESS_SRA {
             meta, reads ->
                 if ( reads.size() == 3 ) {
                     kept_reads = reads.findAll { it ==~ /.*_[12]\.f(ast)?q\.gz$/  }
+                    log.warn "SRR " + meta.id + " has 3 downloaded files!"
                     [ meta, kept_reads ]
                 } else {
                     [ meta, reads ]

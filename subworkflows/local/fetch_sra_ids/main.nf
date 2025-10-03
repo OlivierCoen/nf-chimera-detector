@@ -46,7 +46,7 @@ workflow FETCH_SRA_IDS {
         .unique() // there may be duplicates
         .map {
             meta, sra_id ->
-                def new_meta = meta + [ original_sra_id: sra_id.strip() ]
+                def new_meta = meta + [ sra_id: sra_id.strip() ]
                 [ new_meta, sra_id.strip() ]
         }
         .set { ch_sra_ids }

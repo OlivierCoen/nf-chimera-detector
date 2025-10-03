@@ -20,7 +20,7 @@ process MEGAHIT {
 
     output:
     tuple val(meta), path("*.contigs.fa.gz"),                                                    emit: contigs
-    tuple val("${meta.family}"), val("${meta.id}"), env('GENOME_NB_BASES'),                      topic: assembled_genome_nb_bases
+    tuple val("${meta.family}"), val("${meta.id}"), env('GENOME_NB_BASES'),                      topic: asm_genome_len
     path("*.log"),                                                                               topic: megahit_multiqc
     tuple val("${task.process}"), val('megahit'), eval("megahit -v 2>&1 | sed 's/MEGAHIT v//'"), topic: versions
 

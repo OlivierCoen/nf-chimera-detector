@@ -29,7 +29,7 @@ def addToSraRegistry ( ch_sra_reads) {
             {
                 meta, reads ->
                     [
-                        "${meta.family}_${meta.taxid}_${meta.original_sra_id}_${meta.id}",
+                        "${meta.family}_${meta.taxid}_${meta.sra_id}_${meta.id}",
                         reads instanceof List ? reads.collect { it.name }.join("\n") : reads.name
                     ]
             },
@@ -44,7 +44,7 @@ def addDoneToSraRegistry ( ch_csv ) {
             {
                 meta, csv ->
                     [
-                        "${meta.family}_${meta.taxid}_${meta.original_sra_id}_${meta.id}",
+                        "${meta.family}_${meta.taxid}_${meta.sra_id}_${meta.id}",
                         csv.name
                     ]
             },
@@ -79,7 +79,7 @@ def getSraIdsNotProcessed ( ch_sra_ids ) {
     ch_prefix = ch_sra_ids
                     .map {
                         meta, _ ->
-                            [ meta, "${meta.family}_${meta.taxid}_${meta.original_sra_id}" ]
+                            [ meta, "${meta.family}_${meta.taxid}_${meta.sra_id}" ]
                     }
 
     def to_process_folder = file ( "${params.outdir}/${params.sra_registry}/to_process/" )
@@ -107,7 +107,7 @@ def getSraIdsNotProcessed ( ch_sra_ids ) {
 
     return ch_not_started
             .mix ( ch_started_not_done )
-            .map { meta, files -> [ meta, meta.original_sra_id ] }
+            .map { meta, files -> [ meta, meta.sra_id ] }
 
 
 }
@@ -156,10 +156,8 @@ workflow CHIMERADETECTOR {
 
     // For dev purposes: test download of a specific SRA accession
     if ( params.only_download_srrs ) {
-
         unique_sra_accessions = params.only_download_srrs.strip().tokenize(',')
         ch_sra_ids = ch_sra_ids.filter { meta, sra_id -> unique_sra_accessions.contains(sra_id) }
-
     }
 
     // ------------------------------------------------------------------------------------
@@ -223,11 +221,9 @@ workflow CHIMERADETECTOR {
     // FIND CHIMERAS
     // ------------------------------------------------------------------------------------
 
-    BLAST_AGAINST_TARGET.out.hits
-        .join( BLAST_AGAINST_GENOMES.out.hits )
-        .set { find_chimeras_input }
-
-    FIND_CHIMERAS ( find_chimeras_input )
+    FIND_CHIMERAS (
+        BLAST_AGAINST_TARGET.out.hits.join( BLAST_AGAINST_GENOMES.out.hits )
+     )
     FIND_CHIMERAS.out.csv.set { ch_chimeras_csv }
 
     addDoneToSraRegistry ( ch_chimeras_csv )

@@ -13,9 +13,9 @@ process FLASH {
     output:
     tuple val(meta), path("${prefix}.extendedFrags.fastq.gz"),                                                   emit: merged
     tuple val(meta), path("${prefix}.notCombined_*.fastq.gz"),                                                   emit: notcombined
-    path("*.log"),                                                                                               topic: flash_multiqc
-    path("${prefix}.flash_hist"),                                                                                topic: flash_histogram_multiqc
-    tuple val("${task.process}"), val('flash'), eval("flash --version 2>&1 | sed 's/^.*FLASH v//; s/ .*\$//'"), topic: versions
+    path("*_flash.log"),                                                                                         topic: flash_multiqc
+    path("*_flash.hist"),                                                                                        topic: flash_histogram_multiqc
+    tuple val("${task.process}"), val('flash'), eval("flash --version 2>&1 | sed 's/^.*FLASH v//; s/ .*\$//'"),  topic: versions
 
     script:
     def args = task.ext.args ?: ''
@@ -32,9 +32,9 @@ process FLASH {
         -t ${task.cpus} \\
         ${reads[0]} \\
         ${reads[1]} \\
-        2>&1 | tee ${prefix}.log
+        2>&1 | tee ${prefix}_flash.log
 
-    mv ${prefix}.hist ${prefix}.flash_hist
+    mv ${prefix}.hist ${prefix}_flash.hist
     """
 
 }

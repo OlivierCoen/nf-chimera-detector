@@ -1,25 +1,50 @@
 include { BLAST_MAKEBLASTDB as MAKEBLASTDB             } from '../../../modules/nf-core/blast/makeblastdb'
 include { BLAST_BLASTN as BLASTN                       } from '../../../modules/local/blast/blastn'
 include { SEQTK_SUBSEQ                                 } from '../../../modules/local/seqtk/subseq'
+include { SEQKIT_SPLIT2                                } from '../../../modules/local/seqkit/split2/'
+
+// ------------------------------------------------------------------------------------
+// PROCESSES
+// ------------------------------------------------------------------------------------
+
+process MERGE_HITS {
+    input:
+    tuple val(meta), path(hit_files, stageAs: "**/*")
+
+    output:
+    tuple val(meta), path("${meta.id}_hits.txt"), emit: hits
+
+    script:
+
+    """
+    cat ${hit_files} > ${meta.id}_hits.txt
+    """
+}
+
 
 process EXTRACT_SEQ_IDS {
     input:
     tuple val(meta), path(tsv_file)
 
     output:
-    tuple val(meta), path("${meta.id}_hits.txt"), emit: ids
+    tuple val(meta), path("${meta.id}_hit_ids.txt"), emit: ids
 
     script:
+
     """
-    cut -f1 ${tsv_file} > ${meta.id}_hits.txt
+    cut -f1 ${tsv_file} > ${meta.id}_hit_ids.txt
     """
 }
 
 
+// ------------------------------------------------------------------------------------
+// WORKFLOW
+// ------------------------------------------------------------------------------------
+
 workflow BLAST_AGAINST_TARGET {
 
     take:
-    ch_sra_reads
+    ch_reads_fasta
     ch_target_db
 
     main:
@@ -33,18 +58,46 @@ workflow BLAST_AGAINST_TARGET {
     MAKEBLASTDB ( ch_target_db )
 
     // ------------------------------------------------------------------------------------
+    // COMPUTING THE NB OF CHUNKS FOR EACH READ FASTA FILE
+    // ------------------------------------------------------------------------------------
+
+    ch_reads_fasta
+        .map { meta, fasta -> [ meta.id, meta, fasta ] }
+        .join( Channel.topic('read_fasta_len').map { family, id, nb -> [ id, [read_fasta_len: nb] ] } ) // join on id (SRR ID)
+        .map { // computing the nb of chunks necessary
+            id, meta, fasta, len_map ->
+                def ratio = len_map.read_fasta_len.toInteger() * 50 / params.read_fasta_chunk_max_size
+                def nb_chunks = ratio.toInteger() + 1
+                [ meta, fasta, nb_chunks ]
+        }
+        .set { ch_split_input }
+
+    // ------------------------------------------------------------------------------------
+    // SPLITTING QUERY FASTA FILES IN CHUNKS TO AVOID ISSUES
+    // ------------------------------------------------------------------------------------
+
+    SEQKIT_SPLIT2 ( ch_split_input )
+
+    // ------------------------------------------------------------------------------------
     // BLASTN
     // ------------------------------------------------------------------------------------
 
-     // making all combinations of reads + target db
-    ch_sra_reads
+     // making all combinations of splitted reads + target db
+    SEQKIT_SPLIT2.out.reads // list of splitted reads
+        .transpose() // separate splitted reads, each with their own meta
         .combine( MAKEBLASTDB.out.db )
         .map { meta, reads, meta2, db ->  [ meta, reads, db ] }
         .set { blastn_input }
 
     BLASTN ( blastn_input )
 
-    BLASTN.out.txt.set { ch_hits }
+
+    // ------------------------------------------------------------------------------------
+    // REGROUP HITS BY META
+    // ------------------------------------------------------------------------------------
+
+    MERGE_HITS( BLASTN.out.txt.groupTuple() )
+    MERGE_HITS.out.hits.set { ch_hits }
 
     // ------------------------------------------------------------------------------------
     // EXTRACT SEQ IDS CORRESPONDING TO HITS
@@ -52,7 +105,7 @@ workflow BLAST_AGAINST_TARGET {
 
     EXTRACT_SEQ_IDS ( ch_hits )
 
-    ch_sra_reads
+    ch_reads_fasta
         .join ( EXTRACT_SEQ_IDS.out.ids )
         .set { seqtk_subseq_input }
 

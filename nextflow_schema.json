@@ -64,6 +64,14 @@
                     "default": "flash",
                     "fa_icon": "fas fa-hand-scissors"
                 },
+                "read_fasta_chunk_max_size": {
+                     "type": "integer",
+                     "minimum": 1E6,
+                     "default": 1E8,
+                     "description": "Max number of bases (for each chunks or reads in Fasta format) to provide to Blastn against the target database.",
+                     "help_text": "Read Fasta files may be very big and Blastn may give issues. Therefore, we separate read fasta files into chunks. This parameter serves to determine the number of chunks, given the total size of the fasta file.",
+                     "fa_icon": "fas fa-chart-simple"
+                },
                 "sra_registry": {
                      "type": "string",
                      "format": "file-path",

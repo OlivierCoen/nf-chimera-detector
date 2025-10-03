@@ -20,7 +20,6 @@ workflow DOWNLOAD_SRA {
 
     CUSTOM_SRATOOLSNCBISETTINGS ( ch_sra_ids.collect() )
     ch_ncbi_settings = CUSTOM_SRATOOLSNCBISETTINGS.out.ncbi_settings
-    ch_versions = ch_versions.mix(CUSTOM_SRATOOLSNCBISETTINGS.out.versions)
 
     // ----------------------------------------
     // PREFETCH SEQUENCING READS IN SRA FORMAT.
@@ -48,8 +47,15 @@ workflow DOWNLOAD_SRA {
         ch_sra,
         ch_ncbi_settings
     )
+    SRATOOLS_FASTERQDUMP.out.reads.set { ch_sra_reads }
+
+
+    ch_versions
+        .mix( CUSTOM_SRATOOLSNCBISETTINGS.out.versions )
+        .set { ch_versions }
+
 
     emit:
-    reads    = SRATOOLS_FASTERQDUMP.out.reads
-    versions = ch_versions
+    reads               = ch_sra_reads
+    versions            = ch_versions
 }

@@ -20,6 +20,7 @@ workflow MULTIQC_WORKFLOW {
 
     take:
     ch_chimeras_csv
+    ch_fastq_stats
     ch_reads_fasta
     ch_species_taxids
     ch_versions
@@ -77,6 +78,7 @@ workflow MULTIQC_WORKFLOW {
 
     PREPARE_MULTIQC_DATA (
         ch_chimeras_csv,
+        ch_fastq_stats,
         ch_reads_fasta,
         ch_species_taxids
     )
@@ -88,6 +90,7 @@ workflow MULTIQC_WORKFLOW {
     ch_multiqc_files
         .mix ( PREPARE_MULTIQC_DATA.out.chimeras_data )
         .mix ( PREPARE_MULTIQC_DATA.out.srr_metadata )
+        .mix ( PREPARE_MULTIQC_DATA.out.fastq_stats )
         .mix ( PREPARE_MULTIQC_DATA.out.chimeras_summary )
         .mix ( PREPARE_MULTIQC_DATA.out.data_per_family )
         .mix ( PREPARE_MULTIQC_DATA.out.nb_species_per_family )

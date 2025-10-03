@@ -22,6 +22,11 @@ run_modules:
   - megahit
 
 
+table_cond_formatting_colours:
+  - inverted: "#21B2ED"
+  - not_inverted  : "#9543E5"
+
+
 
 custom_data:
 
@@ -62,6 +67,11 @@ custom_data:
       inverted:
         title: "Inverted orientation?"
         color: "rgb(108, 122, 161)"
+        cond_formatting_rules:
+          inverted:
+            - s_eq: "TRUE"
+          not_inverted:
+            - s_eq: "FALSE"
       pident_1:
         title: "% identity to TE"
         color: "rgb(149, 79, 176)"
@@ -124,7 +134,7 @@ custom_data:
           namespace: "SRR metadata"
           title: "Family"
           description: "Family name as provided by the user"
-      - id:
+      - srr_id:
           namespace: "SRR metadata"
           title: "SRR ID"
           description: "File accession in NCBI SRA"
@@ -145,17 +155,11 @@ custom_data:
       - coverage:
           namespace: "SRR data"
           title: "Coverage"
-          description: "Coverage (total nb of base pairs in read fastq files divided by the genome length)"
+          description: "Coverage: total nb of base pairs in read FASTA files divided by the genome length"
           min: 0
           scale: "RdYlGn"
           format: "{:,.0f}"
           suffix: "X"
-      - fastq_sum_len:
-          namespace: "SRR data"
-          title: "Fastq total size"
-          description: "Total number of base pairs in the original (downloaded or provided by the user) Fastq file(s)"
-          min: 0
-          scale: "RdYlGn"
       - read_fasta_len:
           namespace: "SRR data"
           title: "Read Fasta total size"
@@ -174,6 +178,113 @@ custom_data:
           description: "Total number of base pairs in the assembled genome (if not genome was available on NCBI)"
           min: 0
           scale: "RdYlGn"
+
+
+  fastq_stats:
+    plot_type: "generalstats"
+    headers:
+      - srr_id:
+          namespace: "Fastq stats"
+          title: "SRR ID"
+          description: "File accession in NCBI SRA"
+      - num_seqs:
+          namespace: "Fastq stats"
+          title: "Nb of sequences"
+          description: "Number of sequences in Fastq file(s)"
+          min: 0
+          scale: "RdYlGn"
+      - sum_len:
+          namespace: "Fastq stats"
+          title: "Total nb of base pairs"
+          description: "Total nb of base pairs in Fastq file(s)"
+          min: 0
+          scale: "RdYlGn"
+      - min_len:
+          namespace: "Fastq stats"
+          title: "Min read length"
+          description: "Min read length"
+          min: 0
+          scale: "RdYlGn"
+      - avg_len:
+          namespace: "Fastq stats"
+          title: "Average read length"
+          description: "Average read length"
+          min: 0
+          scale: "RdYlGn"
+      - max_len:
+          namespace: "Fastq stats"
+          title: "Max read length"
+          description: "Max read length"
+          min: 0
+          scale: "RdYlGn"
+      - Q1:
+          namespace: "Fastq stats"
+          title: "Read length - Q1"
+          description: "1st quartile of read length distribution"
+          min: 0
+          scale: "RdYlGn"
+      - Q2:
+          namespace: "Fastq stats"
+          title: "Read length - Q2"
+          description: "2nd quartile of read length distribution"
+          min: 0
+          scale: "RdYlGn"
+      - Q3:
+          namespace: "Fastq stats"
+          title: "Read length - Q3"
+          description: "3rd quartile of read length distribution"
+          min: 0
+          scale: "RdYlGn"
+      - sum_gap:
+          namespace: "Fastq stats"
+          title: "Nb gaps"
+          description: "Number of gaps"
+          min: 0
+          scale: "RdYlGn"
+      - N50:
+          namespace: "Fastq stats"
+          title: "N50"
+          description: "Read N50"
+          min: 0
+          scale: "RdYlGn"
+      - N50_num:
+          namespace: "Fastq stats"
+          title: "L50"
+          description: "Read L50"
+          min: 0
+          scale: "RdYlGn"
+      - Q20_pct:
+          namespace: "Fastq stats"
+          title: "Q20(%)"
+          description: "Percentage of bases with the quality score greater than 20"
+          min: 0
+          scale: "RdYlGn"
+      - Q30_pct:
+          namespace: "Fastq stats"
+          title: "Q30(%)"
+          description: "Percentage of bases with the quality score greater than 30"
+          min: 0
+          scale: "RdYlGn"
+      - AvgQual:
+          namespace: "Fastq stats"
+          title: "average quality"
+          description: "Average read quality"
+          min: 0
+          scale: "RdYlGn"
+      - GC_pct:
+          namespace: "Fastq stats"
+          title: "GC(%)"
+          description: "Percentage of GC content"
+          min: 0
+          scale: "RdYlGn"
+      - sum_n:
+          namespace: "Fastq stats"
+          title: "Nb N"
+          description: "Number of ambitious letters (N, n, X, x)"
+          min: 0
+          scale: "RdYlGn"
+
+
 
 
 
@@ -441,18 +552,6 @@ custom_data:
       Size distribution of the assembled genomes per family
     plot_type: "boxplot"
 
-  fastq_nb_bases:
-    section_name: "Total size of downloaded fastq files"
-    parent_id: data_size
-    parent_name: "Data size"
-    parent_description: "Data size distributions by family"
-    file_format: "tsv"
-    pconfig:
-      sort_samples: true
-    description: |
-      Distribution of size (in # bases) of the downloaded Fastq files, per family
-    plot_type: "boxplot"
-
   read_fasta_len:
     section_name: "Size of processed read Fasta files (in # bases)"
     parent_id: data_size
@@ -473,6 +572,8 @@ sp:
     fn: "*_chimeras.csv"
   srr_metadata:
     fn: "*srr_metadata.tsv"
+  fastq_stats:
+    fn: "*fastq_stats.tsv"
   chimeras_overlap_coverage:
     fn: "*_chimeras.csv"
   chimeras_pident:
@@ -512,8 +613,6 @@ sp:
     fn: "*downloaded_genome_size_transposed.tsv"
   assembled_genome_size:
     fn: "*assembled_genome_size_transposed.tsv"
-  fastq_nb_bases:
-    fn: "*fastq_nb_bases_transposed.tsv"
   read_fasta_len:
     fn: "*read_fasta_len_transposed.tsv"
   nb_srrs_per_family:

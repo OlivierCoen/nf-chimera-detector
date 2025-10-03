@@ -22,6 +22,7 @@ workflow PREPARE_MULTIQC_DATA {
 
     take:
     ch_chimeras_csv
+    ch_fastq_stats
     ch_reads_fasta
     ch_species_taxids
 
@@ -42,13 +43,28 @@ workflow PREPARE_MULTIQC_DATA {
                try {
                     def firstLine = csv_file.readLines().get(0)
                     return firstLine.contains("qseqid")
-               } catch (Exception e) {
+               } catch (Exception e) { // happens everytime a file is empty, which is the case everytime there is no chimera
                     // log.warn "Could not read first line of ${csv_file.name}: ${e.message}"
                     return false
                }
         }
         .map { meta, file -> file }
         .set { ch_chimeras_data_mqc }
+
+    // ------------------------------------------------------------------------------------
+    // PREPARING FASTQ STATISTICS FOR THE GENERALSTATS TABLE
+    // ------------------------------------------------------------------------------------
+
+    ch_fastq_stats
+        .collectFile(
+            name: 'fastq_stats.tsv',
+            seed: "srr_id\tnum_seqs\tsum_len\tmin_len\tavg_len\tmax_len\tQ1\tQ2\tQ3\tsum_gap\tN50\tN50_num\tQ20_pct\tQ30_pct\tAvgQual\tGC_pct\tsum_n",
+            newLine: true,
+            storeDir: "${params.outdir}/multiqc/"
+        ) {
+            item -> "${item.id}\t${item.num_seqs}\t${item.sum_len}\t${item.min_len}\t${item.avg_len}\t${item.max_len}\t${item.Q1}\t${item.Q2}\t${item.Q3}\t${item.sum_gap}\t${item.N50}\t${item.N50_num}\t${item['Q20(%)']}\t${item['Q30(%)']}\t${item.AvgQual}\t${item['GC(%)']}\t${item.sum_n}"
+        }
+        .set { ch_fastq_stats_file }
 
     // ------------------------------------------------------------------------------------
     // GETTING NB OF SPECIES PER FAMILY
@@ -115,10 +131,6 @@ workflow PREPARE_MULTIQC_DATA {
             remainder: true
         )
         .join(
-            Channel.topic('fastq_sum_len').map { family, id, nb -> [ id, [fastq_sum_len: nb] ] },
-            remainder: true
-        )
-        .join(
             Channel.topic('read_fasta_len').map { family, id, nb -> [ id, [read_fasta_len: nb] ] },
             remainder: true
         )
@@ -143,33 +155,18 @@ workflow PREPARE_MULTIQC_DATA {
         .map { // computing coverage
             meta ->
                 def genome_length = meta.dl_genome_len ?: meta.asm_genome_len
-                def coverage = meta.fastq_sum_len.toFloat() / genome_length.toFloat()
+                def coverage = meta.read_fasta_len.toFloat() / genome_length.toFloat()
                 meta + [coverage: coverage]
         }
         .collectFile(
             name: 'srr_metadata.tsv',
-            seed: "srr_id\tfamily\ttaxid\tsra_id\tcoverage\tfastq_sum_len\tread_fasta_len\tdl_genome_len\tasm_genome_len\tnb_chimeras",
+            seed: "srr_id\tfamily\ttaxid\tsra_id\tcoverage\tread_fasta_len\tdl_genome_len\tasm_genome_len\tnb_chimeras",
             newLine: true,
             storeDir: "${params.outdir}/multiqc/"
         ) {
-            item -> "${item.id}\t${item.family}\t${item.taxid}\t${item.sra_id}\t${item.coverage}\t${item.fastq_sum_len}\t${item.read_fasta_len}\t${item.dl_genome_len}\t${item.asm_genome_len}\t${item.nb_chimeras}"
+            item -> "${item.id}\t${item.family}\t${item.taxid}\t${item.sra_id}\t${item.coverage}\t${item.read_fasta_len}\t${item.dl_genome_len}\t${item.asm_genome_len}\t${item.nb_chimeras}"
         }
         .set { ch_srr_metadata_file }
-
-    // ------------------------------------------------------------------------------------
-    // COLLECTING NB OF BASES SIZE OF DOWNLOADED FASTQ FILES PER FAMILY
-    // ------------------------------------------------------------------------------------
-
-    Channel.topic('fastq_sum_len') // family, id, sum_len
-        .collectFile(
-            name: 'fastq_nb_bases.tsv',
-            seed: "family\tdata",
-            newLine: true,
-            storeDir: "${params.outdir}/sratools/"
-        ) {
-            item -> "${item[0]}\t${item[2]}"
-        }
-        .set { ch_fastq_size_file }
 
     // ------------------------------------------------------------------------------------
     // COLLECTING NB OF BASES SIZE OF PROCESSED READ FASTA FILES PER FAMILY
@@ -268,8 +265,11 @@ workflow PREPARE_MULTIQC_DATA {
         }
         .set { ch_nb_chimeras_file }
 
+    // ------------------------------------------------------------------------------------
+    // PIVOTING AND TRANSPOSING DATA FOR MULTIQC
+    // ------------------------------------------------------------------------------------
+
     ch_data_per_family
-        .mix ( ch_fastq_size_file )
         .mix ( ch_read_fasta_size_file )
         .mix ( ch_downloaded_genome_size_file )
         .mix ( ch_assembled_genome_size_file )
@@ -278,16 +278,13 @@ workflow PREPARE_MULTIQC_DATA {
         .mix ( ch_nb_chimeras_file )
         .set { ch_data_per_family }
 
-    // ------------------------------------------------------------------------------------
-    // PIVOTING AND TRANSPOSING DATA FOR MULTIQC
-    // ------------------------------------------------------------------------------------
-
     PREPARE_DATA_PER_FAMILY ( ch_data_per_family )
 
 
     emit:
     chimeras_data                   = ch_chimeras_data_mqc
     srr_metadata                    = ch_srr_metadata_file
+    fastq_stats                     = ch_fastq_stats_file
     chimeras_summary                = MAKE_SUMMARY.out.csv
     nb_species_per_family           = ch_nb_species_per_family_file
     nb_srrs_per_family              = ch_nb_srrs_per_family_file

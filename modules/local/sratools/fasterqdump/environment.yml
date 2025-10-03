@@ -6,5 +6,3 @@ channels:
 dependencies:
   - bioconda::sra-tools=3.2.1
   - conda-forge::pigz=2.8
-  - conda-forge::awk
-  - bioconda::seqkit=2.10.1

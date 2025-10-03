@@ -13,7 +13,6 @@ process SRATOOLS_FASTERQDUMP {
 
     output:
     tuple val(meta), path('*.fastq.gz'),                                                                      emit: reads
-    tuple val("${meta.family}"), val("${meta.id}"), env("TOTAL_NB_BASES"),                                    topic: fastq_sum_len
     tuple val("${task.process}"), val('sratools'), eval("fasterq-dump --version 2>&1 | grep -Eo '[0-9.]+'"),  topic: versions
     tuple val("${task.process}"), val('pigz'),     eval("pigz --version 2>&1 | sed 's/pigz //g'"),            topic: versions
 
@@ -37,8 +36,6 @@ process SRATOOLS_FASTERQDUMP {
         --no-name \\
         --processes $task.cpus \\
         *.fastq
-
-    TOTAL_NB_BASES=\$(seqkit stats --tabular --quiet *.fastq.gz | awk 'NR>1 {sum += \$5} END {print sum}')
     """
 
     stub:

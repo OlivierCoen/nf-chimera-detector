@@ -12,6 +12,7 @@ include { BLAST_AGAINST_TARGET                                                  
 include { BLAST_AGAINST_GENOMES                                                     } from '../subworkflows/local/blast_against_genomes'
 
 include { NCBI_ASSEMBLY_STATS                                                       } from '../modules/local/ncbi_assembly_stats'
+include { SEQKIT_STATS                                                              } from '../modules/nf-core/seqkit/stats'
 include { FIND_CHIMERAS                                                             } from '../modules/local/find_chimeras'
 include { MULTIQC_WORKFLOW                                                          } from '../subworkflows/local/multiqc'
 
@@ -185,11 +186,27 @@ workflow CHIMERADETECTOR {
         .mix ( ch_fastq )
         .set { ch_reads }
 
+    // ---------------------------------------------------------------
+    // COMPUTING STATISTICS FOR EACH SRR / CUSTOM FASTQS
+    // ---------------------------------------------------------------
+
+    SEQKIT_STATS ( ch_reads )
+
+    // parsing stats and turning it into a channel readily formated for the MultiQC generalstat table
+    SEQKIT_STATS.out.stats
+        .splitCsv( header: true, sep: '\t' )
+        .map {
+            meta, stats_map ->
+                ["file", "format", "type"].each { stats_map.remove(it) }
+                [ id: meta.id ] + stats_map
+        }
+        .set { ch_fastq_stats }
+
     // ------------------------------------------------------------------------------------
     // DOWNLOAD GENOME ASSEMBLY FROM NCBI IF AVAILABLE OR MAKE FROM SCRATCH OTHERWISE
     // ------------------------------------------------------------------------------------
 
-    GET_GENOMES  ( ch_reads )
+    GET_GENOMES ( ch_reads )
     GET_GENOMES.out.assemblies.set { ch_assemblies }
 
     // ------------------------------------------------------------------------------------
@@ -232,8 +249,19 @@ workflow CHIMERADETECTOR {
     // MULTIQC
     // ------------------------------------------------------------------------------------
 
+    ch_versions
+        .mix( DOWNLOAD_SRA.out.versions )
+        .mix( SEQKIT_STATS.out.versions )
+        .mix( GET_GENOMES.out.versions )
+        .mix( POST_PROCESS_SRA.out.versions )
+        .mix( BLAST_AGAINST_TARGET.out.versions )
+        .mix( BLAST_AGAINST_GENOMES.out.versions )
+        .set { ch_versions }
+
+
     MULTIQC_WORKFLOW (
         ch_chimeras_csv,
+        ch_fastq_stats,
         ch_reads_fasta,
         ch_species_taxids,
         ch_versions

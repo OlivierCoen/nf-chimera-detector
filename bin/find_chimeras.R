@@ -383,16 +383,17 @@ if ( nrow(blast_hits_1_df) == 0 || nrow(blast_hits_2_df) == 0 ) {
     chimera_df <- find_chimeras(blast_hits_1_df, blast_hits_2_df)
 }
 
+# we want to export files anyway, even when there is no read
+# this helps t keep tracjk of SRRs that have been processed until the end
 nb_chimeras <- nrow(chimera_df)
 if ( nb_chimeras == 0 ) {
     message("\nNo chimeras found")
+    file.create(args$outfile)
+    file.create("chimeric_reads.txt")
 } else {
     message(paste("\nFound ", nb_chimeras, " chimeras"))
+    # writing the names of the chimeric reads in a file
+    write(chimera_df$qseqid, file = "chimeric_reads.txt", ncolumns = 1)
+    chimera_df <- add_metadata(chimera_df, args$family, args$species, args$srr)
+    export_data(chimera_df, args$outfile)
 }
-
-# writing the names of the chimeric reads in a file
-write(chimera_df$qseqid, file = "chimeric_reads.txt", ncolumns = 1)
-
-chimera_df <- add_metadata(chimera_df, args$family, args$species, args$srr)
-
-export_data(chimera_df, args$outfile)

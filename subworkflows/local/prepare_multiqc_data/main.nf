@@ -43,7 +43,7 @@ workflow PREPARE_MULTIQC_DATA {
                     def firstLine = csv_file.readLines().get(0)
                     return firstLine.contains("qseqid")
                } catch (Exception e) {
-                    log.warn "Could not read first line of ${csv_file.name}: ${e.message}"
+                    // log.warn "Could not read first line of ${csv_file.name}: ${e.message}"
                     return false
                }
         }
@@ -130,7 +130,6 @@ workflow PREPARE_MULTIQC_DATA {
             Channel.topic('nb_chimeras').map { family, id, nb -> [ id, [nb_chimeras: nb] ] },
             remainder: true
         )
-        .view()
         .map {
             meta ->
                 // removes first element: taxid (1 does not correspond to the position but to the nb of elements removes from the beginning)

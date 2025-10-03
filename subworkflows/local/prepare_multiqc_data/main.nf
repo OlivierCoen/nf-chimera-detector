@@ -21,13 +21,71 @@ def getBlastDb( process_name ) {
 workflow PREPARE_MULTIQC_DATA {
 
     take:
+    ch_chimeras_csv
     ch_reads_fasta
-    ch_chimeras_data_mqc
+    ch_species_taxids
 
 
     main:
 
     ch_data_per_family = Channel.empty()
+
+
+    // ------------------------------------------------------------------------------------
+    // PREPARING CHIMERAS DATA
+    // ------------------------------------------------------------------------------------
+
+    // removing empty chimera tables (ie. those that contain only metadata and not columns like "qseqid")
+    ch_chimeras_csv
+        .filter {
+            meta, csv_file ->
+               try {
+                    def firstLine = csv_file.readLines().get(0)
+                    return firstLine.contains("qseqid")
+               } catch (Exception e) {
+                    log.warn "Could not read first line of ${csv_file.name}: ${e.message}"
+                    return false
+               }
+        }
+        .map { meta, file -> file }
+        .set { ch_chimeras_data_mqc }
+
+    // ------------------------------------------------------------------------------------
+    // GETTING NB OF SPECIES PER FAMILY
+    // ------------------------------------------------------------------------------------
+
+    ch_species_taxids
+        .map { meta, taxid -> [ meta.family, taxid ] }
+        .groupTuple()
+        .map { meta, taxids -> [ meta, taxids.size() ] }
+        .collectFile(
+            name: 'nb_species_per_family.tsv',
+            seed: "family\tnb_species",
+            newLine: true,
+            storeDir: "${params.outdir}/species_taxids/"
+        ) {
+            item -> "${item[0]}\t${item[1]}"
+        }
+        .set { ch_nb_species_per_family_file }
+
+    // ------------------------------------------------------------------------------------
+    // GETTING NB SRRS PER FAMILY
+    // ------------------------------------------------------------------------------------
+
+    ch_reads_fasta
+        .map { meta, file -> [ meta.family, file ] }
+        .groupTuple()
+        .map { meta, files -> [ meta, files.size() ] }
+        .collectFile(
+            name: 'nb_srrs_per_family.tsv',
+            seed: "family\tnb_srrs",
+            newLine: true,
+            storeDir: "${params.outdir}/sratools/"
+        ) {
+            item -> "${item[0]}\t${item[1]}"
+        }
+        .set { ch_nb_srrs_per_family_file }
+
 
     // ------------------------------------------------------------------------------------
     // SUMMARY OF CHIMERAS STATISTICS PER FAMILY / SPECIES
@@ -42,17 +100,62 @@ workflow PREPARE_MULTIQC_DATA {
     // MAKING GENERAL STAT TABLE PER SRR (ID)
     // ------------------------------------------------------------------------------------
 
-
-    Channel.topic('downloaded_genome_nb_bases')
+    // associating size of downloaded genomes to all possible SRR IDs
+    Channel.topic('dl_genome_len')
         .combine( ch_reads_fasta )
         .filter { family, taxid, nb_bases, meta, fasta -> taxid == meta.taxid }
         .map { family, taxid, nb_bases, meta, fasta -> [ meta.id, nb_bases] }
-        .set { ch_downloaded_genome_nb_bases }
+        .set { ch_dl_genome_len }
 
-
-    Channel.topic('assembled_genome_nb_bases').view{ v -> "assembled_genome_nb_bases " + v}
-    Channel.topic('read_fasta_nb_bases').view{ v -> "read_fasta_nb_bases " + v}
-    Channel.topic('fastq_sum_len').view{ v -> "fastq_sum_len " + v}
+    // performing multiple left joins (remainder is true) in a row, with id (SRR ID) as matching key
+    ch_reads_fasta
+        .map { meta, fasta -> [ meta.id, meta ] }
+        .join(
+            Channel.topic('asm_genome_len').map { family, id, nb -> [ id, [asm_genome_len: nb] ] },
+            remainder: true
+        )
+        .join(
+            Channel.topic('fastq_sum_len').map { family, id, nb -> [ id, [fastq_sum_len: nb] ] },
+            remainder: true
+        )
+        .join(
+            Channel.topic('read_fasta_len').map { family, id, nb -> [ id, [read_fasta_len: nb] ] },
+            remainder: true
+        )
+        .join (
+            ch_dl_genome_len.map { id, nb -> [ id, [dl_genome_len: nb] ] },
+            remainder: true
+        )
+        .join(
+            Channel.topic('nb_chimeras').map { family, id, nb -> [ id, [nb_chimeras: nb] ] },
+            remainder: true
+        )
+        .view()
+        .map {
+            meta ->
+                // removes first element: taxid (1 does not correspond to the position but to the nb of elements removes from the beginning)
+                def cleaned = meta.drop(1)
+                // drop nulls (only for genomes: downloaded XOR assembled)
+                def not_nulls = cleaned.findAll { it != null }
+                // merge list of maps into one map
+                def merged  = not_nulls.collectEntries { it }
+                merged
+        }
+        .map { // computing coverage
+            meta ->
+                def genome_length = meta.dl_genome_len ?: meta.asm_genome_len
+                def coverage = meta.fastq_sum_len.toFloat() / genome_length.toFloat()
+                meta + [coverage: coverage]
+        }
+        .collectFile(
+            name: 'srr_metadata.tsv',
+            seed: "srr_id\tfamily\ttaxid\tsra_id\tcoverage\tfastq_sum_len\tread_fasta_len\tdl_genome_len\tasm_genome_len\tnb_chimeras",
+            newLine: true,
+            storeDir: "${params.outdir}/multiqc/"
+        ) {
+            item -> "${item.id}\t${item.family}\t${item.taxid}\t${item.sra_id}\t${item.coverage}\t${item.fastq_sum_len}\t${item.read_fasta_len}\t${item.dl_genome_len}\t${item.asm_genome_len}\t${item.nb_chimeras}"
+        }
+        .set { ch_srr_metadata_file }
 
     // ------------------------------------------------------------------------------------
     // COLLECTING NB OF BASES SIZE OF DOWNLOADED FASTQ FILES PER FAMILY
@@ -73,9 +176,9 @@ workflow PREPARE_MULTIQC_DATA {
     // COLLECTING NB OF BASES SIZE OF PROCESSED READ FASTA FILES PER FAMILY
     // ------------------------------------------------------------------------------------
 
-    Channel.topic('read_fasta_nb_bases') // family, id, sum_len
+    Channel.topic('read_fasta_len') // family, id, sum_len
         .collectFile(
-            name: 'read_fasta_nb_bases.tsv',
+            name: 'read_fasta_len.tsv',
             seed: "family\tdata",
             newLine: true,
             storeDir: "${params.outdir}/sratools/"
@@ -88,7 +191,7 @@ workflow PREPARE_MULTIQC_DATA {
     // COLLECTING NB OF BASES OF DOWNLOADED GENOMES PER FAMILY
     // ------------------------------------------------------------------------------------
 
-    Channel.topic('downloaded_genome_nb_bases') // family, taxid, nb_bases
+    Channel.topic('dl_genome_len') // family, taxid, nb_bases
         .collectFile(
             name: 'downloaded_genome_size.tsv',
             seed: "family\tdata",
@@ -184,7 +287,11 @@ workflow PREPARE_MULTIQC_DATA {
 
 
     emit:
+    chimeras_data                   = ch_chimeras_data_mqc
+    srr_metadata                    = ch_srr_metadata_file
     chimeras_summary                = MAKE_SUMMARY.out.csv
-    prepared_data                   = PREPARE_DATA_PER_FAMILY.out.tsv
+    nb_species_per_family           = ch_nb_species_per_family_file
+    nb_srrs_per_family              = ch_nb_srrs_per_family_file
+    data_per_family                 = PREPARE_DATA_PER_FAMILY.out.tsv
 }
 

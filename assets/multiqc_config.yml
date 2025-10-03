@@ -117,18 +117,75 @@ custom_data:
         title: "End position on genome"
         color: "rgb(10, 77, 110)"
 
+  srr_metadata:
+    plot_type: "generalstats"
+    headers:
+      - family:
+          namespace: "SRR metadata"
+          title: "Family"
+          description: "Family name as provided by the user"
+      - id:
+          namespace: "SRR metadata"
+          title: "SRR ID"
+          description: "File accession in NCBI SRA"
+      - taxid:
+          namespace: "SRR metadata"
+          title: "Species taxon ID"
+          description: "Taxon ID of the corresponding species in NCBI Taxonomy"
+      - sra_id:
+          namespace: "SRR metadata"
+          title: "SRA ID"
+          description: "Accession of the corresponding experiment in NCBI SRA"
+      - nb_chimeras:
+          namespace: "SRR metadata"
+          title: "Nb chimeras"
+          description: "Number of chimeras found"
+          min: 0
+          scale: "RdYlGn"
+      - coverage:
+          namespace: "SRR data"
+          title: "Coverage"
+          description: "Coverage (total nb of base pairs in read fastq files divided by the genome length)"
+          min: 0
+          scale: "RdYlGn"
+          format: "{:,.0f}"
+          suffix: "X"
+      - fastq_sum_len:
+          namespace: "SRR data"
+          title: "Fastq total size"
+          description: "Total number of base pairs in the original (downloaded or provided by the user) Fastq file(s)"
+          min: 0
+          scale: "RdYlGn"
+      - read_fasta_len:
+          namespace: "SRR data"
+          title: "Read Fasta total size"
+          description: "Total number of base pairs in the merged Fasta file"
+          min: 0
+          scale: "RdYlGn"
+      - dl_genome_len:
+          namespace: "SRR data"
+          title: "Genome length (downloaded)"
+          description: "Total number of base pairs in the downloaded genome (if any for the corresponding species)"
+          min: 0
+          scale: "RdYlGn"
+      - asm_genome_len:
+          namespace: "SRR data"
+          title: "Genome length (assembled)"
+          description: "Total number of base pairs in the assembled genome (if not genome was available on NCBI)"
+          min: 0
+          scale: "RdYlGn"
 
 
 
   stat_chimeras_per_family:
-    section_name: "Average of chimera statistics per family"
+    section_name: "Mean chimera statistics [family]"
     parent_id: chimera_stat_average
     parent_name: "Averages of chimera statistics"
     parent_description: "Average of various statistics about found chimeras, family per family"
     file_format: "csv"
     sort_rows: false
     description: |
-      Table representing mean values among all chimeras found in each family.
+      Mean chimera values, for each family.
     plot_type: "table"
     pconfig:
       col1_header: "Family"
@@ -201,14 +258,14 @@ custom_data:
 
 
   stat_chimeras_per_species:
-    section_name: "Average of chimera statistics per species"
+    section_name: "Mean chimera statistics [species]"
     parent_id: chimera_stat_average
     parent_name: "Averages of chimera statistics"
     parent_description: "Average of various statistics about found chimeras, family per family"
     file_format: "csv"
     sort_rows: false
     description: |
-      Table representing mean values among all chimeras found in each species.
+      Mean chimera values, for each species.
     plot_type: "table"
     pconfig:
       col1_header: "Species taxon ID"
@@ -396,7 +453,7 @@ custom_data:
       Distribution of size (in # bases) of the downloaded Fastq files, per family
     plot_type: "boxplot"
 
-  read_fasta_nb_bases:
+  read_fasta_len:
     section_name: "Size of processed read Fasta files (in # bases)"
     parent_id: data_size
     parent_name: "Data size"
@@ -414,6 +471,8 @@ custom_data:
 sp:
   chimera_families:
     fn: "*_chimeras.csv"
+  srr_metadata:
+    fn: "*srr_metadata.tsv"
   chimeras_overlap_coverage:
     fn: "*_chimeras.csv"
   chimeras_pident:
@@ -455,10 +514,16 @@ sp:
     fn: "*assembled_genome_size_transposed.tsv"
   fastq_nb_bases:
     fn: "*fastq_nb_bases_transposed.tsv"
-  read_fasta_nb_bases:
-    fn: "*read_fasta_nb_bases_transposed.tsv"
+  read_fasta_len:
+    fn: "*read_fasta_len_transposed.tsv"
   nb_srrs_per_family:
     fn: "*nb_srrs_per_family.tsv"
   nb_species_per_family:
     fn: "*nb_species_per_family.tsv"
+
+  flash/hist:
+    fn: "*_flash.hist"
+  flash/log:
+    contents: "[FLASH]"
+    fn: "*_flash.log"
 

@@ -14,7 +14,7 @@ process DOWNLOAD_NCBI_ASSEMBLY {
 
     output:
     tuple val(meta), path('*.{fasta,fa,fna}'),                                                                          emit: assemblies
-    tuple val("${meta.family}"), val("${meta.taxid}"), env('GENOME_NB_BASES'),                                          topic: downloaded_genome_nb_bases
+    tuple val("${meta.family}"), val("${meta.taxid}"), env('GENOME_NB_BASES'),                                          topic: dl_genome_len
     tuple val("${task.process}"), val('ncbi-datasets-cli'), eval("datasets --version | sed 's/datasets version: //g'"), topic: versions
 
     script:

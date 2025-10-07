@@ -15,7 +15,7 @@ process FLASH {
     tuple val(meta), path("${prefix}.notCombined_*.fastq.gz"),                                                   emit: notcombined
     path("*_flash.log"),                                                                                         topic: flash_multiqc
     path("*_flash.hist"),                                                                                        topic: flash_histogram_multiqc
-    tuple val("${task.process}"), val('flash'), eval("flash --version 2>&1 | sed 's/^.*FLASH v//; s/ .*\$//'"),  topic: versions
+    tuple val("${task.process}"), val('flash'), eval("flash --version 2>&1 | head -1 | sed 's/FLASH //g'"),      topic: versions
 
     script:
     def args = task.ext.args ?: ''

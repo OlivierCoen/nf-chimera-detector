@@ -12,12 +12,12 @@ process MERGE_HITS {
     tuple val(meta), path(hit_files, stageAs: "**/*")
 
     output:
-    tuple val(meta), path("${meta.id}_hits.txt"), emit: hits
+    tuple val(meta), path("${meta.id}.all_hits.txt"), emit: hits
 
     script:
 
     """
-    cat ${hit_files} > ${meta.id}_hits.txt
+    cat ${hit_files} > ${meta.id}.all_hits.txt
     """
 }
 

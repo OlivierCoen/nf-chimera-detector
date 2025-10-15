@@ -120,7 +120,7 @@ workflow PREPARE_MULTIQC_DATA {
     Channel.topic('dl_genome_len')
         .combine( ch_reads_fasta )
         .filter { family, taxid, nb_bases, meta, fasta -> taxid == meta.taxid }
-        .map { family, taxid, nb_bases, meta, fasta -> [ meta.id, nb_bases] }
+        .map { family, taxid, nb_bases, meta, fasta -> [ meta.id, nb_bases ] }
         .set { ch_dl_genome_len }
 
     // performing multiple left joins (remainder is true) in a row, with id (SRR ID) as matching key
@@ -160,11 +160,11 @@ workflow PREPARE_MULTIQC_DATA {
         }
         .collectFile(
             name: 'srr_metadata.tsv',
-            seed: "srr_id\tfamily\ttaxid\tsra_id\tcoverage\tread_fasta_len\tdl_genome_len\tasm_genome_len\tnb_chimeras",
+            seed: "srr_id\tfamily\ttaxid\ttaxon_name\tsra_id\tcoverage\tread_fasta_len\tdl_genome_len\tasm_genome_len\tnb_chimeras", // header of TSV file
             newLine: true,
             storeDir: "${params.outdir}/multiqc/"
         ) {
-            item -> "${item.id}\t${item.family}\t${item.taxid}\t${item.sra_id}\t${item.coverage}\t${item.read_fasta_len}\t${item.dl_genome_len}\t${item.asm_genome_len}\t${item.nb_chimeras}"
+            item -> "${item.id}\t${item.family}\ttxid${item.taxid}\t${item.taxon_name}\t${item.sra_id}\t${item.coverage}\t${item.read_fasta_len}\t${item.dl_genome_len}\t${item.asm_genome_len}\t${item.nb_chimeras}"
         }
         .set { ch_srr_metadata_file }
 

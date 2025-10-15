@@ -140,8 +140,12 @@ custom_data:
           description: "File accession in NCBI SRA"
       - taxid:
           namespace: "SRR metadata"
-          title: "Species taxon ID"
-          description: "Taxon ID of the corresponding species in NCBI Taxonomy"
+          title: "Organism taxon ID"
+          description: "Taxon ID of the corresponding organism in NCBI Taxonomy"
+      - taxon_name:
+          namespace: "SRR metadata"
+          title: "Organism name"
+          description: "Name of the corresponding organism in NCBI Taxonomy"
       - sra_id:
           namespace: "SRR metadata"
           title: "SRA ID"

@@ -60,7 +60,7 @@ workflow BLAST_AGAINST_TARGET {
     // ------------------------------------------------------------------------------------
     // COMPUTING THE NB OF CHUNKS FOR EACH READ FASTA FILE
     // ------------------------------------------------------------------------------------
-    Channel.topic('read_fasta_len').view()
+
     ch_reads_fasta
         .map { meta, fasta -> [ meta.id, meta, fasta ] }
         .join( Channel.topic('read_fasta_len').map { family, id, read_fasta_len -> [ id, read_fasta_len ] } ) // join on id (SRR ID)

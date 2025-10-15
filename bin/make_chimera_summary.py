@@ -53,9 +53,11 @@ if __name__ == "__main__":
 
     chimeras_df = pd.concat(chimeras_dfs, ignore_index=True)
 
+    logger.info("Converting all values to numeric when possible")
     # force convert to numeric whenever possible
     chimeras_df = chimeras_df.apply(pd.to_numeric, errors='ignore')
 
+    logger.info("CSelecting all numerical columns")
     # selecting all float, int and bool columns
     cols_to_keep = [col_for_grouping] + [
         col for col in chimeras_df.columns
@@ -64,8 +66,12 @@ if __name__ == "__main__":
     ]
     numeric_df = chimeras_df[cols_to_keep]
 
+    logger.info("Applying mean")
     # grouping by family or taxid & computing mean
     means_df = numeric_df.groupby(col_for_grouping).mean().reset_index()
-
+    print(means_df["slen_2"])
+    logger.info("Exporting")
     means_df.to_csv(args.outfile, index=False, header=True)
+
+    logger.info("Done")
 

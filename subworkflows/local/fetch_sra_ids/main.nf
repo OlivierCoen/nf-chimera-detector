@@ -11,14 +11,12 @@ workflow FETCH_SRA_IDS {
 
     GET_CHILDREN_TAXIDS ( ch_families )
 
-    GET_CHILDREN_TAXIDS.out.taxid_files
-        .map { meta, file -> [ meta, file.splitText() ] }
-        .transpose() // explodes each list
-        .map {
-            meta, taxid ->
-                def new_meta = meta + [ taxid: taxid.strip() ]
-                [ new_meta, taxid.strip() ]
-        }
+    GET_CHILDREN_TAXIDS.out.taxid_to_names_files
+
+        .map { meta, file -> [ meta, file.splitCsv( header: ['taxid', 'taxon_name'] ) ] }
+        .transpose() // explodes each list : we get items like [[family: ..., mean_assembly_length: ...], [taxid: ..., taxon_name: ...]]
+        .map { metas -> metas.collectEntries { it } } // flattens both maps together
+        .map { meta -> [ meta, meta.taxid.strip() ] }
         .set { ch_species_taxids }
 
     GET_SRA_METADATA ( ch_species_taxids )

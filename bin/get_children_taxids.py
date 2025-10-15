@@ -3,6 +3,7 @@
 # Written by Olivier Coen. Released under the MIT license.
 
 import requests
+from tqdm import tqdm
 import sys
 import argparse
 import xml.etree.ElementTree as ET
@@ -30,7 +31,7 @@ NCBI_API_HEADERS = {
 ESEARCH_BASE_URL = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi"
 ESEARCH_RETMAX = 1000000000 # max retmax that worked
 
-OUTFILE_SUFFIX = ".species_taxids.txt"
+TAXID_TO_NAME_OUTFILE_SUFFIX = ".taxids2names.csv"
 
 #####################################################
 #####################################################
@@ -55,8 +56,8 @@ def parse_args():
     wait=wait_exponential(multiplier=1, min=1, max=30),
     before_sleep=before_sleep_log(logger, logging.WARNING),
 )
-def send_request_to_ncbi_taxonomy(taxid: str):
-    taxons = [taxid]
+def send_request_to_ncbi_taxonomy(taxid: str | int):
+    taxons = [str(taxid)]
     data = {
         "taxons": taxons
     }
@@ -97,22 +98,23 @@ def parse_ids_from_xml(xml_string: str):
     return [id_element.text for id_element in root.findall('.//Id')]
 
 
-def get_family_taxid(family: str):
-
-    result = send_request_to_ncbi_taxonomy(family)
-
+def get_taxon_metadata(taxid: str) -> dict:
+    result = send_request_to_ncbi_taxonomy(taxid)
     if len(result['taxonomy_nodes']) > 1:
         raise ValueError(f"Multiple taxids for family {family}")
-    node = result['taxonomy_nodes'][0]
+    return result['taxonomy_nodes'][0]
 
-    if "taxonomy" not in node:
+
+
+def get_family_taxid(family: str):
+    metadata = get_taxon_metadata(family)
+    if "taxonomy" not in metadata:
         logger.info(f"Could not find taxonomy results for family {family}")
-        if "errors" in node:
-            for error in node["errors"]:
+        if "errors" in metadata:
+            for error in metadata["errors"]:
                 logger.error(f"Error: {error['reason']}\n")
                 sys.exit(100)
-
-    return node['taxonomy']['tax_id']
+    return int(metadata["taxonomy"]['tax_id'])
 
 
 def get_children_taxids(taxid: str) -> list[str]:
@@ -127,6 +129,12 @@ def get_children_taxids(taxid: str) -> list[str]:
         database="taxonomy"
     )
     return parse_ids_from_xml(xml_string)
+
+
+def get_taxon_name(taxid: str):
+    metadata = get_taxon_metadata(taxid)
+    return metadata.get("taxonomy", {}).get('organism_name', None)
+
 
 
 #####################################################
@@ -144,14 +152,18 @@ if __name__ == "__main__":
 
     logger.info(f"Getting children taxids for family {family}")
     children_taxids = get_children_taxids(family_taxid)
+
+    # converting all taxids to int for uniformity
+    # adding family taxid to children taxids (in case)
+    # keeping unique taxids (in case)
+    children_taxids = list(set([int(taxid) for taxid in children_taxids + [family_taxid]]))
     logger.info(f"Obtained {len(children_taxids)} children taxids\n")
 
-    # adding family taxid to children taxids
-    children_taxids.append(family_taxid)
+    taxids2names = { taxid: get_taxon_name(taxid) for taxid in tqdm(children_taxids) }
 
-    outfile = f"{family}{OUTFILE_SUFFIX}"
-    with open(outfile, 'w') as fout:
-        for taxid in children_taxids:
-            fout.write(f"{taxid}\n")
+    taxid2name_outfile = f"{family}{TAXID_TO_NAME_OUTFILE_SUFFIX}"
+    with open(taxid2name_outfile, 'w') as fout:
+        for taxid, name in taxids2names.items():
+            fout.write(f"{taxid},{name}\n")
 
     logger.info("Done")

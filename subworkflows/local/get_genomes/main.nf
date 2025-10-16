@@ -38,7 +38,10 @@ workflow GET_GENOMES {
     // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     ch_branched_sra_reads.to_download
-        .map { meta, reads, accession -> [ [ family: meta.family, taxid: meta.taxid ], accession ] }
+        .map {
+            meta, reads, accession -> // remove reads and insert genome_accession in meta map
+                [ [ family: meta.family, taxid: meta.taxid, genome_accession: accession ], accession ]
+        }
         .unique()
         .set { accessions_to_download }
 
@@ -49,13 +52,16 @@ workflow GET_GENOMES {
     // in this case, we create a channel with one assembly per SRR
     // we link the assemblies with their SRRs through meta
     DOWNLOAD_NCBI_ASSEMBLY.out.assemblies
-        .map { meta, assembly -> [ meta, assembly, meta.taxid ] }
+        .map { meta, assembly -> [ meta + [ assembly_name: assembly.baseName ], assembly, meta.taxid ] }
         .set { ch_downloaded_assemblies }
 
     ch_branched_sra_reads.to_download
         .map { meta, reads, accession -> [ meta, reads, meta.taxid ] }
         .combine( ch_downloaded_assemblies, by: 2 ) // combining by taxid
-        .map { taxid, meta_reads, reads, meta_assembly, assembly -> [ meta_reads + meta_assembly, assembly ] } // combining meta maps
+        .map { // adding meta maps together
+            taxid, meta_reads, reads, meta_assembly, assembly ->
+                [ meta_reads + meta_assembly, assembly ]
+        }
         .set { ch_downloaded_assemblies }
 
     // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -101,4 +107,3 @@ workflow GET_GENOMES {
     versions                        = ch_versions
 
 }
-

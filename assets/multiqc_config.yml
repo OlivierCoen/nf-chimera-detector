@@ -3,7 +3,6 @@ report_comment: >
   analysis pipeline.
 
 report_section_order:
-
   "nf-chimera-detector-methods-description":
     order: -1000
   software_versions:
@@ -21,15 +20,11 @@ run_modules:
   - fastp
   - megahit
 
-
 table_cond_formatting_colours:
   - inverted: "#21B2ED"
-  - not_inverted  : "#9543E5"
-
-
+  - not_inverted: "#9543E5"
 
 custom_data:
-
   chimera_families:
     fn: "*_chimeras.csv"
     section_name: "Chimera statistics"
@@ -170,6 +165,10 @@ custom_data:
           description: "Total number of base pairs in the merged Fasta file"
           min: 0
           scale: "RdYlGn"
+      - dl_genome_name:
+          namespace: "SRR data"
+          title: "Genome name (downloaded)"
+          description: "Name of the downloaded genome (if any for the corresponding species)"
       - dl_genome_len:
           namespace: "SRR data"
           title: "Genome length (downloaded)"
@@ -182,7 +181,6 @@ custom_data:
           description: "Total number of base pairs in the assembled genome (if not genome was available on NCBI)"
           min: 0
           scale: "RdYlGn"
-
 
   fastq_stats:
     plot_type: "generalstats"
@@ -288,10 +286,6 @@ custom_data:
           min: 0
           scale: "RdYlGn"
 
-
-
-
-
   stat_chimeras_per_family:
     section_name: "Mean chimera statistics [family]"
     parent_id: chimera_stat_average
@@ -369,8 +363,6 @@ custom_data:
         title: "End position on TE"
       send_2:
         title: "End position on genome"
-
-
 
   stat_chimeras_per_species:
     section_name: "Mean chimera statistics [species]"
@@ -451,9 +443,6 @@ custom_data:
       send_2:
         title: "End position on genome"
 
-
-
-
   nb_chimeras:
     section_name: "Number of chimeras per family"
     parent_id: family_statistics
@@ -499,10 +488,6 @@ custom_data:
       Bar plot showing the number of species found on NCBI for each family
     plot_type: "barplot"
 
-
-
-
-
   nb_hits_target:
     section_name: "Number of hits per family [against TEs]"
     parent_id: nb_hits
@@ -527,10 +512,6 @@ custom_data:
     description: |
       Distribution of number of Blast hits against genome per family
     plot_type: "boxplot"
-
-
-
-
 
   downloaded_genome_size:
     section_name: "Downloaded genomes"
@@ -567,9 +548,6 @@ custom_data:
     description: |
       Distribution of size (in # bases) of the processed read Fasta files, per family
     plot_type: "boxplot"
-
-
-
 
 sp:
   chimera_families:
@@ -629,4 +607,3 @@ sp:
   flash/log:
     contents: "[FLASH]"
     fn: "*_flash.log"
-

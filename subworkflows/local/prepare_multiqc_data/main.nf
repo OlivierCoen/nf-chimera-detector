@@ -116,33 +116,33 @@ workflow PREPARE_MULTIQC_DATA {
     // MAKING GENERAL STAT TABLE PER SRR (ID)
     // ------------------------------------------------------------------------------------
 
-    // associating size of downloaded genomes to all possible SRR IDs
-    Channel.topic('dl_genome_len')
+    // associating metadata of downloaded genomes to all possible SRR IDs
+    Channel.topic('dl_genome_metadata')
         .combine( ch_reads_fasta )
-        .filter { family, taxid, nb_bases, meta, fasta -> taxid == meta.taxid }
-        .map { family, taxid, nb_bases, meta, fasta -> [ meta.id, nb_bases ] }
+        .filter { family, taxid, genome_file, nb_bases, meta, fasta -> taxid == meta.taxid }
+        .map { family, taxid, genome_file, nb_bases, meta, fasta ->  [ meta.id, genome_file.baseName, nb_bases ] }
         .set { ch_dl_genome_len }
 
     // performing multiple left joins (remainder is true) in a row, with id (SRR ID) as matching key
     ch_reads_fasta
-        .map { meta, fasta -> [ meta.id, meta ] }
-        .join(
+        .map { meta, fasta -> [ meta.id, meta ] } // putting SRR id separately in order to join easily with other channels
+        .join( // joining with assembly metadata
             Channel.topic('asm_genome_len').map { family, id, nb -> [ id, [asm_genome_len: nb] ] },
             remainder: true
         )
-        .join(
+        .join( // joining with read fasta metadata
             Channel.topic('read_fasta_len').map { family, id, nb -> [ id, [read_fasta_len: nb] ] },
             remainder: true
         )
-        .join (
-            ch_dl_genome_len.map { id, nb -> [ id, [dl_genome_len: nb] ] },
+        .join ( // joining with download genome metadata
+            ch_dl_genome_len.map { id, genome_name, nb -> [ id, [dl_genome_name: genome_name, dl_genome_len: nb] ] },
             remainder: true
         )
-        .join(
+        .join( // joining with chimeras metadata
             Channel.topic('nb_chimeras').map { family, id, nb -> [ id, [nb_chimeras: nb] ] },
             remainder: true
         )
-        .map {
+        .map { // removing SRR ID and cleaning data
             meta ->
                 // removes first element: taxid (1 does not correspond to the position but to the nb of elements removes from the beginning)
                 def cleaned = meta.drop(1)
@@ -152,6 +152,7 @@ workflow PREPARE_MULTIQC_DATA {
                 def merged  = not_nulls.collectEntries { it }
                 merged
         }
+        .view()
         .map { // computing coverage
             meta ->
                 def genome_length = meta.dl_genome_len ?: meta.asm_genome_len
@@ -160,11 +161,11 @@ workflow PREPARE_MULTIQC_DATA {
         }
         .collectFile(
             name: 'srr_metadata.tsv',
-            seed: "srr_id\tfamily\ttaxid\ttaxon_name\tsra_id\tcoverage\tread_fasta_len\tdl_genome_len\tasm_genome_len\tnb_chimeras", // header of TSV file
+            seed: "srr_id\tfamily\ttaxid\ttaxon_name\tsra_id\tcoverage\tread_fasta_len\tdl_genome_name\tdl_genome_len\tasm_genome_len\tnb_chimeras", // header of TSV file
             newLine: true,
             storeDir: "${params.outdir}/multiqc/"
         ) {
-            item -> "${item.id}\t${item.family}\ttxid${item.taxid}\t${item.taxon_name}\t${item.sra_id}\t${item.coverage}\t${item.read_fasta_len}\t${item.dl_genome_len}\t${item.asm_genome_len}\t${item.nb_chimeras}"
+            item -> "${item.id}\t${item.family}\ttxid${item.taxid}\t${item.taxon_name}\t${item.sra_id}\t${item.coverage}\t${item.read_fasta_len}\t${item.dl_genome_name}\t${item.dl_genome_len}\t${item.asm_genome_len}\t${item.nb_chimeras}"
         }
         .set { ch_srr_metadata_file }
 
@@ -290,4 +291,3 @@ workflow PREPARE_MULTIQC_DATA {
     nb_srrs_per_family              = ch_nb_srrs_per_family_file
     data_per_family                 = PREPARE_DATA_PER_FAMILY.out.tsv
 }
-

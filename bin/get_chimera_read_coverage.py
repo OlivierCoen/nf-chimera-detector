@@ -12,7 +12,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
+logging.basicConfig(
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
+)
 logger = logging.getLogger(__name__)
 
 BLAST_OUTPUT_COL_SCHEMA = pl.Schema(
@@ -30,7 +32,7 @@ BLAST_OUTPUT_COL_SCHEMA = pl.Schema(
         "qlen": pl.UInt64(),
         "slen": pl.UInt64(),
         "evalue": pl.Float64(),
-        "bitscore": pl.Float64()
+        "bitscore": pl.Float64(),
     }
 )
 
@@ -54,7 +56,14 @@ def parse_args():
         "--hits", type=Path, dest="blast_hit_file", required=True, help="Blast hit file"
     )
     parser.add_argument(
-        "--chimeras", dest="chimera_file", type=Path, required=True, help="File containing chimera table"
+        "--chimeras",
+        dest="chimera_file",
+        type=Path,
+        required=True,
+        help="File containing chimera table",
+    )
+    parser.add_argument(
+        "--outdir", dest="output_dir", type=Path, required=True, help="Output directory"
     )
     return parser.parse_args()
 
@@ -64,18 +73,29 @@ def get_occurences(df: pl.DataFrame):
     fields = [str(i) for i in range(target_length)]
 
     return (
-        df
-        .with_columns(
-            nb_left_uncovered=(pl.col("sstart") - 1),  # nb of bases strictly before sstart
-            nb_covered=(pl.col('send') - pl.col("sstart") + 1),  # nb of bases between ssart and send
-            nb_right_uncovered=(pl.lit(target_length) - pl.col("send"))  # nb of bases stricly after send
+        df.with_columns(
+            nb_left_uncovered=(
+                pl.col("sstart") - 1
+            ),  # nb of bases strictly before sstart
+            nb_covered=(
+                pl.col("send") - pl.col("sstart") + 1
+            ),  # nb of bases between ssart and send
+            nb_right_uncovered=(
+                pl.lit(target_length) - pl.col("send")
+            ),  # nb of bases stricly after send
         )
         .with_columns(
-            left_uncovered=pl.int_ranges('nb_left_uncovered').list.eval(pl.element() * 0),
+            left_uncovered=pl.int_ranges("nb_left_uncovered").list.eval(
+                pl.element() * 0
+            ),
             # list of zeros of length nb_left_uncovered
-            covered=pl.int_ranges('nb_covered').list.eval((pl.element() >= 0).cast(pl.Int64)),
+            covered=pl.int_ranges("nb_covered").list.eval(
+                (pl.element() >= 0).cast(pl.Int64)
+            ),
             # trick to have list of ones of length nb_covered
-            right_uncovered=pl.int_ranges('nb_right_uncovered').list.eval(pl.element() * 0),
+            right_uncovered=pl.int_ranges("nb_right_uncovered").list.eval(
+                pl.element() * 0
+            ),
             # list of zeros of length nb_right_uncovered
         )
         .with_columns(
@@ -83,19 +103,29 @@ def get_occurences(df: pl.DataFrame):
             # concatenation of the threee lists: list of zeros / ones of length target_length
         )
         .select(
-            pl.col('occurences').list.to_struct(fields=fields)  # selecting only this column and preparing for unnesting
+            pl.col("occurences").list.to_struct(
+                fields=fields
+            )  # selecting only this column and preparing for unnesting
         )
         .unnest("occurences")
-    # turning "occurences" column (column of lists) into a dataframe: each column correspond to a position on the subject sequence
+        # turning "occurences" column (column of lists) into a dataframe: each column correspond to a position on the subject sequence
     )
 
 
 def swap_start_end_if_necessary(df: pl.DataFrame):
     cond = pl.col("sstart") > pl.col("send")
-    return df.with_columns([
-        pl.when(cond).then(pl.col("send")).otherwise(pl.col("sstart")).alias("sstart"),
-        pl.when(cond).then(pl.col("sstart")).otherwise(pl.col("send")).alias("send"),
-    ])
+    return df.with_columns(
+        [
+            pl.when(cond)
+            .then(pl.col("send"))
+            .otherwise(pl.col("sstart"))
+            .alias("sstart"),
+            pl.when(cond)
+            .then(pl.col("sstart"))
+            .otherwise(pl.col("send"))
+            .alias("send"),
+        ]
+    )
 
 
 def get_coverage(hit_lf: pl.LazyFrame, target: str):
@@ -117,8 +147,9 @@ def get_coverage(hit_lf: pl.LazyFrame, target: str):
 
     # returns the sum of all occurences for each position
     return (
-        occurence_df
-        .select(pl.sum("*"))  # for each column (each position), suming all occurences (1 or 0)
+        occurence_df.select(
+            pl.sum("*")
+        )  # for each column (each position), suming all occurences (1 or 0)
         .transpose()
         .to_series()
         .to_pandas()
@@ -126,50 +157,46 @@ def get_coverage(hit_lf: pl.LazyFrame, target: str):
 
 
 def plot_coverage(
-        non_chimera_coverage: pd.Series,
-        chimera_coverage: pd.Series,
-        target: str,
-        log: bool = False
+    non_chimera_coverage: pd.Series,
+    chimera_coverage: pd.Series,
+    target: str,
+    output_dir: Path,
+    log: bool = False,
 ):
     fig, ax = plt.subplots(figsize=FIGZISE)
 
     common_plot_params = dict(
-        kind='area',
-        ax=ax,
-        alpha=0.6,
-        linewidth=0,
-        stacked=False,
-        xlabel=target
+        kind="area", ax=ax, alpha=0.6, linewidth=0, stacked=False, xlabel=target
     )
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     # PLOTTING NON CHIMERAS
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     if not non_chimera_coverage.empty:
-        s1 = non_chimera_coverage.apply(lambda x: 10 * np.log10(x + 1)) if log else non_chimera_coverage
-        s1.plot(
-            label='Non chimeras',
-            color=NON_CHIMERA_COLOR,
-            **common_plot_params
+        s1 = (
+            non_chimera_coverage.apply(lambda x: 10 * np.log10(x + 1))
+            if log
+            else non_chimera_coverage
         )
+        s1.plot(label="Non chimeras", color=NON_CHIMERA_COLOR, **common_plot_params)
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     # PLOTTING CHIMERAS
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     # chimera_coverage is necessarily not empty because we filtered it beforehand
-    s2 = chimera_coverage.apply(lambda x: 10 * np.log10(x + 1)) if log else chimera_coverage
-    s2.plot(
-        label='Chimeras',
-        color=CHIMERA_COLOR,
-        **common_plot_params
+    s2 = (
+        chimera_coverage.apply(lambda x: 10 * np.log10(x + 1))
+        if log
+        else chimera_coverage
     )
+    s2.plot(label="Chimeras", color=CHIMERA_COLOR, **common_plot_params)
 
     # cleaning target name
-    dirname = target.replace("/", "_")
-    Path(dirname).mkdir(parents=True, exist_ok=True)
+    dirname = output_dir / target.replace("/", "_")
+    Path(dirname).mkdir(parents=True)
     outfile = f"{dirname}/log.png" if log else f"{dirname}/raw.png"
 
-    plt.savefig(outfile, bbox_inches='tight')
+    plt.savefig(outfile, bbox_inches="tight")
     # closes current figure window to save memory
     plt.close()
 
@@ -183,7 +210,9 @@ def plot_coverage(
 if __name__ == "__main__":
     args = parse_args()
 
-    hit_lf = pl.scan_csv(args.blast_hit_file, separator='\t', schema=BLAST_OUTPUT_COL_SCHEMA)
+    hit_lf = pl.scan_csv(
+        args.blast_hit_file, separator="\t", schema=BLAST_OUTPUT_COL_SCHEMA
+    )
     chimera_lf = pl.scan_csv(args.chimera_file)
 
     # dividing hit table into chimera and non-chimera hits
@@ -208,7 +237,18 @@ if __name__ == "__main__":
     # plotting images
     logger.info("Making plots")
     for target in tqdm(chimera_coverage):
-        plot_coverage(non_chimera_coverage[target], chimera_coverage[target], target)
-        plot_coverage(non_chimera_coverage[target], chimera_coverage[target], target, log=True)
+        plot_coverage(
+            non_chimera_coverage[target],
+            chimera_coverage[target],
+            target,
+            args.output_dir,
+        )
+        plot_coverage(
+            non_chimera_coverage[target],
+            chimera_coverage[target],
+            target,
+            args.output_dir,
+            log=True,
+        )
 
     logger.info("Done")

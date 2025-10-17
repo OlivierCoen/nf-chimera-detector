@@ -8,3 +8,4 @@ dependencies:
   - conda-forge::pandas=2.3.3
   - conda-forge::matplotlib=3.10.6
   - conda-forge::tqdm=4.67.1
+  - conda-forge::pyarrow=21.0.0

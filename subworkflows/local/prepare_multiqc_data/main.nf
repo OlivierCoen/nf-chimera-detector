@@ -152,7 +152,6 @@ workflow PREPARE_MULTIQC_DATA {
                 def merged  = not_nulls.collectEntries { it }
                 merged
         }
-        .view()
         .map { // computing coverage
             meta ->
                 def genome_length = meta.dl_genome_len ?: meta.asm_genome_len

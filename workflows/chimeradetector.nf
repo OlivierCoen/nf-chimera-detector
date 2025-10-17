@@ -10,11 +10,12 @@ include { GET_GENOMES                                                           
 include { POST_PROCESS_SRA                                                          } from '../subworkflows/local/post_process_sra'
 include { BLAST_AGAINST_TARGET                                                      } from '../subworkflows/local/blast_against_target'
 include { BLAST_AGAINST_GENOMES                                                     } from '../subworkflows/local/blast_against_genomes'
+include { GET_CHIMERAS                                                              } from '../subworkflows/local/get_chimeras'
+include { MULTIQC_WORKFLOW                                                          } from '../subworkflows/local/multiqc'
 
 include { NCBI_ASSEMBLY_STATS                                                       } from '../modules/local/ncbi_assembly_stats'
 include { SEQKIT_STATS                                                              } from '../modules/nf-core/seqkit/stats'
-include { FIND_CHIMERAS                                                             } from '../modules/local/find_chimeras'
-include { MULTIQC_WORKFLOW                                                          } from '../subworkflows/local/multiqc'
+
 
 
 /*
@@ -235,13 +236,14 @@ workflow CHIMERADETECTOR {
     )
 
     // ------------------------------------------------------------------------------------
-    // FIND CHIMERAS
+    // FIND CHIMERAS AND COMPUTE COVERAGE
     // ------------------------------------------------------------------------------------
 
-    FIND_CHIMERAS (
-        BLAST_AGAINST_TARGET.out.hits.join( BLAST_AGAINST_GENOMES.out.hits )
-     )
-    FIND_CHIMERAS.out.csv.set { ch_chimeras_csv }
+    GET_CHIMERAS (
+        BLAST_AGAINST_TARGET.out.hits,
+        BLAST_AGAINST_GENOMES.out.hits
+    )
+    GET_CHIMERAS.out.chimeras_csv.set { ch_chimeras_csv }
 
     addDoneToSraRegistry ( ch_chimeras_csv )
 

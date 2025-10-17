@@ -1,4 +1,4 @@
-include { BLAST_MAKEBLASTDB as MAKEBLASTDB             } from '../../../modules/nf-core/blast/makeblastdb'
+include { BLAST_MAKEBLASTDB as MAKEBLASTDB             } from '../../../modules/local/blast/makeblastdb'
 include { BLAST_BLASTN as BLASTN                       } from '../../../modules/local/blast/blastn'
 include { SEQTK_SUBSEQ                                 } from '../../../modules/local/seqtk/subseq'
 include { SEQKIT_SPLIT2                                } from '../../../modules/local/seqkit/split2/'
@@ -125,4 +125,3 @@ workflow BLAST_AGAINST_TARGET {
     versions                        = ch_versions
 
 }
-

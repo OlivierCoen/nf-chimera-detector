@@ -1,9 +1,9 @@
 nextflow_process {
 
-    name "Test Process GET_MEAN_ASSEMBLY_LENGTH"
-    script "modules/local/get_mean_assembly_length/main.nf"
-    process "GET_MEAN_ASSEMBLY_LENGTH"
-    tag "get_mean_assembly_length"
+    name "Test Process NCBI_ASSEMBLY_STATS"
+    script "modules/local/ncbi_assembly_stats/main.nf"
+    process "NCBI_ASSEMBLY_STATS"
+    tag "ncbi_assembly_stats"
 
     test("Has genomes") {
 

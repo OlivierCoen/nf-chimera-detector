@@ -1,0 +1,49 @@
+nextflow_process {
+
+    name "Test Process GET_CHIMERA_READ_COVERAGE"
+    script "modules/local/get_chimera_read_coverage/main.nf"
+    process "GET_CHIMERA_READ_COVERAGE"
+    tag "get_chimera_coverage"
+
+    test("Chimera found") {
+
+        when {
+            process {
+                """
+                input[0] = [
+                    [ id: "test" ],
+                    file( "${projectDir}/tests/test_data/blast_outputs/chimeras/DRR515383.all_hits.txt", checkIfExists: true),
+                    file( "${projectDir}/tests/test_data/chimeras/DRR515383_chimeras.csv", checkIfExists: true)
+                ]
+                """
+            }
+        }
+
+        then {
+            assert process.success
+            assert snapshot(process.out).match()
+        }
+
+    }
+
+    test("Empty chimera file - Success if fails") {
+
+        when {
+            process {
+                """
+                input[0] = [
+                    [ id: "test" ],
+                    file( "${projectDir}/tests/test_data/blast_outputs/chimeras/blastOnTEs.txt", checkIfExists: true),
+                    file( "${projectDir}/tests/test_data/chimeras/empty_chimeras.csv", checkIfExists: true)
+                ]
+                """
+            }
+        }
+
+        then {
+            assert !process.success
+        }
+
+    }
+
+}

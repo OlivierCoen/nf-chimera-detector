@@ -193,7 +193,7 @@ def plot_coverage(
 
     # cleaning target name
     dirname = output_dir / target.replace("/", "_")
-    Path(dirname).mkdir(parents=True)
+    Path(dirname).mkdir(parents=True, exist_ok=True)
     outfile = f"{dirname}/log.png" if log else f"{dirname}/raw.png"
 
     plt.savefig(outfile, bbox_inches="tight")
@@ -213,7 +213,12 @@ if __name__ == "__main__":
     hit_lf = pl.scan_csv(
         args.blast_hit_file, separator="\t", schema=BLAST_OUTPUT_COL_SCHEMA
     )
-    chimera_lf = pl.scan_csv(args.chimera_file)
+
+    try:
+        chimera_lf = pl.scan_csv(args.chimera_file)
+    except polars.exceptions.NoDataError as e:
+        logger.error(f"No data in chimera file: {e}")
+        sys.exit(100)
 
     # dividing hit table into chimera and non-chimera hits
     chimera_qseqids = chimera_lf.select("qseqid").collect().to_series().to_list()

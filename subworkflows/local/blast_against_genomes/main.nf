@@ -1,4 +1,4 @@
-include { BLAST_MAKEBLASTDB as MAKEBLASTDB             } from '../../../modules/nf-core/blast/makeblastdb'
+include { BLAST_MAKEBLASTDB as MAKEBLASTDB             } from '../../../modules/local/blast/makeblastdb'
 include { BLAST_BLASTN as BLASTN                       } from '../../../modules/local/blast/blastn'
 
 
@@ -42,4 +42,3 @@ workflow BLAST_AGAINST_GENOMES {
     versions                        = ch_versions
 
 }
-

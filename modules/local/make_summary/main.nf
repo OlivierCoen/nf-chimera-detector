@@ -8,7 +8,7 @@ process MAKE_SUMMARY {
         'community.wave.seqera.io/library/pandas:2.3.2--baef3004955c4a32' }"
 
     input:
-    path chimeras_files
+    path chimeras_file
     each category
 
     output:
@@ -20,7 +20,7 @@ process MAKE_SUMMARY {
     def prefix = task.ext.prefix
     """
     make_chimera_summary.py \\
-        --files "$chimeras_files" \\
+        --file $chimeras_file \\
         --groupby $category \\
         --out ${category}_chimeras_summary.csv
     """

@@ -12,10 +12,8 @@ options(error = traceback)
 # The same command should be used to generate blastn outputs for other genomes of interest.
 
 suppressPackageStartupMessages(library("data.table"))
-suppressPackageStartupMessages(library("dplyr"))
 library(data.table)
 library(optparse)
-library(dplyr)
 
 #####################################################
 #####################################################
@@ -45,8 +43,8 @@ get_args <- function() {
 
 # functions used for the search and analysis of chimeric reads
 
-remove_overlapping_alignments <- function(blast, min_overlap_for_dropping) {
-    #' among HSPs covering the same ≥20bp region of the same read, selects the one of min evalue
+remove_overlapping_alignments = function(blast, min_overlap_for_dropping) {
+    #' among HSPs covering the same ≥20bp region of the same read, selects the one of higher evalue
 
     dt = copy(blast)
     #sorts HSPs by coordinates
@@ -73,8 +71,6 @@ remove_overlapping_alignments <- function(blast, min_overlap_for_dropping) {
         candidates = data.table(odds = odd[f], evens = even[f])
         #determine the one to discard according to evalue
         to_discard = candidates[, ifelse(dt$evalue[odds] < dt$evalue[evens], odds, evens)]
-        # TODO: see if it is exact
-        #to_discard = candidates[, ifelse(dt$evalue[odds] < dt$evalue[evens], evens, odds)]
 
         # checking if to_discard is full of NA (resulting in infinite loop)
         if ( all(is.na(to_discard)) ) {
@@ -90,34 +86,35 @@ remove_overlapping_alignments <- function(blast, min_overlap_for_dropping) {
 }
 
 
-get_best_hit_per_read <- function(dt) {
-  # get the best hits based on:
-  # 1: evalue
-  # 2: pident
-  # 3: qlen
-  # these three filters are used only in the case where multiple hits have the same evalue
-  best_hit_blast <- dt %>%
-      group_by(qseqid) %>%
-      slice_min(evalue, with_ties = TRUE) %>% # get all hits with the lowest evalue
-      slice_max(pident, with_ties = TRUE) %>% # get all hits with the highest pident
-      slice_max(length, with_ties = FALSE) %>% # get only one hit (the first in the group) with the highest alignment length
-      ungroup()
+join_best_hits_on_1_and_2_for_each_read = function(blast) {
+    #' Puts the 2 best HSPs on the same read (which are in different rows) at the same row in a new table,
+    #' so that it can be determined  afterwards if such reads is chimeric
 
-  return(best_hit_blast)
-}
+    #randomise the order of HSPs in the blast results table
+    blast = blast[sample(1:nrow(blast))]
+    #selects reads that have several HSPs
+    blast = blast[duplicated(qseqid) | duplicated(qseqid, fromLast = T)]
+    #puts the best HSPs on top
+    setorder(blast, qseqid, -evalue)
 
+    #puts best HSP on each read in a new table
+    blast1 = blast[!duplicated(qseqid)]
+    #puts 2nd best HSP on each read in another table
+    blast2 = blast[duplicated(qseqid)]
+    blast2 = blast2[!duplicated(qseqid)]
 
-get_reads_with_hits_on_both <- function(dt1, dt2) {
-    # Join both dataframes (inner join) to keep only reads with hits on both target and genome
-
-    #merges these tables (all = FALSE: inner join)
-    merged <- merge(dt1, dt2, by = "qseqid", all = FALSE, suffixes = c("_1","_2"))
+    #merges these tables (full outer join)
+    merged <- merge(blast1, blast2, by = "qseqid", all = T, suffixes = c("_1","_2"))
     message(paste("Obtained", nrow(merged), "reads having hits on both 1 and 2"))
 
-    # checking (just in case)
+    # checking
     if ( any(merged$qlen_1 != merged$qlen_2) ) {
         error("Read lengths do not correspond")
     }
+
+    # keep only rows where subject types are different
+    merged <- merged[merged$subject_type_1 != merged$subject_type_2]
+    message(paste("Kept", nrow(merged), "rows corresponding to hits on both 1 and 2"))
 
     return(merged)
 }
@@ -144,41 +141,40 @@ get_coverage_2_only <- function(blast){
 }
 
 
-get_chimeric_reads <- function(dt, min_total_coverage, min_coverage_original_sequence, min_overlap, max_overlap) {
+get_chimeric_state <- function(df, min_total_coverage, min_coverage_original_sequence, min_overlap, max_overlap) {
     #' finds Chimeric reads = those that partly blast on the virus and the host.
     #' The read has to partly align on the virus genome at the beginning and on the host at the end (or vice versa)
     #' with some (low) overlap between the 2 regions that align.
     #' They also must have a region where they only align on the virus and another that only align on the host.
     #' Or else, it could just reflect some contamination with host DNA that partly resemble the virus DNA
 
-    # annotating reads as chimeric or non chimerix
-    dt$chimeric <- dt$total_coverage >= min_total_coverage &
-                dt$overlap_length >= min_overlap &
-                dt$overlap_length <= max_overlap &
-                dt$coverage_1_only >= min_coverage_original_sequence &
-                dt$coverage_2_only >= min_coverage_original_sequence
+    chimeric <- df$total_coverage >= min_total_coverage &
+                df$overlap_length >= min_overlap &
+                df$overlap_length <= max_overlap &
+                df$coverage_1_only >= min_coverage_original_sequence &
+                df$coverage_2_only >= min_coverage_original_sequence
 
-    # keeping only chimeric reads
-    dt = dt %>% filter(chimeric == TRUE)
+    # replacing NA by False
+    chimeric[is.na(chimeric)] = F
 
-    return(dt)
+    return(chimeric)
 }
 
-compute_coverages_and_overlap <- function(dt, min_total_coverage) {
+compute_coverages_and_overlap <- function(df, min_total_coverage) {
     #' Determines the overlap = length of the microhomology between parent sequences in a chimeric read
     #' using a data table (dt) of chimeric reads (output of join_best_hits_on_1_and_2_for_each_read)
 
     #minimum alignment length of a read against 1 and 2
     if(min_total_coverage <=  1) {
-        min_total_coverage = min_total_coverage * dt$qlen
+        min_total_coverage = min_total_coverage * df$qlen
     } else {
-        min_total_coverage = rep(min_total_coverage, nrow(dt))
+        min_total_coverage = rep(min_total_coverage, nrow(df))
     }
 
-    total_coverage <- get_total_coverage(dt)
-    overlap_length <- get_overlap_length(dt)
-    coverage_1_only <- get_coverage_1_only(dt)
-    coverage_2_only <- get_coverage_2_only(dt)
+    total_coverage <- get_total_coverage(df)
+    overlap_length <- get_overlap_length(df)
+    coverage_1_only <- get_coverage_1_only(df)
+    coverage_2_only <- get_coverage_2_only(df)
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     # corrections
@@ -186,7 +182,7 @@ compute_coverages_and_overlap <- function(dt, min_total_coverage) {
 
     #if the overlap between the aligned parts of the read is greater than the length of aligned region, we need to swap terms
     f = abs(overlap_length) > abs(total_coverage)
-    f[is.na(f)] = FALSE
+    f[is.na(f)] = F
 
     #temporary vector for the swap
     tmp = overlap_length
@@ -205,16 +201,16 @@ compute_coverages_and_overlap <- function(dt, min_total_coverage) {
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    dt$total_coverage <- total_coverage
-    dt$overlap_length <- overlap_length
-    dt$coverage_1_only <- coverage_1_only
-    dt$coverage_2_only <- coverage_2_only
+    df$total_coverage <- total_coverage
+    df$overlap_length <- overlap_length
+    df$coverage_1_only <- coverage_1_only
+    df$coverage_2_only <- coverage_2_only
 
-    return(dt)
+    return(df)
 }
 
 
-get_coordinate_in_1 <- function(dt, dec) {
+get_coordinate_in_1 = function(dt, dec) {
   #' finds coordinates of host sequences in 1
   coordH = rep(NA, nrow(dt))
 
@@ -234,7 +230,7 @@ get_coordinate_in_1 <- function(dt, dec) {
 }
 
 
-get_coordinate_in_2 <- function(dt) {
+get_coordinate_in_2 = function(dt) {
   #' finds insertion coordinates of host sequences in the virus genome.
   coord = rep(NA, nrow(dt))
 
@@ -254,7 +250,7 @@ get_coordinate_in_2 <- function(dt) {
 }
 
 
-find_chimeras <- function (dt1, dt2) {
+find_chimeras <- function (blast_hits_1_df, blast_hits_2_df) {
 
     # CONSTANTS
     MIN_OVERLAP_FOR_DROPPING <- 20
@@ -264,19 +260,26 @@ find_chimeras <- function (dt1, dt2) {
     MIN_COVERAGE_ORIGINAL_SEQUENCE <- 16
 
     # remove alignments within the blast object that are overlapping for a same read, keeping the best evalue alignment
-    message("Removing overlapping alignments for each read")
-    dt1 <- remove_overlapping_alignments(dt1, MIN_OVERLAP_FOR_DROPPING)
-    dt2 <- remove_overlapping_alignments(dt2, MIN_OVERLAP_FOR_DROPPING)
+    message("Removing overlapping alignments in Blast hits against 1...")
+    blast_hits_1_df = remove_overlapping_alignments(blast_hits_1_df, MIN_OVERLAP_FOR_DROPPING)
+    message("Removing overlapping alignments in blast hits against 2...")
+    blast_hits_2_df = remove_overlapping_alignments(blast_hits_2_df, MIN_OVERLAP_FOR_DROPPING)
 
-    message("Keeping best hit per read")
-    dt1 <- get_best_hit_per_read(dt1)
-    dt2 <- get_best_hit_per_read(dt2)
+    message("Concatenating both Blast hit dataframes...")
+    hits_df = rbind(blast_hits_1_df, blast_hits_2_df)
 
-    message("Keeping reads having a hit on both target and genome")
-    dt <- get_reads_with_hits_on_both(dt1, dt2)
+    message("Removing overlapping alignments in merged Blast hits...")
+    hits_df = remove_overlapping_alignments(hits_df, MIN_OVERLAP_FOR_DROPPING)
+
+    # blastn_noOverlap is sorted according to 'qseqid' and 'evalue' columns
+    setorder(hits_df, qseqid, -evalue)
+
+    # for a given read only the 2 best - evalue hits are kept. The description lines of these two hits are then merged on the same row
+    message("Keeping the 2 best hits for each read...")
+    hits_df = join_best_hits_on_1_and_2_for_each_read(hits_df)
 
     message("Computing coverages and overlap")
-    dt <- compute_coverages_and_overlap(dt, MIN_TOTAL_COVERAGE)
+    hits_df <- compute_coverages_and_overlap(hits_df, MIN_TOTAL_COVERAGE)
 
     # find chimeric reads. Four parameters can be set:
     # 1 - proportion of the read which is aligned, cumulating alignment length on the 2 genomes (here 0.9, meaning 90% of the read has to be aligned)
@@ -284,29 +287,39 @@ find_chimeras <- function (dt1, dt2) {
     # 3 - maximum overlap in the alignment with the 2 genomes at the recombination points, reflects the presence of homology between the 2 genomes at the recombination point (here 20)
     # 4 - minimum alignment length on one genome only. Here the read has to be aligned over at least 16 bp on the genome 1 only and over at least 16 bp on genome 2 only
     message("Detecting chimeric reads...")
-    dt = get_chimeric_reads(
-        dt,
+    hits_df$chimeric = get_chimeric_state(
+        hits_df,
         MIN_TOTAL_COVERAGE,
         MIN_COVERAGE_ORIGINAL_SEQUENCE,
         MIN_OVERLAP,
         MAX_OVERLAP
     )
 
+    # generate data table containing only chimeric reads
+    message("Keeping only chimeric reads")
+    chimera_df = hits_df[chimeric == T]
+
     # insert overlap column containing the number of nucleotides shared between the 2 genomes at the recombination point
     message("Adding length of overlaps between 1 and 2")
-    dt$overlap_length = get_overlap_length(dt)
+    chimera_df$overlap_length = get_overlap_length(chimera_df)
+
+    # insert column showing which chimeric reads may be PCR duplicates, i.e. which chimeric reads have identical alignement coordinates on both genomes
+    chimera_df[, pcr_duplicate:= paste(qstart_1 - sstart_1, qend_1 - send_1, sseqid_1, qstart_2 - sstart_2, qend_2 - send_2, sseqid_2)]
 
     # insert column containing coordinate of the recombination point in 1
-    dt$coordinate_in_1 = get_coordinate_in_1(dt)
+    chimera_df$coordinate_in_1 = get_coordinate_in_1(chimera_df)
 
     # insert column containing coordinate of the recombination point in 2
-    dt$coordinate_in_2 = get_coordinate_in_2(dt)
+    chimera_df$coordinate_in_2 = get_coordinate_in_2(chimera_df)
 
-    return(dt)
+    # insert column showing the respective orientation (same or opposite) of the sequences involved in intra - genome chimeras
+    chimera_df[, inverted:= sign(send_1 - sstart_1) != sign(send_2 - sstart_2)]
+
+    return(chimera_df)
 
 }
 
-parse_blast_hit_file <- function(blast_hits_file) {
+parse_blast_hit_file <- function(blast_hits_file, sseqid_type) {
     #' Parse blast hit result file
     # Add propre header to dataframes
     # qseqid      query or source (gene) sequence id
@@ -326,27 +339,29 @@ parse_blast_hit_file <- function(blast_hits_file) {
     #
     # see https://www.metagenomics.wiki/tools/blast/blastn-output-format-6
 
-    blast_hits_dt = fread(blast_hits_file)
-    if ( nrow(blast_hits_dt) == 0 ) {
-        return(blast_hits_dt)
+    blast_hits_df = fread(blast_hits_file)
+    if ( nrow(blast_hits_df) == 0 ) {
+        return(blast_hits_df)
     }
     # columns defined in conf/modules/blast.config
     BLAST_OUTFMT6_COLS <- c("qseqid", "sseqid", "pident", "length", "mismatch", "gapopen", "qstart", "qend", "sstart", "send", "qlen", "slen", "evalue", "bitevalue")
-    setnames(blast_hits_dt, BLAST_OUTFMT6_COLS)
-    return(blast_hits_dt)
+    setnames(blast_hits_df, BLAST_OUTFMT6_COLS)
+    # setting sseqid type
+    blast_hits_df$subject_type = sseqid_type
+    return(blast_hits_df)
 }
 
-add_metadata <- function(dt, family, species, srr) {
+add_metadata <- function(df, family, species, srr) {
     message("Adding metadata")
-    dt$family = family
-    dt$species.taxid = species
-    dt$srr = srr
-    return(dt)
+    df$family = family
+    df$species.taxid = species
+    df$srr = srr
+    return(df)
 }
 
-export_data <- function(dt, filename) {
+export_data <- function(df, filename) {
     message(paste('Exporting data to:', filename, "\n"))
-    write.table(dt, filename, sep = ',', row.names = FALSE, quote = FALSE)
+    write.table(df, filename, sep = ',', row.names = FALSE, quote = FALSE)
 }
 
 #####################################################
@@ -358,19 +373,19 @@ export_data <- function(dt, filename) {
 
 args <- get_args()
 
-blast_hits_1_dt <- parse_blast_hit_file(args$blast_hits_1_file)
-blast_hits_2_dt <- parse_blast_hit_file(args$blast_hits_2_file)
+blast_hits_1_df <- parse_blast_hit_file(args$blast_hits_1_file, 1)
+blast_hits_2_df <- parse_blast_hit_file(args$blast_hits_2_file, 2)
 
-if ( nrow(blast_hits_1_dt) == 0 || nrow(blast_hits_2_dt) == 0 ) {
+if ( nrow(blast_hits_1_df) == 0 || nrow(blast_hits_2_df) == 0 ) {
     warning("At least one input file is empty")
-    chimera_dt <- data.table()
+    chimera_df <- data.table()
 } else {
-    chimera_dt <- find_chimeras(blast_hits_1_dt, blast_hits_2_dt)
+    chimera_df <- find_chimeras(blast_hits_1_df, blast_hits_2_df)
 }
 
 # we want to export files anyway, even when there is no read
 # this helps t keep tracjk of SRRs that have been processed until the end
-nb_chimeras <- nrow(chimera_dt)
+nb_chimeras <- nrow(chimera_df)
 if ( nb_chimeras == 0 ) {
     message("\nNo chimeras found")
     file.create(args$outfile)
@@ -378,7 +393,7 @@ if ( nb_chimeras == 0 ) {
 } else {
     message(paste("\nFound ", nb_chimeras, " chimeras"))
     # writing the names of the chimeric reads in a file
-    write(chimera_dt$qseqid, file = "chimeric_reads.txt", ncolumns = 1)
-    chimera_dt <- add_metadata(chimera_dt, args$family, args$species, args$srr)
-    export_data(chimera_dt, args$outfile)
+    write(chimera_df$qseqid, file = "chimeric_reads.txt", ncolumns = 1)
+    chimera_df <- add_metadata(chimera_df, args$family, args$species, args$srr)
+    export_data(chimera_df, args$outfile)
 }

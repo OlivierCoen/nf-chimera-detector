@@ -59,14 +59,6 @@ custom_data:
       coverage_2_only:
         title: "Coverage on genome only in bp"
         color: "rgb(57, 101, 204)"
-      inverted:
-        title: "Inverted orientation?"
-        color: "rgb(108, 122, 161)"
-        cond_formatting_rules:
-          inverted:
-            - s_eq: "TRUE"
-          not_inverted:
-            - s_eq: "FALSE"
       pident_1:
         title: "% identity to TE"
         color: "rgb(149, 79, 176)"

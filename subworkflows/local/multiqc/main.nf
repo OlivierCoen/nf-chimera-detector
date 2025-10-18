@@ -73,11 +73,35 @@ workflow MULTIQC_WORKFLOW {
                             .mix( ch_methods_description.collectFile( name: 'methods_description_mqc.yaml', sort: true ) )
 
     // ------------------------------------------------------------------------------------
+    // PREPARING CHIMERAS DATA
+    // ------------------------------------------------------------------------------------
+
+    // removing empty chimera tables (ie. those that contain only metadata and not columns like "qseqid")
+    ch_chimeras_csv
+        .filter {
+            meta, csv_file ->
+                try {
+                    def firstLine = csv_file.readLines().get(0)
+                    return firstLine.contains("qseqid")
+                } catch (Exception e) { // happens everytime a file is empty, which is the case everytime there is no chimera
+                    // log.warn "Could not read first line of ${csv_file.name}: ${e.message}"
+                    return false
+                }
+        }
+        .map { meta, file -> file }
+        .collectFile(
+            name: 'all_chimeras.csv',
+            keepHeader: true,
+            storeDir: "${params.outdir}/chimeras/"
+        )
+        .set { ch_chimeras_table }
+
+    // ------------------------------------------------------------------------------------
     // PREPARE MULTIQC DATA
     // ------------------------------------------------------------------------------------
 
     PREPARE_MULTIQC_DATA (
-        ch_chimeras_csv,
+        ch_chimeras_table,
         ch_fastq_stats,
         ch_reads_fasta,
         ch_species_taxids
@@ -88,7 +112,7 @@ workflow MULTIQC_WORKFLOW {
     // ------------------------------------------------------------------------------------
 
     ch_multiqc_files
-        .mix ( PREPARE_MULTIQC_DATA.out.chimeras_data )
+        .mix ( ch_chimeras_table )
         .mix ( PREPARE_MULTIQC_DATA.out.srr_metadata )
         .mix ( PREPARE_MULTIQC_DATA.out.fastq_stats )
         .mix ( PREPARE_MULTIQC_DATA.out.chimeras_summary )
@@ -114,4 +138,3 @@ workflow MULTIQC_WORKFLOW {
     emit:
     multiqc_report = MULTIQC.out.report
 }
-

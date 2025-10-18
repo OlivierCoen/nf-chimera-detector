@@ -21,7 +21,7 @@ def getBlastDb( process_name ) {
 workflow PREPARE_MULTIQC_DATA {
 
     take:
-    ch_chimeras_csv
+    ch_chimeras_table
     ch_fastq_stats
     ch_reads_fasta
     ch_species_taxids
@@ -30,26 +30,6 @@ workflow PREPARE_MULTIQC_DATA {
     main:
 
     ch_data_per_family = Channel.empty()
-
-
-    // ------------------------------------------------------------------------------------
-    // PREPARING CHIMERAS DATA
-    // ------------------------------------------------------------------------------------
-
-    // removing empty chimera tables (ie. those that contain only metadata and not columns like "qseqid")
-    ch_chimeras_csv
-        .filter {
-            meta, csv_file ->
-               try {
-                    def firstLine = csv_file.readLines().get(0)
-                    return firstLine.contains("qseqid")
-               } catch (Exception e) { // happens everytime a file is empty, which is the case everytime there is no chimera
-                    // log.warn "Could not read first line of ${csv_file.name}: ${e.message}"
-                    return false
-               }
-        }
-        .map { meta, file -> file }
-        .set { ch_chimeras_data_mqc }
 
     // ------------------------------------------------------------------------------------
     // PREPARING FASTQ STATISTICS FOR THE GENERALSTATS TABLE
@@ -108,7 +88,7 @@ workflow PREPARE_MULTIQC_DATA {
     // ------------------------------------------------------------------------------------
 
     MAKE_SUMMARY (
-        ch_chimeras_data_mqc.collect(),
+        ch_chimeras_table,
         ['family', 'species']
     )
 
@@ -282,7 +262,6 @@ workflow PREPARE_MULTIQC_DATA {
 
 
     emit:
-    chimeras_data                   = ch_chimeras_data_mqc
     srr_metadata                    = ch_srr_metadata_file
     fastq_stats                     = ch_fastq_stats_file
     chimeras_summary                = MAKE_SUMMARY.out.csv

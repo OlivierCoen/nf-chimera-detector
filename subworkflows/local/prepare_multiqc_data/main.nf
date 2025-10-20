@@ -167,14 +167,14 @@ workflow PREPARE_MULTIQC_DATA {
     // COLLECTING NB OF BASES OF DOWNLOADED GENOMES PER FAMILY
     // ------------------------------------------------------------------------------------
 
-    Channel.topic('dl_genome_len') // family, taxid, nb_bases
+    Channel.topic('dl_genome_metadata') // family, taxid, genome_file, nb_bases
         .collectFile(
             name: 'downloaded_genome_size.tsv',
             seed: "family\tdata",
             newLine: true,
             storeDir: "${params.outdir}/assemblies/"
         ) {
-            item -> "${item[0]}\t${item[2]}"
+            item -> "${item[0]}\t${item[3]}"
         }
         .set { ch_downloaded_genome_size_file }
 
@@ -182,7 +182,7 @@ workflow PREPARE_MULTIQC_DATA {
     // COLLECTING NB OF BASES OF ASSEMBLED GENOMES PER FAMILY
     // ------------------------------------------------------------------------------------
 
-    Channel.topic('assembled_genome_size') // family, id, nb_bases
+    Channel.topic('asm_genome_len') // family, id, nb_bases
         .collectFile(
             name: 'assembled_genome_size.tsv',
             seed: "family\tdata",
@@ -259,7 +259,6 @@ workflow PREPARE_MULTIQC_DATA {
         .set { ch_data_per_family }
 
     PREPARE_DATA_PER_FAMILY ( ch_data_per_family )
-
 
     emit:
     srr_metadata                    = ch_srr_metadata_file

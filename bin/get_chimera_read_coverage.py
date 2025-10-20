@@ -63,7 +63,11 @@ def parse_args():
         help="File containing chimera table",
     )
     parser.add_argument(
-        "--outdir", dest="output_dir", type=Path, required=True, help="Output directory"
+        "--srr",
+        dest="srr_id",
+        type=str,
+        required=True,
+        help="SRR ID",
     )
     return parser.parse_args()
 
@@ -160,13 +164,14 @@ def plot_coverage(
     non_chimera_coverage: pd.Series,
     chimera_coverage: pd.Series,
     target: str,
-    output_dir: Path,
+    srr_id: str,
     log: bool = False,
 ):
     fig, ax = plt.subplots(figsize=FIGZISE)
 
+    xlabel = f"SRR: {srr_id} / TE: {target} "
     common_plot_params = dict(
-        kind="area", ax=ax, alpha=0.6, linewidth=0, stacked=False, xlabel=target
+        kind="area", ax=ax, alpha=0.6, linewidth=0, stacked=False, xlabel=xlabel
     )
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -191,10 +196,12 @@ def plot_coverage(
     )
     s2.plot(label="Chimeras", color=CHIMERA_COLOR, **common_plot_params)
 
-    # cleaning target name
-    dirname = output_dir / target.replace("/", "_")
-    Path(dirname).mkdir(parents=True, exist_ok=True)
-    outfile = f"{dirname}/log.png" if log else f"{dirname}/raw.png"
+    cleaned_target = target.replace("/", "_")
+    outfile = (
+        f"{srr_id}.{cleaned_target}.log.png"
+        if log
+        else f"{srr_id}.{cleaned_target}.raw.png"
+    )
 
     plt.savefig(outfile, bbox_inches="tight")
     # closes current figure window to save memory
@@ -246,13 +253,13 @@ if __name__ == "__main__":
             non_chimera_coverage[target],
             chimera_coverage[target],
             target,
-            args.output_dir,
+            args.srr_id,
         )
         plot_coverage(
             non_chimera_coverage[target],
             chimera_coverage[target],
             target,
-            args.output_dir,
+            args.srr_id,
             log=True,
         )
 

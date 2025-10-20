@@ -151,7 +151,7 @@ custom_data:
           scale: "RdYlGn"
           format: "{:,.0f}"
           suffix: "X"
-      - read_fasta_len:
+      - read_fasta_sum_len:
           namespace: "SRR data"
           title: "Read Fasta total size"
           description: "Total number of base pairs in the merged Fasta file"
@@ -530,7 +530,7 @@ custom_data:
       Distribution of the size of the assembled genomes, family by family
     plot_type: "boxplot"
 
-  read_fasta_len:
+  read_fasta_sum_len:
     section_name: "Size of processed SRR read Fasta files (in # bases)"
     parent_id: data_size
     parent_name: "Data size"
@@ -588,8 +588,8 @@ sp:
     fn: "*downloaded_genome_size_transposed.tsv"
   assembled_genome_size:
     fn: "*assembled_genome_size_transposed.tsv"
-  read_fasta_len:
-    fn: "*read_fasta_len_transposed.tsv"
+  read_fasta_sum_len:
+    fn: "*read_fasta_sum_len_transposed.tsv"
   nb_srrs_per_family:
     fn: "*nb_srrs_per_family.tsv"
   nb_species_per_family:

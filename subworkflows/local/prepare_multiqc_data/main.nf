@@ -110,10 +110,6 @@ workflow PREPARE_MULTIQC_DATA {
             Channel.topic('asm_genome_len').map { family, id, nb -> [ id, [asm_genome_len: nb] ] },
             remainder: true
         )
-        .join( // joining with read fasta metadata
-            Channel.topic('read_fasta_len').map { family, id, nb -> [ id, [read_fasta_len: nb] ] },
-            remainder: true
-        )
         .join ( // joining with download genome metadata
             ch_dl_genome_len.map { id, genome_name, nb -> [ id, [dl_genome_name: genome_name, dl_genome_len: nb] ] },
             remainder: true
@@ -135,16 +131,16 @@ workflow PREPARE_MULTIQC_DATA {
         .map { // computing coverage
             meta ->
                 def genome_length = meta.dl_genome_len ?: meta.asm_genome_len
-                def coverage = meta.read_fasta_len.toFloat() / genome_length.toFloat()
+                def coverage = meta.read_fasta_sum_len.toFloat() / genome_length.toFloat()
                 meta + [coverage: coverage]
         }
         .collectFile(
             name: 'srr_metadata.tsv',
-            seed: "srr_id\tfamily\ttaxid\ttaxon_name\tsra_id\tcoverage\tread_fasta_len\tdl_genome_name\tdl_genome_len\tasm_genome_len\tnb_chimeras", // header of TSV file
+            seed: "srr_id\tfamily\ttaxid\ttaxon_name\tsra_id\tcoverage\tread_fasta_sum_len\tdl_genome_name\tdl_genome_len\tasm_genome_len\tnb_chimeras", // header of TSV file
             newLine: true,
             storeDir: "${params.outdir}/multiqc/"
         ) {
-            item -> "${item.id}\t${item.family}\ttxid${item.taxid}\t${item.taxon_name}\t${item.sra_id}\t${item.coverage}\t${item.read_fasta_len}\t${item.dl_genome_name}\t${item.dl_genome_len}\t${item.asm_genome_len}\t${item.nb_chimeras}"
+            item -> "${item.id}\t${item.family}\ttxid${item.taxid}\t${item.taxon_name}\t${item.sra_id}\t${item.coverage}\t${item.read_fasta_sum_len}\t${item.dl_genome_name}\t${item.dl_genome_len}\t${item.asm_genome_len}\t${item.nb_chimeras}"
         }
         .set { ch_srr_metadata_file }
 
@@ -152,14 +148,15 @@ workflow PREPARE_MULTIQC_DATA {
     // COLLECTING NB OF BASES SIZE OF PROCESSED READ FASTA FILES PER FAMILY
     // ------------------------------------------------------------------------------------
 
-    Channel.topic('read_fasta_len') // family, id, sum_len
+    ch_reads_fasta
+        .map { meta, file -> [ meta.family, meta.read_fasta_sum_len ] }
         .collectFile(
-            name: 'read_fasta_len.tsv',
+            name: 'read_fasta_sum_len.tsv',
             seed: "family\tdata",
             newLine: true,
             storeDir: "${params.outdir}/sratools/"
         ) {
-            item -> "${item[0]}\t${item[2]}"
+            item -> "${item[0]}\t${item[1]}"
         }
         .set { ch_read_fasta_size_file }
 

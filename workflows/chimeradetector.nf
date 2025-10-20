@@ -198,7 +198,7 @@ workflow CHIMERADETECTOR {
         .splitCsv( header: true, sep: '\t' )
         .map {
             meta, stats_map ->
-                ["file", "format", "type"].each { stats_map.remove(it) }
+                ["file", "format", "type"].each { stats_map.remove(it) } // removing fields
                 [ id: meta.id ] + stats_map
         }
         .set { ch_fastq_stats }

@@ -94,14 +94,20 @@ workflow POST_PROCESS_SRA {
 
     SEQKIT_FQ2FA ( ch_reads )
 
+    // adding read fasta length to meta
+    SEQKIT_FQ2FA.out.fasta
+        .map {
+            meta, read_fasta_sum_len, file ->
+                [ meta + [ read_fasta_sum_len: read_fasta_sum_len.toLong() ], file ]
+        }
+        .set { ch_fasta }
 
     ch_versions
         .mix ( SEQKIT_PAIR.out.versions )
         .set { ch_versions }
 
     emit:
-    merged_reads_fasta              = SEQKIT_FQ2FA.out.fasta
+    merged_reads_fasta              = ch_fasta
     versions                        = ch_versions
 
 }
-

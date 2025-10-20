@@ -29,7 +29,6 @@ process GET_CHIMERA_READ_COVERAGE {
 
     script:
     def prefix = ""
-    println meta
     """
     get_chimera_read_coverage.py \\
         --hits $blast_hit_file \\

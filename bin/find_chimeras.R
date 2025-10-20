@@ -46,7 +46,7 @@ get_args <- function() {
 # functions used for the search and analysis of chimeric reads
 
 remove_overlapping_alignments <- function(blast, min_overlap_for_dropping) {
-    #' among HSPs covering the same ≥20bp region of the same read, selects the one of min evalue
+    #' among HSPs covering the same ≥20bp region of the same read, selects the one of max score
 
     dt = copy(blast)
     #sorts HSPs by coordinates
@@ -71,12 +71,10 @@ remove_overlapping_alignments <- function(blast, min_overlap_for_dropping) {
 
         #puts consecutive overlapping HSPs in two columns of a data table (odd rows at the left)
         candidates = data.table(odds = odd[f], evens = even[f])
-        #determine the one to discard according to evalue
-        to_discard = candidates[, ifelse(dt$evalue[odds] < dt$evalue[evens], odds, evens)]
-        # TODO: see if it is exact
-        #to_discard = candidates[, ifelse(dt$evalue[odds] < dt$evalue[evens], evens, odds)]
+        #determine the one to discard according to bitscore
+        to_discard = candidates[, ifelse(dt$bitscore[odds] < dt$bitscore[evens], odds, evens)]
 
-        # checking if to_discard is full of NA (resulting in infinite loop)
+        # checking if to_discard is not full of NA (which would result in an infinite loop)
         if ( all(is.na(to_discard)) ) {
             break
         }
@@ -92,13 +90,13 @@ remove_overlapping_alignments <- function(blast, min_overlap_for_dropping) {
 
 get_best_hit_per_read <- function(dt) {
   # get the best hits based on:
-  # 1: evalue
+  # 1: bitscore
   # 2: pident
   # 3: qlen
-  # these three filters are used only in the case where multiple hits have the same evalue
+  # these three filters are used only in the case where multiple hits have the same bitscore
   best_hit_blast <- dt %>%
       group_by(qseqid) %>%
-      slice_min(evalue, with_ties = TRUE) %>% # get all hits with the lowest evalue
+      slice_max(bitscore, with_ties = TRUE) %>% # get all hits with the highest bitscore
       slice_max(pident, with_ties = TRUE) %>% # get all hits with the highest pident
       slice_max(length, with_ties = FALSE) %>% # get only one hit (the first in the group) with the highest alignment length
       ungroup()
@@ -263,7 +261,7 @@ find_chimeras <- function (dt1, dt2) {
     MAX_OVERLAP <- 20
     MIN_COVERAGE_ORIGINAL_SEQUENCE <- 16
 
-    # remove alignments within the blast object that are overlapping for a same read, keeping the best evalue alignment
+    # remove alignments within the blast object that are overlapping for a same read, keeping the best alignment (best bitscore)
     message("Removing overlapping alignments for each read")
     dt1 <- remove_overlapping_alignments(dt1, MIN_OVERLAP_FOR_DROPPING)
     dt2 <- remove_overlapping_alignments(dt2, MIN_OVERLAP_FOR_DROPPING)
@@ -319,10 +317,10 @@ parse_blast_hit_file <- function(blast_hits_file) {
     # qend        end of alignment in query
     # sstart      start of alignment in sseqid
     # send        end of alignment in sseqid
-    # qlen        query sequence length
-    # slen        sseqid sequence length
+    # qlen        [additional column] query sequence length
+    # slen        [additional column] sseqid sequence length
     # evalue      expect value
-    # bitevalue    bit evalue
+    # bitscore    bitscore
     #
     # see https://www.metagenomics.wiki/tools/blast/blastn-output-format-6
 
@@ -331,7 +329,7 @@ parse_blast_hit_file <- function(blast_hits_file) {
         return(blast_hits_dt)
     }
     # columns defined in conf/modules/blast.config
-    BLAST_OUTFMT6_COLS <- c("qseqid", "sseqid", "pident", "length", "mismatch", "gapopen", "qstart", "qend", "sstart", "send", "qlen", "slen", "evalue", "bitevalue")
+    BLAST_OUTFMT6_COLS <- c("qseqid", "sseqid", "pident", "length", "mismatch", "gapopen", "qstart", "qend", "sstart", "send", "qlen", "slen", "evalue", "bitscore")
     setnames(blast_hits_dt, BLAST_OUTFMT6_COLS)
     return(blast_hits_dt)
 }

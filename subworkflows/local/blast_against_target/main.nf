@@ -62,11 +62,9 @@ workflow BLAST_AGAINST_TARGET {
     // ------------------------------------------------------------------------------------
 
     ch_reads_fasta
-        .map { meta, fasta -> [ meta.id, meta, fasta ] }
-        .join( Channel.topic('read_fasta_len').map { family, id, read_fasta_len -> [ id, read_fasta_len ] } ) // join on id (SRR ID)
         .map { // computing the nb of chunks necessary
-            id, meta, fasta, read_fasta_len ->
-                def ratio = read_fasta_len.toLong() / params.read_fasta_chunk_max_size
+            meta, fasta ->
+                def ratio = meta.read_fasta_sum_len.toLong() / params.read_fasta_chunk_max_size
                 def nb_chunks = ratio.toInteger() + 1
                 [ meta, fasta, nb_chunks ]
         }

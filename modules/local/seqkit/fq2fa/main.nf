@@ -11,8 +11,7 @@ process SEQKIT_FQ2FA {
     tuple val(meta), path(fastq)
 
     output:
-    tuple val(meta), path("*.fa.gz"),                                                           emit: fasta
-    tuple val("${meta.family}"), val("${meta.id}"), env("READ_FASTA_LEN"),                 topic: read_fasta_len
+    tuple val(meta), env("READ_FASTA_SUM_LEN"), path("*.fa.gz"),                                emit: fasta
     tuple val("${task.process}"), val('seqkit'), eval("seqkit | sed '3!d; s/Version: //'"),     topic: versions
 
     script:
@@ -27,7 +26,7 @@ process SEQKIT_FQ2FA {
         -o ${prefix}.fa.gz \\
         $fastq
 
-    READ_FASTA_LEN=\$(seqkit stats *.fa.gz | tail -1 | tr -s '[:space:]' '\t' | cut -f5 | sed 's/,//g')
+    READ_FASTA_SUM_LEN=\$(seqkit stats *.fa.gz | tail -1 | tr -s '[:space:]' '\t' | cut -f5 | sed 's/,//g')
     """
 
     stub:

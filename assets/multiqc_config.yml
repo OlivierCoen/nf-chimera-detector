@@ -439,7 +439,7 @@ custom_data:
     section_name: "Number of chimeras per family"
     parent_id: family_statistics
     parent_name: "Statistics per family"
-    parent_description: "Various distributions computed family per family"
+    parent_description: "Various distributions computed family by family"
     file_format: "tsv"
     pconfig:
       ylab: family
@@ -448,7 +448,7 @@ custom_data:
       tt_decimals: 0
       logswitch: true
     description: |
-      Distribution of number chimeras per family
+      Distribution of the number of chimeras per SRR, family by family
     plot_type: "boxplot"
     color: "rgb(118, 48, 209)"
 
@@ -456,28 +456,29 @@ custom_data:
     section_name: "Number of SRRs per family"
     parent_id: family_statistics
     parent_name: "Statistics per family"
-    parent_description: "Various distributions computed family per family"
+    parent_description: "Various distributions computed family by family"
     file_format: "tsv"
     pconfig:
       sort_samples: true
       tt_decimals: 0
       logswitch: true
     description: |
-      Bar plot showing the number of processed SRRs for each family
+      Number of processed SRRs for each family
     plot_type: "barplot"
 
   nb_species_per_family:
     section_name: "Number of species per family"
     parent_id: family_statistics
     parent_name: "Statistics per family"
-    parent_description: "Various distributions computed family per family"
+    parent_description: "Various distributions computed family by family"
     file_format: "tsv"
     pconfig:
       sort_samples: true
       tt_decimals: 0
       logswitch: true
+      cpswitch: false
     description: |
-      Bar plot showing the number of species found on NCBI for each family
+      Number of species found on NCBI for each family
     plot_type: "barplot"
 
   nb_hits_target:
@@ -490,7 +491,7 @@ custom_data:
       ylab: family
       sort_samples: true
     description: |
-      Distribution of number of Blast hits against target database per family
+      Distribution of the number of Blast hits against the TE database for each SRR, family by family
     plot_type: "boxplot"
 
   nb_hits_genomes:
@@ -502,7 +503,7 @@ custom_data:
     pconfig:
       sort_samples: true
     description: |
-      Distribution of number of Blast hits against genome per family
+      Distribution of the number of Blast hits against genome for each SRR, family by family
     plot_type: "boxplot"
 
   downloaded_genome_size:
@@ -514,7 +515,7 @@ custom_data:
     pconfig:
       sort_samples: true
     description: |
-      Size distribution of the downloaded genomes per family
+      Distribution of the size of the downloaded genomes, family by family
     plot_type: "boxplot"
 
   assembled_genome_size:
@@ -526,11 +527,11 @@ custom_data:
     pconfig:
       sort_samples: true
     description: |
-      Size distribution of the assembled genomes per family
+      Distribution of the size of the assembled genomes, family by family
     plot_type: "boxplot"
 
   read_fasta_len:
-    section_name: "Size of processed read Fasta files (in # bases)"
+    section_name: "Size of processed SRR read Fasta files (in # bases)"
     parent_id: data_size
     parent_name: "Data size"
     parent_description: "Data size distributions by family"
@@ -538,7 +539,7 @@ custom_data:
     pconfig:
       sort_samples: true
     description: |
-      Distribution of size (in # bases) of the processed read Fasta files, per family
+      Distribution of size (in # bases) of the processed SRR read Fasta files, per family
     plot_type: "boxplot"
 
 sp:
@@ -580,9 +581,9 @@ sp:
   nb_chimeras:
     fn: "*nb_chimeras_transposed.tsv"
   nb_hits_target:
-    fn: "*blast_hits_against_target_transposed.tsv"
+    fn: "*blast_nb_hits_target_transposed.tsv"
   nb_hits_genomes:
-    fn: "*blast_hits_against_genomes_transposed.tsv"
+    fn: "*blast_nb_hits_genomes_transposed.tsv"
   downloaded_genome_size:
     fn: "*downloaded_genome_size_transposed.tsv"
   assembled_genome_size:

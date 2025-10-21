@@ -462,6 +462,7 @@ custom_data:
       sort_samples: true
       tt_decimals: 0
       logswitch: true
+      cpswitch: false
     description: |
       Number of processed SRRs for each family
     plot_type: "barplot"

@@ -353,7 +353,6 @@ export_data <- function(dt, filename) {
 #####################################################
 #####################################################
 
-
 args <- get_args()
 
 blast_hits_1_dt <- parse_blast_hit_file(args$blast_hits_1_file)

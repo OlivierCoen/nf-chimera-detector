@@ -12,7 +12,7 @@ process GET_CHIMERA_READ_COVERAGE {
     }
 
     conda "${moduleDir}/spec-file.txt"
-    container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
+    container "${ workflow.containerEngine in ['singularity', 'apptainer'] && !task.ext.singularity_pull_docker_container ?
         'https://community-cr-prod.seqera.io/docker/registry/v2/blobs/sha256/82/8285150b31c413e715428d9b65b13b277941be75f4923bfc4388d202ad0a7bcf/data':
         'community.wave.seqera.io/library/matplotlib_pandas_polars_pyarrow_tqdm:a426e1ee01722428' }"
 

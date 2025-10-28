@@ -5,7 +5,7 @@ process PARSE_MMSEQS_OUTPUT {
     tag "${meta.family} :: ${meta.id}"
 
     conda "${moduleDir}/spec-file.txt"
-    container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
+    container "${ workflow.containerEngine in ['singularity', 'apptainer'] && !task.ext.singularity_pull_docker_container ?
         'https://community-cr-prod.seqera.io/docker/registry/v2/blobs/sha256/c0/c03d8fbb44376692e10bb9e56be2577fc35446c193637735de9fed182e6b58df/data':
         'community.wave.seqera.io/library/pandas:2.3.1--139e2fa6c1f18206' }"
 

@@ -5,7 +5,7 @@ process DOWNLOAD_NCBI_ASSEMBLY {
     tag "${meta.taxid} :: $accession"
 
     conda "${moduleDir}/spec-file.txt"
-    container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
+    container "${ workflow.containerEngine in ['singularity', 'apptainer'] && !task.ext.singularity_pull_docker_container ?
         'https://community-cr-prod.seqera.io/docker/registry/v2/blobs/sha256/a6/a6b13690259900baef6865722cb3a319103acc83b5bcab67504c88bde1e3a9f6/data':
         'community.wave.seqera.io/library/ncbi-datasets-cli_unzip:785aabe86637bae4' }"
 

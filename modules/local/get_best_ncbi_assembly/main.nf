@@ -5,7 +5,7 @@ process GET_BEST_NCBI_ASSEMBLY {
     tag "$taxid"
 
     conda "${moduleDir}/spec-file.txt"
-    container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
+    container "${ workflow.containerEngine in ['singularity', 'apptainer'] && !task.ext.singularity_pull_docker_container ?
         'https://community-cr-prod.seqera.io/docker/registry/v2/blobs/sha256/8d/8da74f9621e013b83c1e2405c8e20fa68c625523b2336704784acaf81c724c04/data':
         'community.wave.seqera.io/library/jq_requests_tenacity:20a1d2f2027ac092' }"
 

@@ -1,14 +1,25 @@
 process FASTP {
     tag "${meta.taxid} :: ${meta.id}"
-    label 'process_medium'
+    label 'process_high'
 
-    errorStrategy = {
+    errorStrategy {
         if (task.exitStatus == 100) {
             // ignoring cases when no read passes filters (resulting in empty output files)
             log.warn("No read passed Fastp filter for SRA ID ${meta.id}.")
             return 'ignore'
         }
+        else if ( task.exitStatus in ((130..145) + 104 + 175) ) {
+            log.info("retry task.exitStatus: ${task.exitStatus}")
+            return 'retry'
+        }
+        else {
+            log.info("finish task.exitStatus: ${task.exitStatus}")
+            return 'finish'
+        }
     }
+
+    maxRetries    = 10
+    maxErrors     = '-1'
 
     conda "${moduleDir}/environment.yml"
     container "${ workflow.containerEngine in ['singularity', 'apptainer'] && !task.ext.singularity_pull_docker_container ?
@@ -30,7 +41,6 @@ process FASTP {
     script:
     def args = task.ext.args ?: ''
     def prefix = task.ext.prefix ?: "${meta.id}"
-
     if ( reads instanceof Path ) {
         """
         fastp \\

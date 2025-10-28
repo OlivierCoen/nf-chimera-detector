@@ -4,7 +4,7 @@ process MMSEQS_CREATE_DB_WITH_INDEX {
     label 'process_low'
 
     conda "${moduleDir}/environment.yml"
-    container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
+    container "${ workflow.containerEngine in ['singularity', 'apptainer'] && !task.ext.singularity_pull_docker_container ?
         'https://depot.galaxyproject.org/singularity/mmseqs2:17.b804f--hd6d6fdc_1':
         'biocontainers/mmseqs2:17.b804f--hd6d6fdc_1' }"
 

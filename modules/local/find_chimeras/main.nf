@@ -5,7 +5,7 @@ process FIND_CHIMERAS {
     tag "${meta.taxid} :: ${meta.id}"
 
     conda "${moduleDir}/spec-file.txt"
-    container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
+    container "${ workflow.containerEngine in ['singularity', 'apptainer'] && !task.ext.singularity_pull_docker_container ?
         'https://community-cr-prod.seqera.io/docker/registry/v2/blobs/sha256/91/91322709e5a0a6929041bb50b7cc8f53b210b72e17e08cf9daf8988d080c0409/data':
         'community.wave.seqera.io/library/r-base_r-data.table_r-dplyr_r-optparse:04b9028974fb6de4' }"
 

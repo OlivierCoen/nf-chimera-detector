@@ -20,7 +20,7 @@ process SRATOOLS_PREFETCH {
     maxRetries 5
 
     conda "${moduleDir}/environment.yml"
-    container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
+    container "${ workflow.containerEngine in ['singularity', 'apptainer'] && !task.ext.singularity_pull_docker_container ?
         'https://community-cr-prod.seqera.io/docker/registry/v2/blobs/sha256/07/079d860bc0b82e189e4015772a7c6d8fe20d9b740058f854dd1513ce33460950/data' :
         'community.wave.seqera.io/library/sra-tools:3.2.1--2063130dadd340c5' }"
 

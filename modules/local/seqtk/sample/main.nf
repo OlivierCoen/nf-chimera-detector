@@ -3,7 +3,7 @@ process SEQTK_SAMPLE {
     label 'process_single'
 
     conda "${moduleDir}/environment.yml"
-    container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
+    container "${ workflow.containerEngine in ['singularity', 'apptainer'] && !task.ext.singularity_pull_docker_container ?
         'https://community-cr-prod.seqera.io/docker/registry/v2/blobs/sha256/1a/1aa6084536813ab32b6373b04407a898ab5de44692763b59ee0705e44974e0de/data' :
         'community.wave.seqera.io/library/seqtk_pigz:aa99a20f06d8e9a8' }"
 

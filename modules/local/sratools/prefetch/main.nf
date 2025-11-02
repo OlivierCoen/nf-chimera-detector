@@ -2,7 +2,7 @@ process SRATOOLS_PREFETCH {
     tag "${meta.taxid} :: ${sra_id}"
     label 'process_low'
 
-    errorStrategy = {
+    errorStrategy {
         if (task.exitStatus == 100) {
             // if vdb_validate fails ...
             log.warn("vdb-validate returned error for SRA ID $sra_id")

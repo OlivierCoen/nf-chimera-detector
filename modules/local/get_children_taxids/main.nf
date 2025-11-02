@@ -4,7 +4,7 @@ process GET_CHILDREN_TAXIDS {
 
     tag "$family"
 
-    errorStrategy = {
+    errorStrategy {
         if (task.exitStatus == 100) {
             // ignoring cases when family does not have children
             log.warn("Could not find species for family ${family}.")

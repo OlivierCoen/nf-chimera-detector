@@ -2,7 +2,7 @@ process MEGAHIT {
     tag "${meta.taxid} :: ${meta.id}"
     label 'process_high'
 
-    errorStrategy = {
+    errorStrategy {
         if (task.exitStatus == 100) {
             // ignoring cases when the assembly is empty
             log.warn("Assembly is empty for SRA ID ${meta.id}.")

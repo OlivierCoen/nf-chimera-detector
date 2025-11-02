@@ -9,11 +9,9 @@ process FASTP {
             return 'ignore'
         }
         else if ( task.exitStatus in ((130..145) + 104 + 175) ) {
-            log.info("retry task.exitStatus: ${task.exitStatus}")
             return 'retry'
         }
         else {
-            log.info("finish task.exitStatus: ${task.exitStatus}")
             return 'finish'
         }
     }

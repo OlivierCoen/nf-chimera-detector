@@ -4,6 +4,9 @@ process DOWNLOAD_NCBI_ASSEMBLY {
 
     tag "${meta.taxid} :: $accession"
 
+    errorStrategy "retry"
+    maxRetries 3
+
     conda "${moduleDir}/spec-file.txt"
     container "${ workflow.containerEngine in ['singularity', 'apptainer'] && !task.ext.singularity_pull_docker_container ?
         'https://community-cr-prod.seqera.io/docker/registry/v2/blobs/sha256/a6/a6b13690259900baef6865722cb3a319103acc83b5bcab67504c88bde1e3a9f6/data':
@@ -27,7 +30,7 @@ process DOWNLOAD_NCBI_ASSEMBLY {
     # compute total genome size
     download_file=\$(find . -maxdepth 1 -name "*.fasta" -o -name "*.fa" -o -name "*.fna")
 
-    GENOME_NB_BASES=\$(grep -v "^>" \$download_file | tr -d "\n" | wc -m)
+    GENOME_NB_BASES=\$(grep -v "^>" \$download_file | tr -d "\\n" | wc -m)
     """
 
 }

@@ -3,7 +3,7 @@ process GET_CHIMERA_READ_COVERAGE {
     label 'process_single'
     tag "${meta.id}"
 
-    errorStrategy = {
+    errorStrategy {
         if (task.exitStatus == 100) {
             // ignoring cases when family does not have children
             log.warn("Empty chimera file ${meta.id}.")

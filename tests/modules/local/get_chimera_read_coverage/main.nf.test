@@ -26,7 +26,7 @@ nextflow_process {
 
     }
 
-    test("Empty chimera file - Success if fails") {
+    test("Empty chimera file") {
 
         when {
             process {
@@ -41,7 +41,27 @@ nextflow_process {
         }
 
         then {
-            assert !process.success
+            assert process.success
+        }
+
+    }
+
+    test("Multiple subject lengths") {
+
+        when {
+            process {
+                """
+                input[0] = [
+                    [ id: "test" ],
+                    file( "${projectDir}/tests/test_data/blast_outputs/chimeras/SRR10566658.all_hits.txt", checkIfExists: true),
+                    file( "${projectDir}/tests/test_data/chimeras/SRR10566658_chimeras.csv", checkIfExists: true)
+                ]
+                """
+            }
+        }
+
+        then {
+            assert process.success
         }
 
     }

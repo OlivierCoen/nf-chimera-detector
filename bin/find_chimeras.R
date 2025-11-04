@@ -112,9 +112,11 @@ get_reads_with_hits_on_both <- function(dt1, dt2) {
     merged <- merge(dt1, dt2, by = "qseqid", all = FALSE, suffixes = c("_1","_2"))
     message(paste("Obtained", nrow(merged), "reads having hits on both 1 and 2"))
 
+    different_qlen <- merged %>% filter(qlen_1 != qlen_2)
     # checking (just in case)
-    if ( any(merged$qlen_1 != merged$qlen_2) ) {
-        error("Read lengths do not correspond")
+    if ( nrow(different_qlen) > 0 ) {
+        print(different_qlen)
+        warning("Some query read lengths do not correspond!")
     }
 
     return(merged)
@@ -328,6 +330,7 @@ parse_blast_hit_file <- function(blast_hits_file) {
     if ( nrow(blast_hits_dt) == 0 ) {
         return(blast_hits_dt)
     }
+
     # columns defined in conf/modules/blast.config
     BLAST_OUTFMT6_COLS <- c("qseqid", "sseqid", "pident", "length", "mismatch", "gapopen", "qstart", "qend", "sstart", "send", "qlen", "slen", "evalue", "bitscore")
     setnames(blast_hits_dt, BLAST_OUTFMT6_COLS)

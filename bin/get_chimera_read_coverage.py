@@ -37,6 +37,46 @@ BLAST_OUTPUT_COL_SCHEMA = pl.Schema(
     }
 )
 
+CHIMERA_COL_SCHEMA = {
+    "qseqid": "string",
+    "sseqid_1": "string",
+    "pident_1": "Float64",
+    "length_1": "Int64",
+    "mismatch_1": "Int64",
+    "gapopen_1": "Int64",
+    "qstart_1": "Int64",
+    "qend_1": "Int64",
+    "sstart_1": "Int64",
+    "send_1": "Int64",
+    "qlen_1": "Int64",
+    "slen_1": "Int64",
+    "evalue_1": "Float64",
+    "bitscore_1": "Float64",
+    "sseqid_2": "string",
+    "pident_2": "Float64",
+    "length_2": "Int64",
+    "mismatch_2": "Int64",
+    "gapopen_2": "Int64",
+    "qstart_2": "Int64",
+    "qend_2": "Int64",
+    "sstart_2": "Int64",
+    "send_2": "Int64",
+    "qlen_2": "Int64",
+    "slen_2": "Int64",
+    "evalue_2": "Float64",
+    "bitscore_2": "Float64",
+    "total_coverage": "Int64",
+    "overlap_length": "Int64",
+    "coverage_1_only": "Int64",
+    "coverage_2_only": "Int64",
+    "chimeric": "boolean",
+    "coordinate_in_1": "Int64",
+    "coordinate_in_2": "Int64",
+    "family": "string",
+    "species.taxid": "Int64",
+    "srr": "string",
+}
+
 FIGZISE = (12, 6)
 
 CHIMERA_COLOR = "green"
@@ -227,13 +267,16 @@ if __name__ == "__main__":
     )
 
     try:
-        chimera_df = pl.read_csv(args.chimera_file)
-    except pl.exceptions.NoDataError as e:
+        chimera_df = pd.read_csv(
+            args.chimera_file,
+            dtype=CHIMERA_COL_SCHEMA,
+        )
+    except pd.errors.EmptyDataError as e:
         logger.warning(f"No data in chimera file: {e}")
         sys.exit(0)
 
     # dividing hit table into chimera and non-chimera hits
-    chimera_qseqids = chimera_df.select("qseqid").to_series().to_list()
+    chimera_qseqids = chimera_df["qseqid"].unique().tolist()
     chimera_hit_df = hit_lf.filter(pl.col("qseqid").is_in(chimera_qseqids))
     non_chimera_hit_df = hit_lf.filter(~pl.col("qseqid").is_in(chimera_qseqids))
 

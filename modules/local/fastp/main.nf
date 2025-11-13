@@ -2,20 +2,6 @@ process FASTP {
     tag "${meta.taxid} :: ${meta.id}"
     label 'process_high'
 
-    errorStrategy {
-        if (task.exitStatus == 100) {
-            // ignoring cases when no read passes filters (resulting in empty output files)
-            log.warn("No read passed Fastp filter for SRA ID ${meta.id}.")
-            return 'ignore'
-        }
-        else if ( task.exitStatus in ((130..145) + 104 + 175) ) {
-            return 'retry'
-        }
-        else {
-            return 'finish'
-        }
-    }
-
     maxRetries    = 10
     maxErrors     = '-1'
 

@@ -9,6 +9,7 @@ workflow GET_GENOMES {
 
     take:
     ch_sra_reads
+    ncbi_api_key
 
     main:
 
@@ -22,7 +23,10 @@ workflow GET_GENOMES {
     // FETCH ACCESSIONS OF AVAILABLE ASSEMBLIES FROM NCBI
     // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    GET_BEST_NCBI_ASSEMBLY ( ch_taxids )
+    GET_BEST_NCBI_ASSEMBLY (
+        ch_taxids,
+        ncbi_api_key
+    )
 
     ch_sra_reads
         .join ( GET_BEST_NCBI_ASSEMBLY.out.accession )

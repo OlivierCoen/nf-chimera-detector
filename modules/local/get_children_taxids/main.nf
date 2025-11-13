@@ -11,6 +11,7 @@ process GET_CHILDREN_TAXIDS {
 
     input:
     tuple val(meta), val(family)
+    val(ncbi_api_key)
 
     output:
     tuple val(meta), path("*.taxids2names.csv"), emit: taxid_to_names_files
@@ -20,13 +21,15 @@ process GET_CHILDREN_TAXIDS {
     tuple val("${task.process}"), val('tenacity'), eval('python3 -c "from importlib.metadata import version; print(version(\'tenacity\'))"'),   topic: versions
 
     script:
+    def ncbi_api_key_arg = ncbi_api_key ? "--ncbi-api-key $ncbi_api_key" : ""
     """
-    get_children_taxids.py --family $family
+    get_children_taxids.py \\
+        --family $family \\
+        $ncbi_api_key_arg
     """
 
     stub:
     """
-    touch test.species_taxids.txt
     touch test.taxids2names.csv
     """
 

@@ -11,6 +11,7 @@ process NCBI_ASSEMBLY_STATS {
 
     input:
     val family
+    val(ncbi_api_key)
 
     output:
     tuple val(family), eval('jq -r .mean_assembly_length *.stats.json'),                                                                        emit: mean_lengths
@@ -22,7 +23,11 @@ process NCBI_ASSEMBLY_STATS {
 
     script:
     def prefix = task.ext.prefix ?: "$family"
+    def ncbi_api_key_arg = ncbi_api_key ? "--ncbi-api-key $ncbi_api_key" : ""
     """
-    get_assembly_stats.py --family $family --out ${prefix}.stats.json
+    get_assembly_stats.py \\
+        --family $family \\
+        --out ${prefix}.stats.json \\
+        $ncbi_api_key_arg
     """
 }

@@ -2,23 +2,6 @@ process SRATOOLS_PREFETCH {
     tag "${meta.taxid} :: ${sra_id}"
     label 'process_low'
 
-    errorStrategy {
-        if (task.exitStatus == 100) {
-            // if vdb_validate fails ...
-            log.warn("vdb-validate returned error for SRA ID $sra_id")
-            return 'retry'
-        } else if (task.exitStatus == 101) {
-            // if checksum fails...
-            log.warn("Wrong checksum for SRA ID $sra_id")
-            return 'retry'
-        } else {
-            log.warn("Unknown issue when prefetching SRA ID $sra_id")
-            sleep(Math.pow(2, task.attempt) * 200 as long)
-            return 'retry'
-        }
-    }
-    maxRetries 5
-
     conda "${moduleDir}/environment.yml"
     container "${ workflow.containerEngine in ['singularity', 'apptainer'] && !task.ext.singularity_pull_docker_container ?
         'https://community-cr-prod.seqera.io/docker/registry/v2/blobs/sha256/07/079d860bc0b82e189e4015772a7c6d8fe20d9b740058f854dd1513ce33460950/data' :

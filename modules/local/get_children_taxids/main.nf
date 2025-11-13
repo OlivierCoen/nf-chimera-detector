@@ -4,14 +4,6 @@ process GET_CHILDREN_TAXIDS {
 
     tag "$family"
 
-    errorStrategy {
-        if (task.exitStatus == 100) {
-            // ignoring cases when family does not have children
-            log.warn("Could not find species for family ${family}.")
-            return 'ignore'
-        }
-    }
-
     conda "${moduleDir}/spec-file.txt"
     container "${ workflow.containerEngine in ['singularity', 'apptainer'] && !task.ext.singularity_pull_docker_container ?
         'https://community-cr-prod.seqera.io/docker/registry/v2/blobs/sha256/b4/b4d686ef63e22bc4d461178fc241cefddd2aa3436e189d3787c8e019448f056e/data':

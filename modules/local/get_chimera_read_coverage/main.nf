@@ -3,14 +3,6 @@ process GET_CHIMERA_READ_COVERAGE {
     label 'process_single'
     tag "${meta.id}"
 
-    errorStrategy {
-        if (task.exitStatus == 100) {
-            // ignoring cases when family does not have children
-            log.warn("Empty chimera file ${meta.id}.")
-            return 'ignore'
-        }
-    }
-
     conda "${moduleDir}/spec-file.txt"
     container "${ workflow.containerEngine in ['singularity', 'apptainer'] && !task.ext.singularity_pull_docker_container ?
         'https://community-cr-prod.seqera.io/docker/registry/v2/blobs/sha256/82/8285150b31c413e715428d9b65b13b277941be75f4923bfc4388d202ad0a7bcf/data':

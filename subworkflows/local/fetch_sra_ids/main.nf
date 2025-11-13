@@ -6,10 +6,14 @@ workflow FETCH_SRA_IDS {
 
     take:
     ch_families
+    ncbi_api_key
 
     main:
 
-    GET_CHILDREN_TAXIDS ( ch_families )
+    GET_CHILDREN_TAXIDS (
+        ch_families,
+        ncbi_api_key
+    )
 
     GET_CHILDREN_TAXIDS.out.taxid_to_names_files
 
@@ -53,4 +57,3 @@ workflow FETCH_SRA_IDS {
     sra_ids           = ch_sra_ids
     taxids            = ch_species_taxids
 }
-

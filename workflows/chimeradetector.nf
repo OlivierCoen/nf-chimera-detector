@@ -138,7 +138,10 @@ workflow CHIMERADETECTOR {
         target_fasta_file
     ])
 
-    NCBI_ASSEMBLY_STATS ( ch_families )
+    NCBI_ASSEMBLY_STATS (
+        ch_families,
+        params.ncbi_api_key ?: []
+    )
 
     NCBI_ASSEMBLY_STATS.out.mean_lengths
         .map {
@@ -152,7 +155,10 @@ workflow CHIMERADETECTOR {
     // GETTING LIST OF SRA IDS
     // ------------------------------------------------------------------------------------
 
-    FETCH_SRA_IDS ( ch_families )
+    FETCH_SRA_IDS (
+        ch_families,
+        params.ncbi_api_key ?: []
+    )
     FETCH_SRA_IDS.out.sra_ids.set { ch_sra_ids }
     FETCH_SRA_IDS.out.taxids.set { ch_species_taxids }
 
@@ -207,7 +213,10 @@ workflow CHIMERADETECTOR {
     // DOWNLOAD GENOME ASSEMBLY FROM NCBI IF AVAILABLE OR MAKE FROM SCRATCH OTHERWISE
     // ------------------------------------------------------------------------------------
 
-    GET_GENOMES ( ch_reads )
+    GET_GENOMES (
+        ch_reads,
+        params.ncbi_api_key ?: []
+    )
     GET_GENOMES.out.assemblies.set { ch_assemblies }
 
     // ------------------------------------------------------------------------------------

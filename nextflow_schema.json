@@ -49,13 +49,13 @@
                     "fa_icon": "fas fa-file-csv"
                 },
                 "read_coverage": {
-                     "type": "integer",
-                     "minimum": 1,
-                     "maximum": 100,
-                     "default": 40,
-                     "description": "Read coverage to keep when assembling with MEGAHIT.",
-                     "help_text": "Reads corresponding to species that do not have available assemblies are assembled using MEGAHIT. Before assembling, reads are subsampled in order to provide optimal input data to MEGAHIT.",
-                     "fa_icon": "fas fa-chart-simple"
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 100,
+                    "default": 40,
+                    "description": "Read coverage to keep when assembling with MEGAHIT.",
+                    "help_text": "Reads corresponding to species that do not have available assemblies are assembled using MEGAHIT. Before assembling, reads are subsampled in order to provide optimal input data to MEGAHIT.",
+                    "fa_icon": "fas fa-chart-simple"
                 },
                 "read_merger": {
                     "type": "string",
@@ -65,19 +65,19 @@
                     "fa_icon": "fas fa-hand-scissors"
                 },
                 "read_fasta_chunk_max_size": {
-                     "type": "integer",
-                     "minimum": 1E6,
-                     "default": 1E8,
-                     "description": "Max number of bases (for each chunks or reads in Fasta format) to provide to Blastn against the target database.",
-                     "help_text": "Read Fasta files may be very big and Blastn may give issues. Therefore, we separate read fasta files into chunks. This parameter serves to determine the number of chunks, given the total size of the fasta file.",
-                     "fa_icon": "fas fa-chart-simple"
+                    "type": "integer",
+                    "minimum": 1e6,
+                    "default": 1e8,
+                    "description": "Max number of bases (for each chunks or reads in Fasta format) to provide to Blastn against the target database.",
+                    "help_text": "Read Fasta files may be very big and Blastn may give issues. Therefore, we separate read fasta files into chunks. This parameter serves to determine the number of chunks, given the total size of the fasta file.",
+                    "fa_icon": "fas fa-chart-simple"
                 },
                 "sra_registry": {
-                     "type": "string",
-                     "format": "file-path",
-                     "default": "sra_registry",
-                     "description": "Name of the directory containing records of SRA processing. The resulting folder will be located under outdir. It is essential to keep track of SRA IDs already processed, in order to avoid processing them again in case the pipeline is run again..",
-                     "fa_icon": "fas fa-folder-open"
+                    "type": "string",
+                    "format": "file-path",
+                    "default": "sra_registry",
+                    "description": "Name of the directory containing records of SRA processing. The resulting folder will be located under outdir. It is essential to keep track of SRA IDs already processed, in order to avoid processing them again in case the pipeline is run again..",
+                    "fa_icon": "fas fa-folder-open"
                 }
             }
         },
@@ -88,22 +88,28 @@
             "description": "Statistical options.",
             "properties": {
                 "max_srrs_per_taxid": {
-                     "type": "integer",
-                     "minimum": 1,
-                     "default": null,
-                     "description": "[ For dev purposes ] : if specified, sets the max number of SRRs per taxon ID to process.",
-                     "fa_icon": "fas fa-chart-simple"
+                    "type": "integer",
+                    "minimum": 1,
+                    "default": null,
+                    "description": "[ For dev purposes ] : if specified, sets the max number of SRRs per taxon ID to process.",
+                    "fa_icon": "fas fa-chart-simple"
                 },
                 "only_download_srrs": {
-                     "type": "string",
-                     "default": null,
-                     "description": "[ For dev purposes ] : if specified, only the provided SRA accessions (separated by a comma) will be downloaded.",
-                     "fa_icon": "fas fa-chart-simple"
+                    "type": "string",
+                    "default": null,
+                    "description": "[ For dev purposes ] : if specified, only the provided SRA accessions (separated by a comma) will be downloaded.",
+                    "fa_icon": "fas fa-chart-simple"
                 },
                 "ignore_sra_registry": {
-                     "type": "boolean",
-                     "description": "[ For dev purposes ] : ignore SRA registry and download SRRs again.",
-                     "fa_icon": "fas fa-chart-simple"
+                    "type": "boolean",
+                    "description": "[ For dev purposes ] : ignore SRA registry and download SRRs again.",
+                    "fa_icon": "fas fa-chart-simple"
+                },
+                "ncbi_api_key": {
+                    "type": "string",
+                    "default": null,
+                    "description": "[ For dev purposes ] : if specified, use the provided NCBI API key to increase the rate limit for the NCBI taxonomy database.",
+                    "fa_icon": "fas fa-chart-simple"
                 }
             }
         },

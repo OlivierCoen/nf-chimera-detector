@@ -11,6 +11,7 @@ process GET_BEST_NCBI_ASSEMBLY {
 
     input:
     tuple val(meta), val(taxid)
+    val(ncbi_api_key)
 
     output:
     tuple val(meta), eval('jq -r .accession *.assembly_report.json'),                                                                           emit: accession
@@ -22,8 +23,12 @@ process GET_BEST_NCBI_ASSEMBLY {
 
     script:
     def prefix = task.ext.prefix ?: "$taxid"
+    def ncbi_api_key_arg = ncbi_api_key ? "--ncbi-api-key $ncbi_api_key" : ""
     """
-    get_best_assembly.py --taxon-id $taxid --out ${prefix}.assembly_report.json
+    get_best_assembly.py \\
+        --taxon-id $taxid \\
+        --out ${prefix}.assembly_report.json \\
+        $ncbi_api_key_arg
     """
 
 }

@@ -2,18 +2,18 @@
 
 # Written by Olivier Coen. Released under the MIT license.
 
-import requests
-import sys
-import json
 import argparse
+import json
 import logging
+import sys
 
+import requests
 from tenacity import (
+    before_sleep_log,
     retry,
     retry_if_exception_type,
     stop_after_delay,
     wait_exponential,
-    before_sleep_log,
 )
 
 logging.basicConfig(
@@ -77,7 +77,7 @@ def send_request_to_ncbi_genome_dataset_api(taxid: int, ncbi_api_key: str | None
     wait=wait_exponential(multiplier=1, min=1, max=30),
     before_sleep=before_sleep_log(logger, logging.WARNING),
 )
-def send_request_to_ncbi_taxonomy(taxon: str, ncbi_api_key: str | None):
+def send_request_to_ncbi_taxonomy(taxon: str | int, ncbi_api_key: str | None):
     taxons = [str(taxon)]
     data = {"taxons": taxons}
     headers = dict(NCBI_API_HEADERS)
@@ -105,8 +105,8 @@ def get_family_taxid(family: str, ncbi_api_key: str | None):
     return node["taxonomy"]["tax_id"]
 
 
-def get_parent_taxid(taxid: int):
-    result = send_request_to_ncbi_taxonomy(taxid)
+def get_parent_taxid(taxid: int, ncbi_api_key: str | None):
+    result = send_request_to_ncbi_taxonomy(taxid, ncbi_api_key)
 
     if "taxonomy_nodes" not in result:
         raise ValueError(f"Could not get taxonomy data for taxid {taxid}")
@@ -142,9 +142,9 @@ def get_assembly_stats(taxid: int, ncbi_api_key: str | None) -> dict:
             f"Could not get assembly stats for children for taxid {taxid}. Trying with parent."
         )
         # recursive call with parent taxids
-        parent_taxid = get_parent_taxid(taxid)
+        parent_taxid = get_parent_taxid(taxid, ncbi_api_key)
         logger.info(f"Parent taxid: {parent_taxid}")
-        return get_assembly_stats(parent_taxid)
+        return get_assembly_stats(parent_taxid, ncbi_api_key)
 
     # remove genbank assemblies whenever there is the equivalent refseq one
     filter_assembly_stats = {}

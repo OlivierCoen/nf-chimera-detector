@@ -2,20 +2,20 @@
 
 # Written by Olivier Coen. Released under the MIT license.
 
-import requests
-from tqdm import tqdm
-import sys
 import argparse
-import xml.etree.ElementTree as ET
 import logging
+import sys
+import xml.etree.ElementTree as ET
 
+import requests
 from tenacity import (
+    before_sleep_log,
     retry,
     retry_if_exception_type,
     stop_after_delay,
     wait_exponential,
-    before_sleep_log,
 )
+from tqdm import tqdm
 
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
@@ -85,7 +85,7 @@ def send_esearch_query(query: str, database: str, ncbi_api_key: str | None):
     return response.text
 
 
-def parse_ids_from_xml(xml_string: str):
+def parse_ids_from_xml(xml_string: str) -> list[str]:
     """
     Parse XML string and get text in <Id>...</Id> blocks
     :param xml_string:
@@ -94,17 +94,21 @@ def parse_ids_from_xml(xml_string: str):
     # parsing XML returned by API
     root = ET.fromstring(xml_string)
     # species taxon IDs are contained in <Id>...</Id> blocks
-    return [id_element.text for id_element in root.findall(".//Id")]
+    return [
+        id_element.text
+        for id_element in root.findall(".//Id")
+        if id_element.text is not None
+    ]
 
 
-def get_taxon_metadata(taxid: str, ncbi_api_key: str) -> dict:
+def get_taxon_metadata(taxid: str | int, ncbi_api_key: str | None) -> dict:
     result = send_request_to_ncbi_taxonomy(taxid, ncbi_api_key)
     if len(result["taxonomy_nodes"]) > 1:
         raise ValueError(f"Multiple taxids for family {family}")
     return result["taxonomy_nodes"][0]
 
 
-def get_family_taxid(family: str, ncbi_api_key: str):
+def get_family_taxid(family: str, ncbi_api_key: str | None) -> int:
     metadata = get_taxon_metadata(family, ncbi_api_key)
     if "taxonomy" not in metadata:
         logger.info(f"Could not find taxonomy results for family {family}")
@@ -115,7 +119,7 @@ def get_family_taxid(family: str, ncbi_api_key: str):
     return int(metadata["taxonomy"]["tax_id"])
 
 
-def get_children_taxids(taxid: str, ncbi_api_key: str | None) -> list[str]:
+def get_children_taxids(taxid: int, ncbi_api_key: str | None) -> list[str]:
     """
     Get list of children taxonomy IDs given a family taxonomy ID
     :param taxid:
@@ -130,8 +134,8 @@ def get_children_taxids(taxid: str, ncbi_api_key: str | None) -> list[str]:
     return parse_ids_from_xml(xml_string)
 
 
-def get_taxon_name(taxid: str):
-    metadata = get_taxon_metadata(taxid)
+def get_taxon_name(taxid: int, ncbi_api_key: str | None):
+    metadata = get_taxon_metadata(taxid, ncbi_api_key)
     return metadata.get("taxonomy", {}).get("organism_name", None)
 
 
@@ -159,7 +163,10 @@ if __name__ == "__main__":
     )
     logger.info(f"Obtained {len(children_taxids)} children taxids\n")
 
-    taxids2names = {taxid: get_taxon_name(taxid) for taxid in tqdm(children_taxids)}
+    taxids2names = {
+        taxid: get_taxon_name(taxid, args.ncbi_api_key)
+        for taxid in tqdm(children_taxids)
+    }
 
     taxid2name_outfile = f"{family}{TAXID_TO_NAME_OUTFILE_SUFFIX}"
     with open(taxid2name_outfile, "w") as fout:

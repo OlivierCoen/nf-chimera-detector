@@ -2,17 +2,17 @@
 
 # Written by Olivier Coen. Released under the MIT license.
 
-import requests
 import argparse
 import json
 import logging
 
+import requests
 from tenacity import (
+    before_sleep_log,
     retry,
     retry_if_exception_type,
     stop_after_delay,
     wait_exponential,
-    before_sleep_log,
 )
 
 logging.basicConfig(
@@ -89,7 +89,7 @@ def get_current_assemblies(reports: list[dict]):
     current_assembly_reports = [
         report
         for report in reports
-        if report.get("assembly_info", {}).get("assembly_status") == "current"
+        if report.get("assembly_info", {}).get("refseq_category") == "reference genome"
     ]
     if not current_assembly_reports:
         return reports

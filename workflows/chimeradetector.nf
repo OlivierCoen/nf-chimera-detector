@@ -162,10 +162,18 @@ workflow CHIMERADETECTOR {
     FETCH_SRA_IDS.out.sra_ids.set { ch_sra_ids }
     FETCH_SRA_IDS.out.taxids.set { ch_species_taxids }
 
-    // For dev purposes: test download of a specific SRA accession
-    if ( params.only_download_srrs ) {
-        unique_sra_accessions = params.only_download_srrs.strip().tokenize(',')
-        ch_sra_ids = ch_sra_ids.filter { meta, sra_id -> unique_sra_accessions.contains(sra_id) }
+    // ------------------------------------------------------------------------------------
+    // RESTRICTING TO SPECIFIC SRA IDS / EXCLUDING SPECIFIC SRA IDS
+    // ------------------------------------------------------------------------------------
+
+    if ( params.restrict_to_srrs ) {
+        restricted_srrs = params.restrict_to_srrs.strip().tokenize(',')
+        ch_sra_ids = ch_sra_ids.filter { meta, sra_id -> restricted_srrs.contains(sra_id) }
+    }
+
+    if ( params.exclude_srrs ) {
+        excluded_srrs = params.exclude_srrs.strip().tokenize(',')
+        ch_sra_ids = ch_sra_ids.filter { meta, sra_id -> !excluded_srrs.contains(sra_id) }
     }
 
     // ------------------------------------------------------------------------------------

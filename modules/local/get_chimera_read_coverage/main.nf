@@ -1,6 +1,6 @@
 process GET_CHIMERA_READ_COVERAGE {
 
-    label 'process_single'
+    label 'process_medium'
     tag "${meta.id}"
 
     conda "${moduleDir}/spec-file.txt"

@@ -230,38 +230,3 @@ def formatVersionsToYAML( ch_versions ) {
             }
             .unique()
 }
-
-
-
-//
-// Get software versions for pipeline
-// temporary replacements of the native processVersionsFromYAML
-//
-def customProcessVersionsFromYAML(yaml_file) {
-    Yaml yaml = new Yaml()
-    versions = yaml.load(yaml_file)
-    return yaml.dumpAsMap(versions).trim()
-}
-
-//
-// Get channel of software versions used in pipeline in YAML format
-// temporary replacements of the native softwareVersionsToYAML
-//
-def customSoftwareVersionsToYAML(versions) {
-    return Channel.of(workflowVersionToYAML())
-            .concat(
-                versions
-                .unique()
-                .map {
-                    name, tool, version -> [ name.tokenize(':').last(), [ tool, version ] ]
-                }
-                .groupTuple()
-                .map {
-                    processName, toolInfo ->
-                        def toolVersions = toolInfo.collect { tool, version -> "    ${tool}: ${version}" }.join('\n')
-                        "${processName}:\n${toolVersions}\n"
-                }
-                .map { customProcessVersionsFromYAML(it) }
-            )
-}
-

@@ -99,9 +99,10 @@ workflow PREPARE_MULTIQC_DATA {
     // associating metadata of downloaded genomes to all possible SRR IDs
     Channel.topic('dl_genome_metadata')
         .combine( ch_reads_fasta )
-        .filter { family, taxid, genome_file, nb_bases, meta, fasta -> taxid == meta.taxid }
+        .filter { family, taxid, genome_file, nb_bases, meta, fasta -> taxid.toString() == meta.taxid.toString() }
         .map { family, taxid, genome_file, nb_bases, meta, fasta ->  [ meta.id, genome_file.baseName, nb_bases ] }
         .set { ch_dl_genome_len }
+    ch_dl_genome_len.collect()
 
     // performing multiple left joins (remainder is true) in a row, with id (SRR ID) as matching key
     ch_reads_fasta

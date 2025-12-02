@@ -22,7 +22,7 @@ workflow SRA_READS_PREPARATION {
     // Subsampling reads in read files
     // ---------------------------------------------------------------------
 
-    SEQKIT_STATS.out.stats
+    seqtk_sample_input = SEQKIT_STATS.out.stats
         .splitCsv( header: true, sep: '\t', limit: 1 )
         .map { meta, row -> [ meta, row.sum_len as Float ] }
         .join ( ch_sra_reads )
@@ -33,7 +33,7 @@ workflow SRA_READS_PREPARATION {
                 def fraction_to_keep = [ params.read_coverage / observed_coverage, 1 ].min()
                 [ meta, reads, fraction_to_keep ]
         }
-        .set { seqtk_sample_input }
+
 
     SEQTK_SAMPLE ( seqtk_sample_input )
 

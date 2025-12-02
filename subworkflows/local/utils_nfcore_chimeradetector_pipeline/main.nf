@@ -81,17 +81,19 @@ workflow PIPELINE_INITIALISATION {
     //
     ch_fastq = Channel.empty()
     if ( params.fastq ) {
-       Channel
+       ch_fastq = Channel
         .fromList( samplesheetToList(params.fastq, "${projectDir}/assets/schema_fastq.json") )
         .map { meta, file1, file2 = null ->
+            //converting taxid to string, for compatibility with subsequent steps
+            meta.taxid = meta.taxid.toString()
             new_meta = meta + [ sra_id: meta.id ]
-            if (file2 != null) {
-                [ new_meta, [file1, file2] ]
-            } else {
+            if (file2 == null || file2 == [] ) {
                 [ new_meta, file1 ]
+            } else {
+                [ new_meta, [file1, file2] ]
             }
         }
-        .set { ch_fastq }
+
     }
 
     emit:

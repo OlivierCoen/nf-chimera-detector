@@ -138,18 +138,34 @@ workflow CHIMERADETECTOR {
         target_fasta_file
     ])
 
+    // ------------------------------------------------------------------------------------
+    // FETCHING STATISTICS FOR ALL FAMILIES INCLUDED IN THE ANALYSIS
+    // ------------------------------------------------------------------------------------
+
+    // mix together all families
+    ch_all_families = ch_families.mix ( ch_fastq.map { meta, files -> meta.family } )
+
     NCBI_ASSEMBLY_STATS (
-        ch_families,
+        ch_all_families,
         params.ncbi_api_key ?: []
     )
 
-    NCBI_ASSEMBLY_STATS.out.mean_lengths
+    // associating back statistics to their respective family channels
+    ch_families = ch_families
+        .join( NCBI_ASSEMBLY_STATS.out.mean_lengths )
         .map {
             family, mean_assembly_length ->
                 def meta = [ family: family, mean_assembly_length: mean_assembly_length ]
                 [ meta, family ]
         }
-        .set { ch_families }
+
+    ch_fastq = ch_fastq
+        .combine( NCBI_ASSEMBLY_STATS.out.mean_lengths )
+        .filter { meta, files, family, mean_assembly_length -> meta.family == family }
+        .map { meta, files, family, mean_assembly_length ->
+            def new_meta = meta + [ mean_assembly_length: mean_assembly_length ]
+            [ new_meta, files ]
+        }
 
     // ------------------------------------------------------------------------------------
     // GETTING LIST OF SRA IDS

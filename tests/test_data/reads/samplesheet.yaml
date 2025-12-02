@@ -1,0 +1,10 @@
+- family: Pithoviridae
+  taxid: 271108
+  sample: paired
+  fastq_1: tests/test_data/reads/DRR618977_1.head.fastq.gz
+  fastq_2: tests/test_data/reads/DRR618977_2.head.fastq.gz
+
+- family: Pithoviridae
+  taxid: 271108
+  sample: single_with_chimera
+  fastq_1: tests/test_data/reads/DRR515383.filtered.fastq.gz

@@ -6,12 +6,12 @@ import argparse
 import logging
 import sys
 from pathlib import Path
-from tqdm import tqdm
-import polars as pl
-import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
 
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import polars as pl
+from tqdm import tqdm
 
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
@@ -173,9 +173,9 @@ def swap_start_end_if_necessary(df: pl.DataFrame):
     )
 
 
-def get_coverage(hit_df: pl.DataFrame, target: str):
+def get_coverage(hit_lf: pl.LazyFrame, target: str):
     # takes the sub dataframe corresponding to this target
-    df = hit_df.filter(pl.col("sseqid") == target)
+    df = hit_lf.filter(pl.col("sseqid") == target).collect()
 
     if df.is_empty():
         return pd.DataFrame()
@@ -259,7 +259,7 @@ def plot_coverage(
 if __name__ == "__main__":
     args = parse_args()
 
-    hit_lf = pl.read_csv(
+    hit_lf = pl.scan_csv(
         args.blast_hit_file,
         separator="\t",
         schema=BLAST_OUTPUT_COL_SCHEMA,
@@ -275,37 +275,33 @@ if __name__ == "__main__":
         logger.warning(f"No data in chimera file: {e}")
         sys.exit(0)
 
-    # dividing hit table into chimera and non-chimera hits
+    logger.info("Dividing hit table into chimera and non-chimera hits")
     chimera_qseqids = chimera_df["qseqid"].unique().tolist()
-    chimera_hit_df = hit_lf.filter(pl.col("qseqid").is_in(chimera_qseqids))
-    non_chimera_hit_df = hit_lf.filter(~pl.col("qseqid").is_in(chimera_qseqids))
+    chimera_hit_lf = hit_lf.filter(pl.col("qseqid").is_in(chimera_qseqids))
+    non_chimera_hit_lf = hit_lf.filter(~pl.col("qseqid").is_in(chimera_qseqids))
 
     # looping through target sequences and making coverage plot
-    target_sequences = hit_lf.select("sseqid").unique().to_series().to_list()
+    logger.info("Extracting target sequences")
+    target_sequences = hit_lf.select("sseqid").unique().collect().to_series().to_list()
 
-    non_chimera_coverage = {}
-    chimera_coverage = {}
-    logger.info("Computing coverages for each target sequence")
+    logger.info("Computing coverages for each target sequence and making plots")
     for target in tqdm(target_sequences):
-        coverage_df = get_coverage(chimera_hit_df, target)
+        chimera_coverage_df = get_coverage(chimera_hit_lf, target)
         # we don't want to keep targets for which there is not chimera
-        if coverage_df.empty:
+        if chimera_coverage_df.empty:
             continue
-        chimera_coverage[target] = coverage_df
-        non_chimera_coverage[target] = get_coverage(non_chimera_hit_df, target)
+        non_chimera_coverage_df = get_coverage(non_chimera_hit_lf, target)
 
-    # plotting images
-    logger.info("Making plots")
-    for target in tqdm(chimera_coverage):
         plot_coverage(
-            non_chimera_coverage[target],
-            chimera_coverage[target],
+            non_chimera_coverage_df,
+            chimera_coverage_df,
             target,
             args.srr_id,
         )
+
         plot_coverage(
-            non_chimera_coverage[target],
-            chimera_coverage[target],
+            non_chimera_coverage_df,
+            chimera_coverage_df,
             target,
             args.srr_id,
             log=True,

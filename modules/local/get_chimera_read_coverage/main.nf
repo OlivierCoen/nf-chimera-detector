@@ -1,6 +1,6 @@
 process GET_CHIMERA_READ_COVERAGE {
 
-    label 'process_medium'
+    label 'process_high_memory'
     tag "${meta.id}"
 
     conda "${moduleDir}/spec-file.txt"

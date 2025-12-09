@@ -22,6 +22,7 @@ process GET_CHIMERA_READ_COVERAGE {
     script:
     def prefix = ""
     """
+    # for matplotlib
     export MPLCONFIGDIR=\${PWD}
 
     get_chimera_read_coverage.py \\

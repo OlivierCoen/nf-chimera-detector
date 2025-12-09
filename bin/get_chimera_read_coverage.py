@@ -117,6 +117,10 @@ def get_occurences(df: pl.DataFrame):
     target_length = df.select("slen").unique().to_series().item(0)
     fields = [str(i) for i in range(target_length)]
 
+    with open("log.txt", "a") as f:
+        msg = f"target: {df['sseqid'].item(0)} || nb lines: {len(df)}"
+        f.write(msg)
+
     return (
         df.with_columns(
             nb_left_uncovered=(

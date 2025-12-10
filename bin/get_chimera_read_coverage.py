@@ -79,6 +79,9 @@ CHIMERA_COL_SCHEMA = {
 
 FIGZISE = (12, 6)
 
+CHUNKSIZE = 100000
+MAX_NUMBER_HITS_CONSIDERED = 100000
+
 CHIMERA_COLOR = "green"
 NON_CHIMERA_COLOR = "grey"
 
@@ -117,9 +120,11 @@ def get_occurences(df: pl.DataFrame):
     target_length = df.select("slen").unique().to_series().item(0)
     fields = [str(i) for i in range(target_length)]
 
+    """
     with open("log.txt", "a") as f:
         msg = f"target: {df['sseqid'].item(0)} || nb lines: {len(df)}"
         f.write(msg)
+    """
 
     return (
         df.with_columns(
@@ -177,17 +182,7 @@ def swap_start_end_if_necessary(df: pl.DataFrame):
     )
 
 
-def get_coverage(hit_lf: pl.LazyFrame, target: str):
-    # takes the sub dataframe corresponding to this target
-    df = hit_lf.filter(pl.col("sseqid") == target).collect()
-
-    if df.is_empty():
-        return pd.DataFrame()
-
-    # if multiple subject lengths are found, log a warning
-    if len(df.select("slen").unique()) > 1:
-        logger.warning(f"Multiple subject lengths for target {target}:\n {df}")
-
+def get_chunk_coverage(df: pl.DataFrame) -> pd.DataFrame:
     # swapping start and end if on the reverse strand
     df = swap_start_end_if_necessary(df)
 
@@ -206,11 +201,54 @@ def get_coverage(hit_lf: pl.LazyFrame, target: str):
     )
 
 
+def get_coverage(
+    hit_lf: pl.LazyFrame, target: str, is_chimera: bool
+) -> tuple[pd.DataFrame, bool]:
+    # takes the sub dataframe corresponding to this target
+    lf = hit_lf.filter(pl.col("sseqid") == target)
+
+    if lf.limit(1).collect().is_empty():
+        return pd.DataFrame(), False
+
+    # if multiple subject lengths are found, log a warning
+    if len(lf.select("slen").collect().unique()) > 1:
+        logger.warning(f"Multiple subject lengths for target {target}")
+
+    # get the total number of rows
+    n_rows = lf.select(pl.len()).collect().item()
+
+    is_subsampled = False
+    if not is_chimera and n_rows > MAX_NUMBER_HITS_CONSIDERED:
+        logger.warning(
+            f"Too many hits for target {target}: {n_rows}. Subsampling to {MAX_NUMBER_HITS_CONSIDERED}"
+        )
+        indices = sorted(
+            np.random.choice(n_rows, size=MAX_NUMBER_HITS_CONSIDERED, replace=False)
+        )
+        lf = (
+            lf.with_row_index()
+            .filter(pl.col("index").is_in(indices))
+            .select(pl.exclude("index"))
+        )
+        is_subsampled = True
+
+    # perform coverage computation on chunks to limit memory usage
+    coverage_dfs = []
+    for i in range(0, n_rows, CHUNKSIZE):
+        chunk = lf.slice(i, CHUNKSIZE).collect()
+        if chunk.is_empty():
+            break
+        coverage_dfs.append(get_chunk_coverage(chunk))
+
+    return pd.concat(coverage_dfs, axis=1), is_subsampled
+
+
 def plot_coverage(
     non_chimera_coverage: pd.Series,
     chimera_coverage: pd.Series,
     target: str,
     srr_id: str,
+    is_subsampled: bool,
     log: bool = False,
 ):
     fig, ax = plt.subplots(figsize=FIGZISE)
@@ -243,10 +281,11 @@ def plot_coverage(
     s2.plot(label="Chimeras", color=CHIMERA_COLOR, **common_plot_params)
 
     cleaned_target = target.replace("/", "_")
+    subsampling_status = ".subsampled" if is_subsampled else ""
     outfile = (
-        f"{srr_id}.{cleaned_target}.log.png"
+        f"{srr_id}.{cleaned_target}{subsampling_status}.log.png"
         if log
-        else f"{srr_id}.{cleaned_target}.raw.png"
+        else f"{srr_id}.{cleaned_target}{subsampling_status}.raw.png"
     )
 
     plt.savefig(outfile, bbox_inches="tight")
@@ -290,17 +329,14 @@ if __name__ == "__main__":
 
     logger.info("Computing coverages for each target sequence and making plots")
     for target in tqdm(target_sequences):
-        chimera_coverage_df = get_coverage(chimera_hit_lf, target)
+        chimera_coverage_df, is_subsampled = get_coverage(
+            chimera_hit_lf, target, is_chimera=True
+        )
         # we don't want to keep targets for which there is not chimera
         if chimera_coverage_df.empty:
             continue
-        non_chimera_coverage_df = get_coverage(non_chimera_hit_lf, target)
-
-        plot_coverage(
-            non_chimera_coverage_df,
-            chimera_coverage_df,
-            target,
-            args.srr_id,
+        non_chimera_coverage_df, is_subsampled = get_coverage(
+            non_chimera_hit_lf, target, is_chimera=False
         )
 
         plot_coverage(
@@ -308,6 +344,15 @@ if __name__ == "__main__":
             chimera_coverage_df,
             target,
             args.srr_id,
+            is_subsampled,
+        )
+
+        plot_coverage(
+            non_chimera_coverage_df,
+            chimera_coverage_df,
+            target,
+            args.srr_id,
+            is_subsampled,
             log=True,
         )
 

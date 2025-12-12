@@ -1,104 +1,83 @@
 # nf-chimera-detector: Usage
 
-> _Documentation of pipeline parameters is generated automatically from the pipeline schema and can no longer be found in markdown files._
+## 1 - Use public data only
 
-## Introduction
+The easiest way to run the pipeline is by using data on NCBI.
 
-<!-- TODO nf-core: Add documentation about anything specific to running your pipeline. For general topics, please point to (and add to) the main nf-core website. -->
+Prepare a `.txt` file with the following format:
 
-## Samplesheet input
+```title="families.txt"
+Pithoviridae
+Ascoviridae
+Nudiviridae
+Mamonoviridae
+```
 
-You will need to create a samplesheet with information about the samples you would like to analyse before running the pipeline. Use this parameter to specify its location. It has to be a comma-separated file with 3 columns, and a header row as shown in the examples below.
+and a `.fasta` file containing the sequences thaht you expect to find in your NGS data
+
+Now run:
 
 ```bash
---input '[path to samplesheet file]'
+nextflow run OlivierCoen/nf-chimera-detector \
+   -latest \
+   -profile apptainer \
+   --families families.txt \
+   --target_db <target DB Fasta file> \
+   --outdir <output directory>
 ```
 
-### Multiple runs of the same sample
+## 2 - Use local data only
 
-The `sample` identifiers have to be the same when you have re-sequenced the same sample more than once e.g. to increase sequencing depth. The pipeline will concatenate the raw reads before performing any downstream analysis. Below is an example for the same sample sequenced across 3 lanes:
+You can also run the pipeline using local data only, without pulling any data from the internet. To do this, you need to specify the `--fastq` flag when running the pipeline.
 
-```csv title="samplesheet.csv"
-sample,fastq_1,fastq_2
-CONTROL_REP1,AEG588A1_S1_L002_R1_001.fastq.gz,AEG588A1_S1_L002_R2_001.fastq.gz
-CONTROL_REP1,AEG588A1_S1_L003_R1_001.fastq.gz,AEG588A1_S1_L003_R2_001.fastq.gz
-CONTROL_REP1,AEG588A1_S1_L004_R1_001.fastq.gz,AEG588A1_S1_L004_R2_001.fastq.gz
+First, prepare a samplesheet listing the fastq files you want to use:
+
+```title=samplesheet.csv
+family,taxid,sample,fastq_1,fastq_2
+family1,1234,paired,paired_1.fastq.gz,paired_2.fastq.gz
+family2,56789,single,single.fastq.gz,
 ```
 
-### Full samplesheet
+>[!TIP]
+> If you have single-end reads, leave the `fastq_2` column empty.
 
-The pipeline will auto-detect whether a sample is single- or paired-end using the information provided in the samplesheet. The samplesheet can have as many columns as you desire, however, there is a strict requirement for the first 3 columns to match those defined in the table below.
+| Column       | Description                                                                               |
+| ------------ | ----------------------------------------------------------------------------------------- |
+| `family`     | Name of the family associated to this dataset                                            |
+| `taxid`      | Taxonomic ID of the species associated to this dataset                                    |
+| `sample`     | Name of the sample                         |
+| `fastq_1` | Path to the first fastq file for paired-end reads or single fastq file for single-end reads |
+| `fastq_2` | Path to the second fastq file for paired-end reads |
 
-A final samplesheet file consisting of both single- and paired-end data may look something like the one below. This is for 6 samples, where `TREATMENT_REP3` has been sequenced twice.
+The samplesheet can also be a YAML file:
 
-```csv title="samplesheet.csv"
-sample,fastq_1,fastq_2
-CONTROL_REP1,AEG588A1_S1_L002_R1_001.fastq.gz,AEG588A1_S1_L002_R2_001.fastq.gz
-CONTROL_REP2,AEG588A2_S2_L002_R1_001.fastq.gz,AEG588A2_S2_L002_R2_001.fastq.gz
-CONTROL_REP3,AEG588A3_S3_L002_R1_001.fastq.gz,AEG588A3_S3_L002_R2_001.fastq.gz
-TREATMENT_REP1,AEG588A4_S4_L003_R1_001.fastq.gz,
-TREATMENT_REP2,AEG588A5_S5_L003_R1_001.fastq.gz,
-TREATMENT_REP3,AEG588A6_S6_L003_R1_001.fastq.gz,
-TREATMENT_REP3,AEG588A6_S6_L004_R1_001.fastq.gz,
+```yaml
+- family: family1
+  taxid: 1234
+  sample: paired
+  fastq_1: paired_1.fastq.gz
+  fastq_2: paired_2.fastq.gz
+
+- family: family2
+  taxid: 56789
+  sample: single
+  fastq_1: single.fastq.gz
+  fastq_2: 
 ```
 
-| Column    | Description                                                                                                                                                                            |
-| --------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `sample`  | Custom sample name. This entry will be identical for multiple sequencing libraries/runs from the same sample. Spaces in sample names are automatically converted to underscores (`_`). |
-| `fastq_1` | Full path to FastQ file for Illumina short reads 1. File has to be gzipped and have the extension ".fastq.gz" or ".fq.gz".                                                             |
-| `fastq_2` | Full path to FastQ file for Illumina short reads 2. File has to be gzipped and have the extension ".fastq.gz" or ".fq.gz".                                                             |
-
-An [example samplesheet](../assets/samplesheet.csv) has been provided with the pipeline.
-
-## Running the pipeline
-
-The typical command for running the pipeline is as follows:
-
+Now run:
 ```bash
-nextflow run nf-chimera-detector --input ./samplesheet.csv --outdir ./results  -profile docker
+nextflow run OlivierCoen/nf-chimera-detector \
+   -latest \
+   -profile apptainer \
+   --fastq < samplesheet.csv / samplesheet.yaml > \
+   --target_db <target DB Fasta file> \
+   --outdir <output directory>
 ```
 
-This will launch the pipeline with the `docker` configuration profile. See below for more information about profiles.
+## 3 - Use both public and local data
 
-Note that the pipeline will create the following files in your working directory:
-
-```bash
-work                # Directory containing the nextflow working files
-<OUTDIR>            # Finished results in specified location (defined with --outdir)
-.nextflow_log       # Log file from Nextflow
-# Other nextflow hidden files, eg. history of pipeline runs and old logs.
-```
-
-If you wish to repeatedly use the same parameters for multiple runs, rather than specifying each flag in the command, you can specify these in a params file.
-
-Pipeline settings can be provided in a `yaml` or `json` file via `-params-file <file>`.
-
-> [!WARNING]
-> Do not use `-c <file>` to specify parameters as this will result in errors. Custom config files specified with `-c` must only be used for [tuning process resource specifications](https://nf-co.re/docs/usage/configuration#tuning-workflow-resources), other infrastructural tweaks (such as output directories), or module arguments (args).
-
-The above pipeline run specified with a params file in yaml format:
-
-```bash
-nextflow run nf-chimera-detector -profile docker -params-file params.yaml
-```
-
-with:
-
-```yaml title="params.yaml"
-input: './samplesheet.csv'
-outdir: './results/'
-<...>
-```
-
-You can also generate such `YAML`/`JSON` files via [nf-core/launch](https://nf-co.re/launch).
-
-### Updating the pipeline
-
-When you run the above command, Nextflow automatically pulls the pipeline code from GitHub and stores it as a cached version. When running the pipeline after this, it will always use the cached version if available - even if the pipeline has been updated since. To make sure that you're running the latest version of the pipeline, make sure that you regularly update the cached version of the pipeline:
-
-```bash
-nextflow pull nf-chimera-detector
-```
+You can combine analysis of both local and public data in one single analysis by specifying both the `--families` and `--fastq` flags.
 
 ### Reproducibility
 

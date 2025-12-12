@@ -15,33 +15,39 @@
 
 **nf-chimera-detector** is a bioinformatics pipeline that aims at detecting transposable elements in public genomic data from DNA viruses.
 
-<!-- TODO nf-core:
-   Complete this sentence with a 2-3 sentence summary of what types of data the pipeline ingests, a brief overview of the
-   major pipeline sections and the types of output it produces. You're giving an overview to someone new
-   to nf-core here, in 15-20 seconds. For an example, see https://github.com/nf-core/rnaseq/blob/master/README.md#introduction
--->
-
-<!-- TODO nf-core: Include a figure that guides the user through the major workflow steps. Many nf-core
-     workflows use the "tube map" design for that. See https://nf-co.re/docs/guidelines/graphic_design/workflow_diagrams#examples for examples.   -->
-<!-- TODO nf-core: Fill in short bullet-pointed list of the default steps in the pipeline -->
-
-## Usage
+> [!TIP]
+> Before running the pipelines, be sure to have Nextflow + Apptainer or Nextflow + Micromamba installed.
+> See the prerequisites [here](docs/prerequisites.md).
 
 > [!NOTE]
 > If you are new to Nextflow and nf-core, please refer to [this page](https://nf-co.re/docs/usage/installation) on how to set-up Nextflow. Make sure to [test your setup](https://nf-co.re/docs/usage/introduction#how-to-run-a-pipeline) with `-profile test` before running the workflow on actual data.
 
+## Usage
+
+Prepare a `.txt` file with the following format:
+
+```
+Pithoviridae
+Ascoviridae
+Nudiviridae
+Mamonoviridae
+```
+and a `.fasta` file containing the sequences that you expect to find in your NGS data.
 
 Now, you can run the pipeline using:
 
-<!-- TODO nf-core: update the following command to include all required parameters for a minimal example -->
-
 ```bash
-nextflow run nf-chimera-detector \
-   -profile <docker/singularity/.../institute> \
-   --families families.txt \
-   --target_db /path/to/target_db_fasta \
-   --outdir <OUTDIR>
+nextflow run OlivierCoen/nf-chimera-detector \
+   -latest \
+   -profile apptainer \
+   --families <families file> \
+   --target_db <target DB Fasta file> \
+   --outdir <output directory>
 ```
+
+>[!TIP]
+>More detailed usage documentation is available [here](docs/usage.md).
+>In particular, if you want to run the pipeline with your own data, see [Use local data only](docs/usage.md#2---use-local-data-only).
 
 > [!WARNING]
 > Please provide pipeline parameters via the CLI or Nextflow `-params-file` option. Custom config files including those provided by the `-c` Nextflow option can be used to provide any configuration _**except for parameters**_; see [docs](https://nf-co.re/docs/usage/getting_started/configuration#custom-configuration-files).

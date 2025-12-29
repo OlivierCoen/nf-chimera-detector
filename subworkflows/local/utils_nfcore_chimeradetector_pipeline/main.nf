@@ -67,33 +67,40 @@ workflow PIPELINE_INITIALISATION {
     // Create channel from family file provided through params.families
     //
     ch_families = Channel.empty()
+
     if ( params.families ) {
-        Channel
-        .fromPath( params.families )
-        .splitText()
-        .map { family -> family.strip() }
-        .filter { family -> family != "" } // removes empty lines
-        .set { ch_families }
+        try {
+            ch_families = channel.fromList( params.families.toString().tokenize(",") )
+        } catch (Exception e) {
+            error("Error parsing families ${params.families}: ${e.message}")
+        }
     }
+
+    if ( params.family_file ) {
+        ch_families = ch_families.mix( channel.fromPath( params.family_file ).splitText() )
+    }
+
+    ch_families = ch_families
+                    .map { family -> family.strip() }
+                    .filter { family -> family != "" } // removes empty lines
 
     //
     // Create channel from fastq file provided through params.fastq
     //
     ch_fastq = Channel.empty()
     if ( params.fastq ) {
-       ch_fastq = Channel
-        .fromList( samplesheetToList(params.fastq, "${projectDir}/assets/schema_fastq.json") )
-        .map { meta, file1, file2 = null ->
-            //converting taxid to string, for compatibility with subsequent steps
-            //println "meta.taxid ${meta.taxid}"
-            meta.taxid = meta.taxid.toString()
-            new_meta = meta + [ sra_id: meta.id ]
-            if (file2 == null || file2 == [] ) {
-                [ new_meta, file1 ]
-            } else {
-                [ new_meta, [file1, file2] ]
-            }
-        }
+       ch_fastq = channel.fromList( samplesheetToList(params.fastq, "${projectDir}/assets/schema_fastq.json") )
+                    .map { meta, file1, file2 = null ->
+                        //converting taxid to string, for compatibility with subsequent steps
+                        //println "meta.taxid ${meta.taxid}"
+                        meta.taxid = meta.taxid.toString()
+                        new_meta = meta + [ sra_id: meta.id ]
+                        if (file2 == null || file2 == [] ) {
+                            [ new_meta, file1 ]
+                        } else {
+                            [ new_meta, [file1, file2] ]
+                        }
+                    }
 
     }
 

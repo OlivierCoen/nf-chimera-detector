@@ -40,7 +40,7 @@ Now, you can run the pipeline using:
 nextflow run OlivierCoen/nf-chimera-detector \
    -latest \
    -profile apptainer \
-   --families <families file> \
+   --family_file <family file> \
    --target_db <target DB Fasta file> \
    --outdir <output directory>
 ```

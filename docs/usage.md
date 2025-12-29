@@ -21,7 +21,7 @@ Now run:
 nextflow run OlivierCoen/nf-chimera-detector \
    -latest \
    -profile apptainer \
-   --families families.txt \
+   --family_file families.txt \
    --target_db <target DB Fasta file> \
    --outdir <output directory>
 ```
@@ -77,7 +77,7 @@ nextflow run OlivierCoen/nf-chimera-detector \
 
 ## 3 - Use both public and local data
 
-You can combine analysis of both local and public data in one single analysis by specifying both the `--families` and `--fastq` flags.
+You can combine analysis of both local and public data in one single analysis by specifying both the `--families` / `--family_file` and `--fastq` flags.
 
 ### Reproducibility
 

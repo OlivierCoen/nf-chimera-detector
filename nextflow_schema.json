@@ -14,10 +14,16 @@
             "properties": {
                 "families": {
                     "type": "string",
+                    "description": "NCBI families of interest (names of taxids). These can be families, genera, species, etc.",
+                    "help_text": "Provide one or multiple families separated by commas, e.g., Pithoviridae,Ascoviridae",
+                    "fa_icon": "fas fa-file-csv"
+                },
+                "family_file": {
+                    "type": "string",
                     "format": "file-path",
                     "exists": true,
                     "pattern": "^\\S+\\.txt$",
-                    "description": "Path to a txt file containing virus families of interest. One family name by line.",
+                    "description": "Path to a txt file containing NCBI families of interest. One family name by line.",
                     "help_text": "Example: assets/virus_families.txt",
                     "fa_icon": "fas fa-file-csv"
                 },

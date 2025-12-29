@@ -286,11 +286,13 @@ def completionEmail(summary_params, email, email_on_fail, plaintext_email, outdi
     def engine       = new groovy.text.GStringTemplateEngine()
     def tf           = new File("${workflow.projectDir}/assets/email_template.txt")
     def txt_template = engine.createTemplate(tf).make(email_fields)
+    println "myprint txt_template $txt_template"
     def email_txt    = txt_template.toString()
 
     // Render the HTML template
     def hf            = new File("${workflow.projectDir}/assets/email_template.html")
     def html_template = engine.createTemplate(hf).make(email_fields)
+    println "myprint html_template $html_template"
     def email_html    = html_template.toString()
 
     // Render the sendmail template
@@ -298,6 +300,7 @@ def completionEmail(summary_params, email, email_on_fail, plaintext_email, outdi
     def smail_fields           = [email: email_address, subject: subject, email_txt: email_txt, email_html: email_html, projectDir: "${workflow.projectDir}", mqcFile: mqc_report, mqcMaxSize: max_multiqc_email_size.toBytes()]
     def sf                     = new File("${workflow.projectDir}/assets/sendmail_template.txt")
     def sendmail_template      = engine.createTemplate(sf).make(smail_fields)
+    println "myprint sendmail_template $sendmail_template"
     def sendmail_html          = sendmail_template.toString()
 
     // Send the HTML e-mail
@@ -308,12 +311,14 @@ def completionEmail(summary_params, email, email_on_fail, plaintext_email, outdi
                 new org.codehaus.groovy.GroovyException('Send plaintext e-mail, not HTML')
             }
             // Try to send HTML e-mail using sendmail
+            println "myprint workflow.launchDir.toString ${workflow.launchDir}"
             def sendmail_tf = new File(workflow.launchDir.toString(), ".sendmail_tmp.html")
             sendmail_tf.withWriter { w -> w << sendmail_html }
             ['sendmail', '-t'].execute() << sendmail_html
             log.info("-${colors.purple}[${workflow.manifest.name}]${colors.green} Sent summary e-mail to ${email_address} (sendmail)-")
         }
         catch (Exception msg) {
+            println "myprint msg $msg"
             log.debug(msg.toString())
             log.debug("Trying with mail instead of sendmail")
             // Catch failures and try with plaintext
@@ -324,12 +329,14 @@ def completionEmail(summary_params, email, email_on_fail, plaintext_email, outdi
     }
 
     // Write summary e-mail HTML to a file
+    println "myprint workflow.launchDir.toString ${workflow.launchDir}"
     def output_hf = new File(workflow.launchDir.toString(), ".pipeline_report.html")
     output_hf.withWriter { w -> w << email_html }
     nextflow.extension.FilesEx.copyTo(output_hf.toPath(), "${outdir}/pipeline_info/pipeline_report.html")
     output_hf.delete()
 
     // Write summary e-mail TXT to a file
+    println "myprint workflow.launchDir.toString ${workflow.launchDir}"
     def output_tf = new File(workflow.launchDir.toString(), ".pipeline_report.txt")
     output_tf.withWriter { w -> w << email_txt }
     nextflow.extension.FilesEx.copyTo(output_tf.toPath(), "${outdir}/pipeline_info/pipeline_report.txt")
@@ -404,6 +411,7 @@ def imNotification(summary_params, hook_url) {
     def json_path     = hook_url.contains("hooks.slack.com") ? "slackreport.json" : "adaptivecard.json"
     def hf            = new File("${workflow.projectDir}/assets/${json_path}")
     def json_template = engine.createTemplate(hf).make(msg_fields)
+    println "myprint json_template $json_template"
     def json_message  = json_template.toString()
 
     // POST

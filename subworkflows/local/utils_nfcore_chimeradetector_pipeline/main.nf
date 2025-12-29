@@ -85,6 +85,7 @@ workflow PIPELINE_INITIALISATION {
         .fromList( samplesheetToList(params.fastq, "${projectDir}/assets/schema_fastq.json") )
         .map { meta, file1, file2 = null ->
             //converting taxid to string, for compatibility with subsequent steps
+            println "meta.taxid ${meta.taxid}"
             meta.taxid = meta.taxid.toString()
             new_meta = meta + [ sra_id: meta.id ]
             if (file2 == null || file2 == [] ) {
@@ -209,7 +210,7 @@ def methodsDescriptionText(mqc_methods_yaml) {
 
     def engine =  new groovy.text.SimpleTemplateEngine()
     def description_html = engine.createTemplate(methods_text).make(meta)
-
+    println "description_html $description_html"
     return description_html.toString()
 }
 

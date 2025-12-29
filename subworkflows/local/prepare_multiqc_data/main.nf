@@ -103,6 +103,7 @@ workflow PREPARE_MULTIQC_DATA {
             if ( taxid == null ||  meta.taxid == null ) {
                 error("Missing taxid information: ${taxid} and ${meta.taxid}")
             }
+            [ family, taxid, genome_file, nb_bases, meta, fasta ]
         }
         .filter { family, taxid, genome_file, nb_bases, meta, fasta -> taxid.toString() == meta.taxid.toString() }
         .map { family, taxid, genome_file, nb_bases, meta, fasta ->  [ meta.id, genome_file.baseName, nb_bases ] }

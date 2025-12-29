@@ -99,6 +99,11 @@ workflow PREPARE_MULTIQC_DATA {
     // associating metadata of downloaded genomes to all possible SRR IDs
     Channel.topic('dl_genome_metadata')
         .combine( ch_reads_fasta )
+        .map { family, taxid, genome_file, nb_bases, meta, fasta ->
+            if ( taxid == null ||  meta.taxid == null ) {
+                error("Missing taxid information: ${taxid} and ${meta.taxid}")
+            }
+        }
         .filter { family, taxid, genome_file, nb_bases, meta, fasta -> taxid.toString() == meta.taxid.toString() }
         .map { family, taxid, genome_file, nb_bases, meta, fasta ->  [ meta.id, genome_file.baseName, nb_bases ] }
         .set { ch_dl_genome_len }

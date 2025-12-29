@@ -13,7 +13,7 @@ workflow GET_CHIMERAS {
     // ------------------------------------------------------------------------------------
     // FIND CHIMERAS FROM BLAST RESULTS
     // ------------------------------------------------------------------------------------
-
+    ch_target_hits.join( ch_genome_hits ).view { v -> "find chim ${v}"}
     FIND_CHIMERAS (
         ch_target_hits.join( ch_genome_hits )
     )

@@ -322,7 +322,7 @@ def getSraIdsNotProcessed ( ch_sra_ids ) {
                             .map {
                                 meta, files ->
                                     flattened_files = files.flatten()
-                                    println "flattened_files $flattened_files"
+                                    //println "flattened_files $flattened_files"
                                     if ( flattened_files )
                                         [ meta, flattened_files ]
                             }

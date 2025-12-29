@@ -20,6 +20,8 @@ include { PIPELINE_COMPLETION     } from './subworkflows/local/utils_nfcore_chim
 workflow {
 
     main:
+    try {
+
     //
     // SUBWORKFLOW: Run initialisation tasks
     //
@@ -49,6 +51,14 @@ workflow {
         params.outdir,
         params.monochrome_logs,
     )
+
+    } catch (Exception e) {
+        println "Error message: ${e.message}"
+        println "Stack trace:"
+        e.stackTrace.each { trace ->
+            println "  File: ${trace.fileName}, Line: ${trace.lineNumber}, Method: ${trace.methodName}"
+        }
+    }
 }
 
 /*

@@ -1,8 +1,8 @@
 process FIND_CHIMERAS {
 
-    label 'process_medium'
+    label 'process_low'
 
-    tag "${meta} ${meta.family} :: ${meta.taxid} :: ${meta.id}"
+    tag "${meta.family} :: txid${meta.taxid} :: ${meta.id}"
 
     conda "${moduleDir}/spec-file.txt"
     container "${ workflow.containerEngine in ['singularity', 'apptainer'] && !task.ext.singularity_pull_docker_container ?
@@ -14,7 +14,7 @@ process FIND_CHIMERAS {
 
     output:
     tuple val(meta), path("*_chimeras.csv"),                                                                                  emit: csv
-    tuple val("${meta.family}"), val("${meta.id}"), env("NB_CHIMERAS"),                                                       topic: nb_chimeras
+    tuple val("${meta.family}"),  val("${meta.id}"), env("NB_CHIMERAS"),                                                      topic: nb_chimeras
     tuple val("${task.process}"), val('R'),          eval('Rscript -e "cat(R.version.string)" | sed "s/R version //"'),       topic: versions
     tuple val("${task.process}"), val('dplyr'),      eval('Rscript -e "cat(as.character(packageVersion(\'dplyr\')))"'),       topic: versions
     tuple val("${task.process}"), val('data.table'), eval('Rscript -e "cat(as.character(packageVersion(\'data.table\')))"'),  topic: versions
@@ -33,7 +33,5 @@ process FIND_CHIMERAS {
 
     NB_CHIMERAS=\$(wc -l < chimeric_reads.txt)
     """
-
-
 
 }

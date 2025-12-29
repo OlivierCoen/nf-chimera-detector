@@ -31,13 +31,22 @@ workflow {
         params.outdir
     )
 
-    //
-    // WORKFLOW: Run main workflow
-    //
-    CHIMERADETECTOR (
-        PIPELINE_INITIALISATION.out.families,
-        PIPELINE_INITIALISATION.out.fastq
-    )
+    // try catch for better error reporting
+    try {
+        //
+        // WORKFLOW: Run main workflow
+        //
+        CHIMERADETECTOR (
+            PIPELINE_INITIALISATION.out.families,
+            PIPELINE_INITIALISATION.out.fastq
+        )
+    } catch (Exception e) {
+        def stackTraceElement = e.stackTrace[0]
+        println "Error in file: ${stackTraceElement.fileName}"
+        println "Error at line: ${stackTraceElement.lineNumber}"
+        println "Error message: ${e.message}"
+    }
+
     //
     // SUBWORKFLOW: Run completion tasks
     //

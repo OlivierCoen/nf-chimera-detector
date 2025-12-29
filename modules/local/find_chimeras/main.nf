@@ -2,7 +2,7 @@ process FIND_CHIMERAS {
 
     label 'process_medium'
 
-    tag "${meta.taxid} :: ${meta.id}"
+    tag "${meta} ${meta.family} :: ${meta.taxid} :: ${meta.id}"
 
     conda "${moduleDir}/spec-file.txt"
     container "${ workflow.containerEngine in ['singularity', 'apptainer'] && !task.ext.singularity_pull_docker_container ?

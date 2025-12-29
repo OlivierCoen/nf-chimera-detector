@@ -13,11 +13,22 @@ workflow GET_CHIMERAS {
     // ------------------------------------------------------------------------------------
     // FIND CHIMERAS FROM BLAST RESULTS
     // ------------------------------------------------------------------------------------
-    ch_target_hits.join( ch_genome_hits ).view { v -> "find chim ${v}"}
+    ch_target_hits
+    .join( ch_genome_hits )
+    .collectFile(
+        name: 'test.tsv',
+        seed: "id\tfamily\tmean_assembly_length\ttaxid\ttaxon_name\tsra_id\tread_fasta_sum_len\tfile1\tfile2", // header of TSV file
+        newLine: true,
+        storeDir: "${params.outdir}"
+    ){
+        meta, f1, f2 -> "${meta.id}\t${meta.family}\t${meta.mean_assembly_length}\ttxid${meta.taxid}\t${meta.taxon_name}\t${meta.sra_id}\t${meta.read_fasta_sum_len}\t${f1}\t${f2}"
+    }
+
+
     FIND_CHIMERAS (
         ch_target_hits.join( ch_genome_hits )
     )
-    FIND_CHIMERAS.out.csv.set { ch_chimeras_csv }
+    FIND_CHIMERAS.out.csv.view { meta, file -> "chimera ${meta}, ${file}" }.set { ch_chimeras_csv }
 
     // ------------------------------------------------------------------------------------
     // COMPUTE COVERAGE OF CHIMERAS ON TARGETS

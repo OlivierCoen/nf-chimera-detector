@@ -115,7 +115,6 @@ get_reads_with_hits_on_both <- function(dt1, dt2) {
     different_qlen <- merged %>% filter(qlen_1 != qlen_2)
     # checking (just in case)
     if ( nrow(different_qlen) > 0 ) {
-        print(different_qlen)
         warning("Some query read lengths do not correspond!")
     }
 

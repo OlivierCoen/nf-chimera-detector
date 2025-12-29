@@ -104,10 +104,9 @@ def getSraIdsNotProcessed ( ch_sra_ids ) {
                             .map {
                                 meta, files ->
                                     flattened_files = files.flatten()
+                                    println "flattened_files $flattened_files"
                                     if ( flattened_files )
                                         [ meta, flattened_files ]
-                                    else
-                                        error("No files found for ${meta}")
                             }
                             .filter {
                                 meta, files -> files.size() == 1 && files[0].toString().contains('to_process')

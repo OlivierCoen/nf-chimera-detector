@@ -12,7 +12,7 @@ workflow DOWNLOAD_SRA {
 
     main:
 
-    ch_versions = Channel.empty()
+    ch_versions = channel.empty()
 
     // --------------------------------------------------------
     // DETECT EXISTING NCBI USER SETTINGS OR CREATE NEW ONES.
@@ -30,14 +30,13 @@ workflow DOWNLOAD_SRA {
         ch_ncbi_settings
     )
 
-    SRATOOLS_PREFETCH.out.sra
-        .transpose() // when multiple SRRs are downloaded for a specific SRA ID, we split them
-        .map {
-            meta, sra ->
-                def new_meta = [ id: sra.name ] + meta
-                [ new_meta, sra ]
-        }
-        .set { ch_sra }
+    ch_sra = SRATOOLS_PREFETCH.out.sra
+                .transpose() // when multiple SRRs are downloaded for a specific SRA ID, we split them
+                .map {
+                    meta, sra ->
+                        def new_meta = [ id: sra.name ] + meta
+                        [ new_meta, sra ]
+                }
 
     // ---------------------------------------------------------------
     // CONVERT THE SRA FORMAT INTO ONE OR MORE COMPRESSED FASTQ FILES.
@@ -47,12 +46,10 @@ workflow DOWNLOAD_SRA {
         ch_sra,
         ch_ncbi_settings
     )
-    SRATOOLS_FASTERQDUMP.out.reads.set { ch_sra_reads }
+    ch_sra_reads = SRATOOLS_FASTERQDUMP.out.reads
 
-
-    ch_versions
-        .mix( CUSTOM_SRATOOLSNCBISETTINGS.out.versions )
-        .set { ch_versions }
+    ch_versions = ch_versions
+                    .mix( CUSTOM_SRATOOLSNCBISETTINGS.out.versions )
 
 
     emit:

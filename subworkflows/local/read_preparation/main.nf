@@ -3,7 +3,7 @@ include { SEQTK_SAMPLE                                              } from '../.
 include { FASTP                                                     } from '../../../modules/local/fastp'
 
 
-workflow SRA_READS_PREPARATION {
+workflow READ_PREPARATION {
 
     take:
     ch_sra_reads

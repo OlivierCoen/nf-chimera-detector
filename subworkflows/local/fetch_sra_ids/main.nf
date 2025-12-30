@@ -15,13 +15,11 @@ workflow FETCH_SRA_IDS {
         ncbi_api_key
     )
 
-    GET_CHILDREN_TAXIDS.out.taxid_to_names_files
-
-        .map { meta, file -> [ meta, file.splitCsv( header: ['taxid', 'taxon_name'] ) ] }
-        .transpose() // explodes each list : we get items like [[family: ..., mean_assembly_length: ...], [taxid: ..., taxon_name: ...]]
-        .map { metas -> metas.collectEntries { it } } // flattens both maps together
-        .map { meta -> [ meta, meta.taxid.strip() ] }
-        .set { ch_species_taxids }
+    ch_species_taxids = GET_CHILDREN_TAXIDS.out.taxid_to_names_files
+                            .map { meta, file -> [ meta, file.splitCsv( header: ['taxid', 'taxon_name'] ) ] }
+                            .transpose() // explodes each list : we get items like [[family: ..., mean_assembly_length: ...], [taxid: ..., taxon_name: ...]]
+                            .map { metas -> metas.collectEntries { it } } // flattens both maps together
+                            .map { meta -> [ meta, meta.taxid.strip() ] }
 
     GET_SRA_METADATA ( ch_species_taxids )
 
@@ -29,29 +27,27 @@ workflow FETCH_SRA_IDS {
     // FOR DEV PURPOSES : RESTRICTING SELECTED SRRS
     // ------------------------------------------------------------------------------------
 
-    GET_SRA_METADATA.out.sra_id_files
-        .map {
-            meta, file ->
-                if ( params.max_srrs_per_taxid ) { // in dev, limiting the nb of SRR per taxid
-                    [ meta, file.splitText( limit: params.max_srrs_per_taxid ) ]
-                } else {
-                    [ meta, file.splitText() ]
-                }
-        }
-        .set { ch_sra_id_files }
+    ch_sra_id_files = GET_SRA_METADATA.out.sra_id_files
+                        .map {
+                            meta, file ->
+                                if ( params.max_srrs_per_taxid ) { // in dev, limiting the nb of SRR per taxid
+                                    [ meta, file.splitText( limit: params.max_srrs_per_taxid ) ]
+                                } else {
+                                    [ meta, file.splitText() ]
+                                }
+                        }
 
     // ------------------------------------------------------------------------------------
     // ------------------------------------------------------------------------------------
 
-    ch_sra_id_files
-        .transpose() // explodes each list
-        .unique() // there may be duplicates
-        .map {
-            meta, sra_id ->
-                def new_meta = meta + [ sra_id: sra_id.strip() ]
-                [ new_meta, sra_id.strip() ]
-        }
-        .set { ch_sra_ids }
+    ch_sra_ids = ch_sra_id_files
+                    .transpose() // explodes each list
+                    .unique() // there may be duplicates
+                    .map {
+                        meta, sra_id ->
+                            def new_meta = meta + [ sra_id: sra_id.strip() ]
+                            [ new_meta, sra_id.strip() ]
+                    }
 
     emit:
     sra_ids           = ch_sra_ids

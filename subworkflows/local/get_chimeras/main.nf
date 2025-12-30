@@ -28,16 +28,14 @@ workflow GET_CHIMERAS {
     FIND_CHIMERAS (
         ch_target_hits.join( ch_genome_hits )
     )
-    FIND_CHIMERAS.out.csv.view { meta, file -> "chimera ${meta}, ${file}" }.set { ch_chimeras_csv }
+    ch_chimeras_csv = FIND_CHIMERAS.out.csv
 
     // ------------------------------------------------------------------------------------
     // COMPUTE COVERAGE OF CHIMERAS ON TARGETS
     // ------------------------------------------------------------------------------------
 
     // filter out empty chimera files
-    ch_chimeras_csv
-        .filter { meta, file -> file.size() > 0 }
-        .set { ch_nonempty_chimeras_csv }
+    ch_nonempty_chimeras_csv = ch_chimeras_csv.filter { meta, file -> file.size() > 0 }
 
     GET_CHIMERA_READ_COVERAGE (
         ch_target_hits.join( ch_nonempty_chimeras_csv )

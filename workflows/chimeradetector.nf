@@ -34,11 +34,11 @@ workflow CHIMERADETECTOR {
 
     main:
 
-    ch_versions = Channel.empty()
-    ch_multiqc_files = Channel.empty()
+    ch_versions = channel.empty()
+    ch_multiqc_files = channel.empty()
 
     def target_fasta_file = file( params.target_db, checkExists: true )
-    ch_target_db = Channel.of([
+    ch_target_db = channel.of([
         [ id: target_fasta_file.baseName ],
         target_fasta_file
     ])
@@ -80,8 +80,8 @@ workflow CHIMERADETECTOR {
         ch_families,
         params.ncbi_api_key ?: []
     )
-    FETCH_SRA_IDS.out.sra_ids.set { ch_sra_ids }
-    FETCH_SRA_IDS.out.taxids.set { ch_species_taxids }
+    ch_sra_ids = FETCH_SRA_IDS.out.sra_ids
+    ch_species_taxids = FETCH_SRA_IDS.out.taxids
 
     // ------------------------------------------------------------------------------------
     // RESTRICTING TO SPECIFIC SRA IDS / EXCLUDING SPECIFIC SRA IDS
@@ -145,14 +145,14 @@ workflow CHIMERADETECTOR {
     SEQKIT_STATS ( ch_reads )
 
     // parsing stats and turning it into a channel readily formated for the MultiQC generalstat table
-    SEQKIT_STATS.out.stats
-        .splitCsv( header: true, sep: '\t' )
-        .map {
-            meta, stats_map ->
-                ["file", "format", "type"].each { stats_map.remove(it) } // removing fields
-                [ id: meta.id ] + stats_map
-        }
-        .set { ch_fastq_stats }
+    ch_fastq_stats = SEQKIT_STATS.out.stats
+                        .splitCsv( header: true, sep: '\t' )
+                        .map {
+                            meta, stats_map ->
+                                ["file", "format", "type"].each { stats_map.remove(it) } // removing fields
+                                [ id: meta.id ] + stats_map
+                        }
+
 
     // ------------------------------------------------------------------------------------
     // DOWNLOAD GENOME ASSEMBLY FROM NCBI IF AVAILABLE OR MAKE FROM SCRATCH OTHERWISE
@@ -162,14 +162,14 @@ workflow CHIMERADETECTOR {
         ch_reads,
         params.ncbi_api_key ?: []
     )
-    GET_GENOMES.out.assemblies.set { ch_assemblies }
+    ch_assemblies = GET_GENOMES.out.assemblies
 
     // ------------------------------------------------------------------------------------
     // COMBINE PAIRED READS (IF NECESSARY) AND CONVERT FASTQ TO FASTA
     // ------------------------------------------------------------------------------------
 
-    POST_PROCESS_SRA ( ch_reads )
-    POST_PROCESS_SRA.out.merged_reads_fasta.set { ch_reads_fasta }
+    POST_PROCESS_READS ( ch_reads )
+    ch_reads_fasta = POST_PROCESS_READS.out.merged_reads_fasta
 
     // ------------------------------------------------------------------------------------
     // BLAST AGAINST TARGET
@@ -197,7 +197,7 @@ workflow CHIMERADETECTOR {
         BLAST_AGAINST_TARGET.out.hits,
         BLAST_AGAINST_GENOMES.out.hits
     )
-    GET_CHIMERAS.out.chimeras_csv.set { ch_chimeras_csv }
+    ch_chimeras_csv = GET_CHIMERAS.out.chimeras_csv
 
     addDoneToSraRegistry ( ch_chimeras_csv )
 
@@ -205,14 +205,13 @@ workflow CHIMERADETECTOR {
     // MULTIQC
     // ------------------------------------------------------------------------------------
 
-    ch_versions
-        .mix( DOWNLOAD_SRA.out.versions )
-        .mix( SEQKIT_STATS.out.versions )
-        .mix( GET_GENOMES.out.versions )
-        .mix( POST_PROCESS_SRA.out.versions )
-        .mix( BLAST_AGAINST_TARGET.out.versions )
-        .mix( BLAST_AGAINST_GENOMES.out.versions )
-        .set { ch_versions }
+    ch_versions = ch_versions
+                    .mix( DOWNLOAD_SRA.out.versions )
+                    .mix( SEQKIT_STATS.out.versions )
+                    .mix( GET_GENOMES.out.versions )
+                    .mix( POST_PROCESS_READS.out.versions )
+                    .mix( BLAST_AGAINST_TARGET.out.versions )
+                    .mix( BLAST_AGAINST_GENOMES.out.versions )
 
 
     MULTIQC_WORKFLOW (

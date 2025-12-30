@@ -27,7 +27,7 @@ workflow MULTIQC_WORKFLOW {
 
     main:
 
-    ch_multiqc_files = Channel.empty()
+    ch_multiqc_files = channel.empty()
 
     // ------------------------------------------------------------------------------------
     // VERSIONS
@@ -37,34 +37,37 @@ workflow MULTIQC_WORKFLOW {
     // TODO: use the nf-core functions when they are adapted to channel topics
 
     // Collate and save software versions
-    formatVersionsToYAML ( Channel.topic('versions') )
-        .mix ( softwareVersionsToYAML( ch_versions ) ) // mix with versions obtained from emit outputs
-        .collectFile(storeDir: "${params.outdir}/pipeline_info", name: 'software_mqc_versions.yml', sort: true, newLine: true)
-        .set { ch_collated_versions }
-
+    ch_collated_versions = formatVersionsToYAML ( channel.topic('versions') )
+                            .mix ( softwareVersionsToYAML( ch_versions ) ) // mix with versions obtained from emit outputs
+                            .collectFile(
+                                storeDir: "${params.outdir}/pipeline_info",
+                                name: 'software_mqc_versions.yml',
+                                sort: true,
+                                newLine: true
+                            )
 
     // ------------------------------------------------------------------------------------
     // CONFIG
     // ------------------------------------------------------------------------------------
 
-    ch_multiqc_config = Channel.fromPath( "$projectDir/assets/multiqc_config.yml", checkIfExists: true )
+    ch_multiqc_config = channel.fromPath( "$projectDir/assets/multiqc_config.yml", checkIfExists: true )
 
     summary_params = paramsSummaryMap( workflow, parameters_schema: "nextflow_schema.json")
-    ch_workflow_summary = Channel.value( paramsSummaryMultiqc(summary_params) )
+    ch_workflow_summary = channel.value( paramsSummaryMultiqc(summary_params) )
 
     ch_multiqc_custom_config = params.multiqc_config ?
-                                    Channel.fromPath(params.multiqc_config, checkIfExists: true) :
-                                    Channel.empty()
+                                    channel.fromPath(params.multiqc_config, checkIfExists: true) :
+                                    channel.empty()
 
     ch_multiqc_logo = params.multiqc_logo ?
-                        Channel.fromPath(params.multiqc_logo, checkIfExists: true) :
-                        Channel.empty()
+                        channel.fromPath(params.multiqc_logo, checkIfExists: true) :
+                        channel.empty()
 
     ch_multiqc_custom_methods_description = params.multiqc_methods_description ?
                                                 file(params.multiqc_methods_description, checkIfExists: true) :
                                                 file("$projectDir/assets/methods_description_template.yml", checkIfExists: true)
 
-    ch_methods_description = Channel.value( methodsDescriptionText(ch_multiqc_custom_methods_description) )
+    ch_methods_description = channel.value( methodsDescriptionText(ch_multiqc_custom_methods_description) )
 
     // Adding metadata to MultiQC
     ch_multiqc_files = ch_multiqc_files
@@ -77,24 +80,23 @@ workflow MULTIQC_WORKFLOW {
     // ------------------------------------------------------------------------------------
 
     // removing empty chimera tables (ie. those that contain only metadata and not columns like "qseqid")
-    ch_chimeras_csv
-        .filter {
-            meta, csv_file ->
-                try {
-                    def firstLine = csv_file.readLines().get(0)
-                    return firstLine.contains("qseqid")
-                } catch (Exception e) { // happens everytime a file is empty, which is the case everytime there is no chimera
-                    // log.warn "Could not read first line of ${csv_file.name}: ${e.message}"
-                    return false
-                }
-        }
-        .map { meta, file -> file }
-        .collectFile(
-            name: 'all_chimeras.csv',
-            keepHeader: true,
-            storeDir: "${params.outdir}/chimeras/"
-        )
-        .set { ch_chimeras_table }
+    ch_chimeras_table = ch_chimeras_csv
+                        .filter {
+                            meta, csv_file ->
+                                try {
+                                    def firstLine = csv_file.readLines().get(0)
+                                    return firstLine.contains("qseqid")
+                                } catch (Exception e) { // happens everytime a file is empty, which is the case everytime there is no chimera
+                                    // log.warn "Could not read first line of ${csv_file.name}: ${e.message}"
+                                    return false
+                                }
+                        }
+                        .map { meta, file -> file }
+                        .collectFile(
+                            name: 'all_chimeras.csv',
+                            keepHeader: true,
+                            storeDir: "${params.outdir}/chimeras/"
+                        )
 
     // ------------------------------------------------------------------------------------
     // PREPARE MULTIQC DATA
@@ -111,19 +113,18 @@ workflow MULTIQC_WORKFLOW {
     // LAUNCH MULTIQC
     // ------------------------------------------------------------------------------------
 
-    ch_multiqc_files
-        .mix ( ch_chimeras_table )
-        .mix ( PREPARE_MULTIQC_DATA.out.srr_metadata )
-        .mix ( PREPARE_MULTIQC_DATA.out.fastq_stats )
-        .mix ( PREPARE_MULTIQC_DATA.out.chimeras_summary )
-        .mix ( PREPARE_MULTIQC_DATA.out.data_per_family )
-        .mix ( PREPARE_MULTIQC_DATA.out.nb_species_per_family )
-        .mix ( PREPARE_MULTIQC_DATA.out.nb_srrs_per_family )
-        .mix ( Channel.topic('fastp_multiqc') )
-        .mix ( Channel.topic('megahit_multiqc') )
-        .mix ( Channel.topic('flash_multiqc') )
-        .mix ( Channel.topic('flash_histogram_multiqc') )
-        .set { ch_multiqc_files }
+    ch_multiqc_files = ch_multiqc_files
+                        .mix ( ch_chimeras_table )
+                        .mix ( PREPARE_MULTIQC_DATA.out.srr_metadata )
+                        .mix ( PREPARE_MULTIQC_DATA.out.fastq_stats )
+                        .mix ( PREPARE_MULTIQC_DATA.out.chimeras_summary )
+                        .mix ( PREPARE_MULTIQC_DATA.out.data_per_family )
+                        .mix ( PREPARE_MULTIQC_DATA.out.nb_species_per_family )
+                        .mix ( PREPARE_MULTIQC_DATA.out.nb_srrs_per_family )
+                        .mix ( channel.topic('fastp_multiqc') )
+                        .mix ( channel.topic('megahit_multiqc') )
+                        .mix ( channel.topic('flash_multiqc') )
+                        .mix ( channel.topic('flash_histogram_multiqc') )
 
     MULTIQC (
         ch_multiqc_files.collect(),

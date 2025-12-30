@@ -49,7 +49,7 @@ workflow BLAST_AGAINST_TARGET {
 
     main:
 
-    ch_versions = Channel.empty()
+    ch_versions = channel.empty()
 
     // ------------------------------------------------------------------------------------
     // MAKE DB
@@ -61,14 +61,13 @@ workflow BLAST_AGAINST_TARGET {
     // COMPUTING THE NB OF CHUNKS FOR EACH READ FASTA FILE
     // ------------------------------------------------------------------------------------
 
-    ch_reads_fasta
-        .map { // computing the nb of chunks necessary
-            meta, fasta ->
-                def ratio = meta.read_fasta_sum_len.toLong() / params.read_fasta_chunk_max_size
-                def nb_chunks = ratio.toInteger() + 1
-                [ meta, fasta, nb_chunks ]
-        }
-        .set { ch_split_input }
+    ch_split_input = ch_reads_fasta
+                        .map { // computing the nb of chunks necessary
+                            meta, fasta ->
+                                def ratio = meta.read_fasta_sum_len.toLong() / params.read_fasta_chunk_max_size
+                                def nb_chunks = ratio.toInteger() + 1
+                                [ meta, fasta, nb_chunks ]
+                        }
 
     // ------------------------------------------------------------------------------------
     // SPLITTING QUERY FASTA FILES IN CHUNKS TO AVOID ISSUES
@@ -81,11 +80,10 @@ workflow BLAST_AGAINST_TARGET {
     // ------------------------------------------------------------------------------------
 
      // making all combinations of splitted reads + target db
-    SEQKIT_SPLIT2.out.reads // list of splitted reads
-        .transpose() // separate splitted reads, each with their own meta
-        .combine( MAKEBLASTDB.out.db )
-        .map { meta, reads, meta2, db ->  [ meta, reads, db ] }
-        .set { blastn_input }
+    blastn_input = SEQKIT_SPLIT2.out.reads // list of splitted reads
+                    .transpose() // separate splitted reads, each with their own meta
+                    .combine( MAKEBLASTDB.out.db )
+                    .map { meta, reads, meta2, db ->  [ meta, reads, db ] }
 
     BLASTN ( blastn_input )
 
@@ -95,7 +93,7 @@ workflow BLAST_AGAINST_TARGET {
     // ------------------------------------------------------------------------------------
 
     MERGE_HITS( BLASTN.out.txt.groupTuple() )
-    MERGE_HITS.out.hits.set { ch_hits }
+    ch_hits = MERGE_HITS.out.hits
 
     // ------------------------------------------------------------------------------------
     // EXTRACT SEQ IDS CORRESPONDING TO HITS
@@ -103,9 +101,9 @@ workflow BLAST_AGAINST_TARGET {
 
     EXTRACT_SEQ_IDS ( ch_hits )
 
-    ch_reads_fasta
-        .join ( EXTRACT_SEQ_IDS.out.ids )
-        .set { seqtk_subseq_input }
+    seqtk_subseq_input = ch_reads_fasta
+                            .join ( EXTRACT_SEQ_IDS.out.ids )
+
 
     // ------------------------------------------------------------------------------------
     // GET READS CORRESPONDING TO THESE SEQ IDS
@@ -113,9 +111,8 @@ workflow BLAST_AGAINST_TARGET {
 
     SEQTK_SUBSEQ ( seqtk_subseq_input )
 
-    ch_versions
-        .mix ( MAKEBLASTDB.out.versions )
-        .set { ch_versions }
+    ch_versions = ch_versions
+                    .mix ( MAKEBLASTDB.out.versions )
 
     emit:
     hits                            = ch_hits

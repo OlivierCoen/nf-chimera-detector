@@ -6,8 +6,9 @@
 
 include { FETCH_SRA_IDS                                                             } from '../subworkflows/local/fetch_sra_ids'
 include { DOWNLOAD_SRA                                                              } from '../subworkflows/local/download_sra'
+include { DOWNLOAD_ENA                                                              } from '../subworkflows/local/download_ena'
 include { GET_GENOMES                                                               } from '../subworkflows/local/get_genomes'
-include { POST_PROCESS_SRA                                                          } from '../subworkflows/local/post_process_sra'
+include { POST_PROCESS_READS                                                        } from '../subworkflows/local/post_process_reads'
 include { BLAST_AGAINST_TARGET                                                      } from '../subworkflows/local/blast_against_target'
 include { BLAST_AGAINST_GENOMES                                                     } from '../subworkflows/local/blast_against_genomes'
 include { GET_CHIMERAS                                                              } from '../subworkflows/local/get_chimeras'
@@ -108,18 +109,34 @@ workflow CHIMERADETECTOR {
     }
 
     // ------------------------------------------------------------------------------------
+    // SEPARATE SRA IDS AND ENA IDS
+    // ------------------------------------------------------------------------------------
+
+    ch_db_specific_ids = ch_not_processed_sra_ids
+                            .branch { meta, id ->
+                                        sra: id.startsWith('SR')
+                                        ena: id.startsWith('ER')
+                            }
+
+    // ------------------------------------------------------------------------------------
     // DOWNLOAD ALL SRA DATA
     // ------------------------------------------------------------------------------------
 
-    DOWNLOAD_SRA ( ch_not_processed_sra_ids )
-    DOWNLOAD_SRA.out.reads.set { ch_sra_reads }
+    DOWNLOAD_SRA( ch_db_specific_ids.sra )
 
-    addToSraRegistry ( ch_sra_reads )
+    // ------------------------------------------------------------------------------------
+    // DOWNLOAD ALL ENA DATA
+    // ------------------------------------------------------------------------------------
 
-    // mix with custom Fastq files
-    ch_sra_reads
-        .mix ( ch_fastq )
-        .set { ch_reads }
+    DOWNLOAD_ENA( ch_db_specific_ids.ena )
+
+    // ------------------------------------------------------------------------------------
+    // MERGE SRA, ENA READS AND READS PROVIDED BY USER
+    // ------------------------------------------------------------------------------------
+
+    ch_reads = ch_fastq
+                .mix ( DOWNLOAD_SRA.out.reads )
+                .mix ( DOWNLOAD_ENA.out.reads )
 
     // ---------------------------------------------------------------
     // COMPUTING STATISTICS FOR EACH SRR / CUSTOM FASTQS

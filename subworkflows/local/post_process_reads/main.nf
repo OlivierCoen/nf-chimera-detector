@@ -4,26 +4,26 @@ include { FLASH                                 } from '../../../modules/local/f
 include { SEQKIT_FQ2FA                          } from '../../../modules/local/seqkit/fq2fa'
 
 
-workflow POST_PROCESS_SRA {
+workflow POST_PROCESS_READS {
 
     take:
-    ch_sra_reads
+    ch_reads
 
     main:
 
     ch_versions = Channel.empty()
 
-    ch_sra_reads
+    ch_reads
         .branch {
             meta, reads ->
                 single: reads instanceof Path
                 paired: reads instanceof List
         }
-        .set { ch_branched_sra_reads }
+        .set { ch_branched_reads }
 
     // in very rare cases (like SRX18097776), we obtain 3 files from fasterq-dump
     // in such cases, we keep only the ones having _1/_2 suffix (especially for convenience)
-    ch_branched_sra_reads.paired
+    ch_branched_reads.paired
         .map {
             meta, reads ->
                 if ( reads.size() == 3 ) {
@@ -34,14 +34,14 @@ workflow POST_PROCESS_SRA {
                     [ meta, reads ]
                 }
         }
-        .set { ch_sra_paired_reads }
+        .set { ch_paired_reads }
 
 
     // ------------------------------------------------------------------------------------
     // FILTER OUT UNPAIRED READS (NECESSARY FOR BBMERGE)
     // ------------------------------------------------------------------------------------
 
-    SEQKIT_PAIR ( ch_sra_paired_reads )
+    SEQKIT_PAIR ( ch_paired_reads )
 
     // ------------------------------------------------------------------------------------
     // MERGE OVERLAPPING PAIRED READS INTO A SINGLE FASTQ FILE
@@ -88,7 +88,7 @@ workflow POST_PROCESS_SRA {
     // ------------------------------------------------------------------------------------
 
     // putting together single reads and processed paired reads
-    ch_branched_sra_reads.single
+    ch_branched_reads.single
         .mix ( ch_processed_paired_reads )
         .set { ch_reads }
 

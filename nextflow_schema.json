@@ -96,6 +96,13 @@
                     "default": null,
                     "description": "If specified, only the provided SRA accessions (separated by a comma) will be downloaded.",
                     "fa_icon": "fas fa-chart-simple"
+                },
+                "restrict_to_srxs_in_file": {
+                    "type": "string",
+                    "format": "file-path",
+                    "exists": true,
+                    "description": "If specified, only the SRA accessions in this file will be downloaded.",
+                    "fa_icon": "fas fa-file-csv"
                 }
             }
         },

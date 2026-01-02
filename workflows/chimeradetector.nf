@@ -87,9 +87,26 @@ workflow CHIMERADETECTOR {
     // RESTRICTING TO SPECIFIC SRA IDS / EXCLUDING SPECIFIC SRA IDS
     // ------------------------------------------------------------------------------------
 
-    if ( params.restrict_to_srxs ) {
-        restricted_srrs = params.restrict_to_srxs.strip().tokenize(',')
-        ch_sra_ids = ch_sra_ids.filter { meta, sra_id -> restricted_srrs.contains(sra_id) }
+    if ( params.restrict_to_srxs || params.restrict_to_srxs_in_file ) {
+
+        ch_restricted_srxs = channel.empty()
+        if ( params.restrict_to_srxs ) {
+            ch_restricted_srxs = ch_restricted_srxs.mix( channel.fromList( params.restrict_to_srxs.tokenize(',') ) )
+        }
+        if ( params.restrict_to_srxs_in_file ) {
+            ch_restricted_srxs = ch_restricted_srxs.mix( channel.fromPath( params.restrict_to_srxs_in_file).splitText() )
+        }
+        ch_restricted_srxs = ch_restricted_srxs
+                            .map { it -> it.strip() }
+                            .unique()
+                            .collect()
+                            .map { lst -> [ lst ] }
+
+        ch_sra_ids = ch_sra_ids
+                        .combine( ch_restricted_srxs )
+                        .filter { meta, sra_id, restricted_srxs -> restricted_srxs.contains(sra_id) }
+                        .map { meta, sra_id, restricted_srxs -> [ meta, sra_id ] }
+
     }
 
     if ( params.exclude_srxs ) {

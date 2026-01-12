@@ -19,7 +19,7 @@ process DOWNLOAD_NCBI_ASSEMBLY {
 
     script:
     """
-    datasets download genome accession $accession
+    datasets download genome accession $accession --include genome
 
     unzip -o ncbi_dataset.zip
     mv ncbi_dataset/data/${accession}/* .

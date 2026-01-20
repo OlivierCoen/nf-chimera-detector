@@ -22,6 +22,9 @@
 > [!NOTE]
 > If you are new to Nextflow and nf-core, please refer to [this page](https://nf-co.re/docs/usage/installation) on how to set-up Nextflow. Make sure to [test your setup](https://nf-co.re/docs/usage/introduction#how-to-run-a-pipeline) with `-profile test` before running the workflow on actual data.
 
+> [!IMPORTANT]
+> This pipeline may have to handle a very important amount of data, especially when fetching all data from big families. Make sure to have enough disk space available. Alternatively, you can add the `cleanup` profile to your profiles (e.g. `-profile apptainer,cleanup`), which will perform automatic cleanup of intermediate files using the `nf-boost` plugin. This solution should be used with caution, as it will prevent users from using the `-resume` parameter.
+
 ## Usage
 
 Prepare a `.txt` file with the following format:

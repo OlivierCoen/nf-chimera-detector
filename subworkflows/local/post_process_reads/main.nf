@@ -1,4 +1,4 @@
-include { SEQKIT_PAIR                           } from '../../../modules/nf-core/seqkit/pair'
+include { SEQKIT_PAIR                           } from '../../../modules/local/seqkit/pair'
 include { BBMAP_BBMERGE as BBMERGE              } from '../../../modules/nf-core/bbmap/bbmerge'
 include { FLASH                                 } from '../../../modules/local/flash'
 include { SEQKIT_FQ2FA                          } from '../../../modules/local/seqkit/fq2fa'
@@ -40,6 +40,7 @@ workflow POST_PROCESS_READS {
     // ------------------------------------------------------------------------------------
 
     SEQKIT_PAIR ( ch_paired_reads )
+    ch_properly_paired_reads = SEQKIT_PAIR.out.reads
 
     // ------------------------------------------------------------------------------------
     // MERGE OVERLAPPING PAIRED READS INTO A SINGLE FASTQ FILE
@@ -47,7 +48,7 @@ workflow POST_PROCESS_READS {
 
     if ( params.read_merger == "flash" ) {
 
-        FLASH ( SEQKIT_PAIR.out.reads )
+        FLASH ( ch_properly_paired_reads )
 
         // putting together merged and unmerged reads
         ch_processed_paired_reads = FLASH.out.merged
@@ -62,7 +63,7 @@ workflow POST_PROCESS_READS {
 
         def interleave = false
         BBMERGE (
-            SEQKIT_PAIR.out.reads,
+            ch_properly_paired_reads,
             interleave
         )
 
@@ -94,10 +95,6 @@ workflow POST_PROCESS_READS {
                         meta, read_fasta_sum_len, file ->
                             [ meta + [ read_fasta_sum_len: read_fasta_sum_len.toLong() ], file ]
                     }
-
-    ch_versions = ch_versions
-                    .mix ( SEQKIT_PAIR.out.versions )
-
 
     emit:
     merged_reads_fasta              = ch_fasta

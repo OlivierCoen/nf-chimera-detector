@@ -48,7 +48,9 @@ workflow CHIMERADETECTOR {
     // ------------------------------------------------------------------------------------
 
     // mix together all families
-    ch_all_families = ch_families.mix ( ch_fastq.map { meta, files -> meta.family } )
+    ch_all_families = ch_families
+                        .mix ( ch_fastq.map { meta, files -> meta.family } )
+                        .unique()
 
     NCBI_ASSEMBLY_STATS (
         ch_all_families,

@@ -247,9 +247,10 @@ def get_coverage(
     return df, is_subsampled
 
 
-def get_series_to_plot(df: pl.DataFrame, log: bool) -> pd.Series:
-    s = df[df.columns[0]].to_pandas()
-    return s.apply(lambda x: 10 * np.log10(x + 1)) if log else s
+def apply_log_if_needed(df: pl.DataFrame, log: bool) -> pd.DataFrame:
+    # computes 10 * log10(x + 1) if needed
+    expr = 10 * (pl.all() + pl.lit(1)).log10() if log else pl.all()
+    return df.with_columns(expr).to_pandas()
 
 
 def get_outfile(target: str, srr_id: str, log: bool, is_subsampled: bool) -> str:
@@ -278,22 +279,24 @@ def plot_coverage(
     # PLOTTING NON CHIMERAS
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     if not non_chimera_coverage_df.is_empty():
-        non_chimera_coverage = get_series_to_plot(non_chimera_coverage_df, log)
-        non_chimera_coverage.plot(
-            y="non chimera",
+        df = apply_log_if_needed(non_chimera_coverage_df, log)
+        df.plot(
+            y=df.columns[0],
             label="Non chimeras",
             color=NON_CHIMERA_COLOR,
             ax=ax,
             xlabel=xlabel,
             **COMMON_PLOT_PARAMS,
         )
+        del df
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     # PLOTTING CHIMERAS
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     # chimera_coverage is necessarily not empty because we filtered it beforehand
-    chimera_coverage = get_series_to_plot(chimera_coverage_df, log)
-    chimera_coverage.plot(
+    df = apply_log_if_needed(chimera_coverage_df, log)
+    df.plot(
+        y=df.columns[0],
         label="Chimeras",
         color=CHIMERA_COLOR,
         ax=ax,

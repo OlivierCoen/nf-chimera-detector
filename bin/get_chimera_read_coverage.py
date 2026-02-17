@@ -28,54 +28,56 @@ BLAST_OUTPUT_COL_SCHEMA = pl.Schema(
         "gapopen": pl.UInt32(),
         "qstart": pl.UInt32(),
         "qend": pl.UInt32(),
-        "sstart": pl.UInt32(),
-        "send": pl.UInt32(),
-        "qlen": pl.UInt64(),
+        "sstart": pl.UInt64(),
+        "send": pl.UInt64(),
+        "qlen": pl.UInt32(),
         "slen": pl.UInt64(),
         "evalue": pl.Float64(),
         "bitscore": pl.Float64(),
     }
 )
 
-CHIMERA_COL_SCHEMA = {
-    "qseqid": "string",
-    "sseqid_1": "string",
-    "pident_1": "Float64",
-    "length_1": "Int64",
-    "mismatch_1": "Int64",
-    "gapopen_1": "Int64",
-    "qstart_1": "Int64",
-    "qend_1": "Int64",
-    "sstart_1": "Int64",
-    "send_1": "Int64",
-    "qlen_1": "Int64",
-    "slen_1": "Int64",
-    "evalue_1": "Float64",
-    "bitscore_1": "Float64",
-    "sseqid_2": "string",
-    "pident_2": "Float64",
-    "length_2": "Int64",
-    "mismatch_2": "Int64",
-    "gapopen_2": "Int64",
-    "qstart_2": "Int64",
-    "qend_2": "Int64",
-    "sstart_2": "Int64",
-    "send_2": "Int64",
-    "qlen_2": "Int64",
-    "slen_2": "Int64",
-    "evalue_2": "Float64",
-    "bitscore_2": "Float64",
-    "total_coverage": "Int64",
-    "overlap_length": "Int64",
-    "coverage_1_only": "Int64",
-    "coverage_2_only": "Int64",
-    "chimeric": "boolean",
-    "coordinate_in_1": "Int64",
-    "coordinate_in_2": "Int64",
-    "family": "string",
-    "species.taxid": "Int64",
-    "srr": "string",
-}
+CHIMERA_COL_SCHEMA = pl.Schema(
+    {
+        "qseqid": pl.String(),
+        "sseqid_1": pl.String(),
+        "pident_1": pl.Float64(),
+        "length_1": pl.UInt32(),
+        "mismatch_1": pl.UInt32(),
+        "gapopen_1": pl.UInt32(),
+        "qstart_1": pl.UInt32(),
+        "qend_1": pl.UInt32(),
+        "sstart_1": pl.UInt64(),
+        "send_1": pl.UInt64(),
+        "qlen_1": pl.UInt32(),
+        "slen_1": pl.UInt64(),
+        "evalue_1": pl.Float64(),
+        "bitscore_1": pl.Float64(),
+        "sseqid_2": pl.String(),
+        "pident_2": pl.Float64(),
+        "length_2": pl.UInt32(),
+        "mismatch_2": pl.UInt32(),
+        "gapopen_2": pl.UInt32(),
+        "qstart_2": pl.UInt32(),
+        "qend_2": pl.UInt32(),
+        "sstart_2": pl.UInt64(),
+        "send_2": pl.UInt64(),
+        "qlen_2": pl.UInt32(),
+        "slen_2": pl.UInt64(),
+        "evalue_2": pl.Float64(),
+        "bitscore_2": pl.Float64(),
+        "total_coverage": pl.Int32(),
+        "overlap_length": pl.Int32(),
+        "coverage_1_only": pl.Int32(),
+        "coverage_2_only": pl.Int32(),
+        "chimeric": pl.Boolean(),
+        "coordinate_in_1": pl.Int32(),
+        "coordinate_in_2": pl.Int32(),
+        "family": pl.String(),
+        "species.taxid": pl.UInt64(),
+        "srr": pl.String(),
+    }
+)
 
 FIGZISE = (12, 6)
 
@@ -264,8 +266,7 @@ def get_coverage(
 
     # takes the sub dataframe corresponding to this target
     lf = hit_lf.filter(pl.col("sseqid") == target)
-    if is_chimera:
-        print(lf.collect().write_parquet("test.parquet"))
+
     if lf.limit(1).collect().is_empty():
         return pl.DataFrame(), False
 
@@ -390,29 +391,21 @@ if __name__ == "__main__":
         separator="\t",
         schema=BLAST_OUTPUT_COL_SCHEMA,
         has_header=False,
-    )
+    ).with_row_index()
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     # PARSE CHIMERA DATA
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    try:
-        chimera_df = pd.read_csv(
-            args.chimera_file,
-            dtype=CHIMERA_COL_SCHEMA,
-        )
-    except pd.errors.EmptyDataError as e:
-        logger.warning(f"No data in chimera file: {e}")
+    chimera_lf = pl.scan_csv(
+        args.chimera_file,
+        has_header=True,
+        schema=CHIMERA_COL_SCHEMA,
+    ).select(["qseqid", "sstart_1", "send_1", "sstart_2", "send_2"])
+
+    if chimera_lf.limit(1).collect().is_empty():
+        logger.warning("Chimera file is empty")
         sys.exit(0)
-
-    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    # SEPARATING BLAST HITS INTO CHIMERA AND NON-CHIMERA
-    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-    logger.info("Dividing hit table into chimera and non-chimera hits")
-    chimera_qseqids = chimera_df["qseqid"].unique().tolist()
-    chimera_hit_lf = hit_lf.filter(pl.col("qseqid").is_in(chimera_qseqids))
-    non_chimera_hit_lf = hit_lf.filter(~pl.col("qseqid").is_in(chimera_qseqids))
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     # GETTING LIST OF TARGET SEQUENCES
@@ -421,6 +414,41 @@ if __name__ == "__main__":
     # looping through target sequences and making coverage plot
     logger.info("Extracting target sequences")
     target_sequences = hit_lf.select("sseqid").unique().collect().to_series().to_list()
+
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    # SEPARATING BLAST HITS INTO CHIMERA AND NON-CHIMERA
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    logger.info("Dividing hit table into chimera and non-chimera hits")
+
+    # getting blast hits corresponding to chimera rows
+    # choosing either one of the two pairs of coordinates:
+    # for each qseqid in chimera_lf, we want to find the corresponding blast results with
+    # EITHER sstart = sstart_1 & send = send_1
+    # OR     sstart = sstart_2 & send = send_2
+    chimera_hit_lf = (
+        hit_lf.join(chimera_lf, how="full", on="qseqid")
+        .filter(
+            (
+                (pl.col("qseqid") == pl.col("qseqid"))
+                & (pl.col("sstart") == pl.col("sstart_1"))
+                & (pl.col("send") == pl.col("send_1"))
+            )
+            | (
+                (pl.col("qseqid") == pl.col("qseqid"))
+                & (pl.col("sstart") == pl.col("sstart_2"))
+                & (pl.col("send") == pl.col("send_2"))
+            )
+        )
+        .select(["sseqid", "sstart", "send", "slen", "index"])
+    )
+
+    chimera_indexes = (
+        chimera_hit_lf.select("index").unique().collect().to_series().to_list()
+    )
+    non_chimera_hit_lf = hit_lf.filter(~pl.col("index").is_in(chimera_indexes))
+
+    chimera_hit_lf = chimera_hit_lf.drop("index")
+    non_chimera_hit_lf = non_chimera_hit_lf.drop("index")
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     # MAKING COVERAGE PLOTS FOR EACH TARGET SEQUENCE

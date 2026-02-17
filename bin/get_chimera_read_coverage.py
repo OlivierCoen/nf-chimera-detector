@@ -122,12 +122,6 @@ def get_occurences(df: pl.DataFrame):
     target_length = df.select("slen").unique().to_series().item(0)
     fields = [str(i) for i in range(target_length)]
 
-    """
-    with open("log.txt", "a") as f:
-        msg = f"target: {df['sseqid'].item(0)} || nb lines: {len(df)}"
-        f.write(msg)
-    """
-
     return (
         df.with_columns(
             nb_left_uncovered=(
@@ -203,7 +197,8 @@ def get_coverage(
 ) -> tuple[pl.DataFrame, bool]:
     # takes the sub dataframe corresponding to this target
     lf = hit_lf.filter(pl.col("sseqid") == target)
-
+    if is_chimera:
+        print(lf.collect().write_parquet("test.parquet"))
     if lf.limit(1).collect().is_empty():
         return pl.DataFrame(), False
 
@@ -247,10 +242,12 @@ def get_coverage(
     return df, is_subsampled
 
 
-def apply_log_if_needed(df: pl.DataFrame, log: bool) -> pd.DataFrame:
+def get_series_to_plot(df: pl.DataFrame, log: bool, new_name: str) -> pd.DataFrame:
+    col = df.columns[0]
     # computes 10 * log10(x + 1) if needed
-    expr = 10 * (pl.all() + pl.lit(1)).log10() if log else pl.all()
-    return df.with_columns(expr).to_pandas()
+    expr = 10 * (pl.col(col) + pl.lit(1)).log10() if log else pl.col(col)
+    expr = expr.alias(new_name)
+    return df.select(expr).to_pandas()
 
 
 def get_outfile(target: str, srr_id: str, log: bool, is_subsampled: bool) -> str:
@@ -269,7 +266,7 @@ def plot_coverage(
     target: str,
     srr_id: str,
     is_subsampled: bool,
-    log: bool = False,
+    log: bool,
 ):
     fig, ax = plt.subplots(figsize=FIGZISE)
 
@@ -279,10 +276,8 @@ def plot_coverage(
     # PLOTTING NON CHIMERAS
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     if not non_chimera_coverage_df.is_empty():
-        df = apply_log_if_needed(non_chimera_coverage_df, log)
+        df = get_series_to_plot(non_chimera_coverage_df, log, "Non chimeras")
         df.plot(
-            y=df.columns[0],
-            label="Non chimeras",
             color=NON_CHIMERA_COLOR,
             ax=ax,
             xlabel=xlabel,
@@ -294,10 +289,8 @@ def plot_coverage(
     # PLOTTING CHIMERAS
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     # chimera_coverage is necessarily not empty because we filtered it beforehand
-    df = apply_log_if_needed(chimera_coverage_df, log)
+    df = get_series_to_plot(chimera_coverage_df, log, "Chimeras")
     df.plot(
-        y=df.columns[0],
-        label="Chimeras",
         color=CHIMERA_COLOR,
         ax=ax,
         xlabel=xlabel,
@@ -344,7 +337,7 @@ if __name__ == "__main__":
     # looping through target sequences and making coverage plot
     logger.info("Extracting target sequences")
     target_sequences = hit_lf.select("sseqid").unique().collect().to_series().to_list()
-
+    target_sequences = ["Se_rnd-1_family-265#DNA/TcMar-Tc1"]
     logger.info("Computing coverages for each target sequence and making plots")
     for target in tqdm(target_sequences):
         # getting coverage for chimera reads
@@ -366,6 +359,7 @@ if __name__ == "__main__":
             target,
             args.srr_id,
             is_subsampled,
+            log=False,
         )
 
         plot_coverage(

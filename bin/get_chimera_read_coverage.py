@@ -119,6 +119,27 @@ def parse_args():
 
 
 def get_occurences(df: pl.DataFrame):
+    """
+    From a polars dataframe containing the columns:
+        - slen: length of the target sequence
+        - sstart: start position of the hit
+        - send: end position of the hit
+    Returns a polars dataframe like:
+        ┌─────┬─────┬─────┬─────┬───┬──────┬──────┬──────┬──────┐
+        │ 0   ┆ 1   ┆ 2   ┆ 3   ┆ … ┆ 1331 ┆ 1332 ┆ 1333 ┆ 1334 │
+        │ --- ┆ --- ┆ --- ┆ --- ┆   ┆ ---  ┆ ---  ┆ ---  ┆ ---  │
+        │ i64 ┆ i64 ┆ i64 ┆ i64 ┆   ┆ i64  ┆ i64  ┆ i64  ┆ i64  │
+        ╞═════╪═════╪═════╪═════╪═══╪══════╪══════╪══════╪══════╡
+        │ 0   ┆ 0   ┆ 0   ┆ 1   ┆ … ┆ 0    ┆ 0    ┆ 0    ┆ 0    │
+        │ 0   ┆ 0   ┆ 0   ┆ 1   ┆ … ┆ 0    ┆ 0    ┆ 0    ┆ 0    │
+        │ 0   ┆ 0   ┆ 0   ┆ 1   ┆ … ┆ 1    ┆ 0    ┆ 0    ┆ 0    │
+        │ 0   ┆ 0   ┆ 0   ┆ 1   ┆ … ┆ 1    ┆ 0    ┆ 0    ┆ 0    │
+        │ 0   ┆ 0   ┆ 0   ┆ 0   ┆ … ┆ 0    ┆ 0    ┆ 1    ┆ 1    │
+        │ 0   ┆ 0   ┆ 0   ┆ 0   ┆ … ┆ 0    ┆ 0    ┆ 0    ┆ 0    │
+        └─────┴─────┴─────┴─────┴───┴──────┴──────┴──────┴──────┘
+    Each row represents a read, with columns indicating the position along the target sequence.
+    0 and 1 represent whether the read covers the position or not.
+    """
     target_length = df.select("slen").unique().to_series().item(0)
     fields = [str(i) for i in range(target_length)]
 
@@ -163,6 +184,9 @@ def get_occurences(df: pl.DataFrame):
 
 
 def swap_start_end_if_necessary(df: pl.DataFrame):
+    """
+    If start position is greater than end position, swap them.
+    """
     cond = pl.col("sstart") > pl.col("send")
     return df.with_columns(
         [
@@ -179,6 +203,24 @@ def swap_start_end_if_necessary(df: pl.DataFrame):
 
 
 def get_chunk_coverage(df: pl.DataFrame) -> pl.DataFrame:
+    """
+    From a polars dataframe containing the columns:
+        - slen: length of the target sequence
+        - sstart: start position of the hit
+        - send: end position of the hit
+    Return a dataframe containing one column with coverage for each position on the target sequence, like:
+        ┌──────────┐
+        │ column_0 │
+        │ ---      │
+        │ i64      │
+        ╞══════════╡
+        │ 0        │
+        │ 1        │
+        │ 1        │
+        │ 2        │
+        │ 2        │
+        └──────────┘
+    """
     # swapping start and end if on the reverse strand
     df = swap_start_end_if_necessary(df)
 
@@ -195,6 +237,31 @@ def get_chunk_coverage(df: pl.DataFrame) -> pl.DataFrame:
 def get_coverage(
     hit_lf: pl.LazyFrame, target: str, is_chimera: bool
 ) -> tuple[pl.DataFrame, bool]:
+    """
+    Returns a tuple containing
+    * a pandas DataFrame with coverage information
+    * a boolean indicating if subsampling was needed
+    The returned polars dataframe has one single column:
+        ┌──────────┐
+        │ column_0 │
+        │ ---      │
+        │ i64      │
+        ╞══════════╡
+        │ 0        │
+        │ 1        │
+        │ 1        │
+        │ 2        │
+        │ 2        │
+        │ …        │
+        │ 0        │
+        │ 0        │
+        │ 3        │
+        │ 4        │
+        │ 4        │
+        └──────────┘
+    It represents the coverage at each position of the target sequence.
+    """
+
     # takes the sub dataframe corresponding to this target
     lf = hit_lf.filter(pl.col("sseqid") == target)
     if is_chimera:
@@ -232,17 +299,15 @@ def get_coverage(
             break
         coverage_dfs.append(get_chunk_coverage(chunk))
 
-    df = pl.concat(coverage_dfs, how="vertical")
-
-    if is_chimera:
-        df = df.rename({"column_0": "chimera"})
-    else:
-        df = df.rename({"column_0": "non chimera"})
-
-    return df, is_subsampled
+    return pl.concat(coverage_dfs, how="vertical"), is_subsampled
 
 
 def get_series_to_plot(df: pl.DataFrame, log: bool, new_name: str) -> pd.DataFrame:
+    """
+    Returns a pandas DataFrame containing a single column
+    If log is True, computes 10 * log10(x + 1)
+    Else, returns the original column
+    """
     col = df.columns[0]
     # computes 10 * log10(x + 1) if needed
     expr = 10 * (pl.col(col) + pl.lit(1)).log10() if log else pl.col(col)
@@ -251,6 +316,9 @@ def get_series_to_plot(df: pl.DataFrame, log: bool, new_name: str) -> pd.DataFra
 
 
 def get_outfile(target: str, srr_id: str, log: bool, is_subsampled: bool) -> str:
+    """
+    Returns the output file name for the given target, SRR ID, log status, and subsampling status.
+    """
     cleaned_target = target.replace("/", "_")
     subsampling_status = ".subsampled" if is_subsampled else ""
     return (
@@ -313,12 +381,20 @@ def plot_coverage(
 if __name__ == "__main__":
     args = parse_args()
 
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    # PARSE BLAST HITS
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
     hit_lf = pl.scan_csv(
         args.blast_hit_file,
         separator="\t",
         schema=BLAST_OUTPUT_COL_SCHEMA,
         has_header=False,
     )
+
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    # PARSE CHIMERA DATA
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     try:
         chimera_df = pd.read_csv(
@@ -329,14 +405,27 @@ if __name__ == "__main__":
         logger.warning(f"No data in chimera file: {e}")
         sys.exit(0)
 
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    # SEPARATING BLAST HITS INTO CHIMERA AND NON-CHIMERA
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
     logger.info("Dividing hit table into chimera and non-chimera hits")
     chimera_qseqids = chimera_df["qseqid"].unique().tolist()
     chimera_hit_lf = hit_lf.filter(pl.col("qseqid").is_in(chimera_qseqids))
     non_chimera_hit_lf = hit_lf.filter(~pl.col("qseqid").is_in(chimera_qseqids))
 
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    # GETTING LIST OF TARGET SEQUENCES
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
     # looping through target sequences and making coverage plot
     logger.info("Extracting target sequences")
     target_sequences = hit_lf.select("sseqid").unique().collect().to_series().to_list()
+
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    # MAKING COVERAGE PLOTS FOR EACH TARGET SEQUENCE
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
     target_sequences = ["Se_rnd-1_family-265#DNA/TcMar-Tc1"]
     logger.info("Computing coverages for each target sequence and making plots")
     for target in tqdm(target_sequences):
@@ -345,7 +434,7 @@ if __name__ == "__main__":
             chimera_hit_lf, target, is_chimera=True
         )
 
-        # we don't want to keep targets for which there is not chimera
+        # we don't want to plot figures for targets for which there is no chimera
         if chimera_coverage_df.is_empty():
             continue
 

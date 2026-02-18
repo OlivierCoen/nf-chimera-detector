@@ -1,4 +1,5 @@
 process PREPARE_DATA_PER_FAMILY {
+    tag "${data_file.baseName}"
 
     label 'process_single'
 

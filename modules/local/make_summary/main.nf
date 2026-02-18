@@ -1,4 +1,5 @@
 process MAKE_SUMMARY {
+    tag "${category}"
 
     label 'process_single'
 

@@ -8,6 +8,8 @@ include { SEQKIT_SPLIT2                                } from '../../../modules/
 // ------------------------------------------------------------------------------------
 
 process MERGE_HITS {
+    tag "${meta.id}"
+
     input:
     tuple val(meta), path(hit_files, stageAs: "**/*")
 
@@ -15,7 +17,6 @@ process MERGE_HITS {
     tuple val(meta), path("${meta.id}.all_hits.txt"), emit: hits
 
     script:
-
     """
     cat ${hit_files} > ${meta.id}.all_hits.txt
     """
@@ -23,6 +24,7 @@ process MERGE_HITS {
 
 
 process EXTRACT_SEQ_IDS {
+    tag "${meta.id}"
     input:
     tuple val(meta), path(tsv_file)
 
@@ -30,7 +32,6 @@ process EXTRACT_SEQ_IDS {
     tuple val(meta), path("${meta.id}_hit_ids.txt"), emit: ids
 
     script:
-
     """
     cut -f1 ${tsv_file} > ${meta.id}_hit_ids.txt
     """

@@ -295,7 +295,7 @@ def get_coverage(
     # perform coverage computation on chunks to limit memory usage
     coverage_dfs = []
     for i in range(0, n_rows, CHUNKSIZE):
-        chunk = lf.slice(i, CHUNKSIZE).collect()
+        chunk = lf.slice(i, CHUNKSIZE).select(["sstart", "send", "slen"]).collect()
         if chunk.is_empty():
             break
         coverage_dfs.append(get_chunk_coverage(chunk))
@@ -401,7 +401,7 @@ if __name__ == "__main__":
         args.chimera_file,
         has_header=True,
         schema=CHIMERA_COL_SCHEMA,
-    ).select(["qseqid", "sstart_1", "send_1", "sstart_2", "send_2"])
+    )
 
     if chimera_lf.limit(1).collect().is_empty():
         logger.warning("Chimera file is empty")
@@ -416,9 +416,9 @@ if __name__ == "__main__":
     target_sequences = hit_lf.select("sseqid").unique().collect().to_series().to_list()
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    # SEPARATING BLAST HITS INTO CHIMERA AND NON-CHIMERA
+    # MERGING BLAST HITS WITH CHIMERA DATA
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    logger.info("Dividing hit table into chimera and non-chimera hits")
+    logger.info("Merging blast hits with chimera data")
 
     # getting blast hits corresponding to chimera rows
     # choosing either one of the two pairs of coordinates:
@@ -426,21 +426,33 @@ if __name__ == "__main__":
     # EITHER sstart = sstart_1 & send = send_1
     # OR     sstart = sstart_2 & send = send_2
     chimera_hit_lf = (
-        hit_lf.join(chimera_lf, how="full", on="qseqid")
+        hit_lf.join(chimera_lf, how="full", on="qseqid", suffix="_chimera")
         .filter(
-            (
-                (pl.col("qseqid") == pl.col("qseqid"))
-                & (pl.col("sstart") == pl.col("sstart_1"))
-                & (pl.col("send") == pl.col("send_1"))
-            )
-            | (
-                (pl.col("qseqid") == pl.col("qseqid"))
-                & (pl.col("sstart") == pl.col("sstart_2"))
-                & (pl.col("send") == pl.col("send_2"))
+            (pl.col("qseqid") == pl.col("qseqid_chimera"))
+            & (
+                (
+                    (pl.col("sseqid") == pl.col("sseqid_1"))
+                    & (pl.col("qstart") == pl.col("qstart_1"))
+                    & (pl.col("qend") == pl.col("qend_1"))
+                    & (pl.col("sstart") == pl.col("sstart_1"))
+                    & (pl.col("send") == pl.col("send_1"))
+                )
+                | (
+                    (pl.col("sseqid") == pl.col("sseqid_2"))
+                    & (pl.col("qstart") == pl.col("qstart_2"))
+                    & (pl.col("qend") == pl.col("qend_2"))
+                    & (pl.col("sstart") == pl.col("sstart_2"))
+                    & (pl.col("send") == pl.col("send_2"))
+                )
             )
         )
         .select(["sseqid", "sstart", "send", "slen", "index"])
     )
+
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    # SEPARATING BLAST HITS INTO CHIMERA AND NON-CHIMERA
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    logger.info("Dividing hit table into chimera and non-chimera hits")
 
     chimera_indexes = (
         chimera_hit_lf.select("index").unique().collect().to_series().to_list()
@@ -454,7 +466,6 @@ if __name__ == "__main__":
     # MAKING COVERAGE PLOTS FOR EACH TARGET SEQUENCE
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    target_sequences = ["Se_rnd-1_family-265#DNA/TcMar-Tc1"]
     logger.info("Computing coverages for each target sequence and making plots")
     for target in tqdm(target_sequences):
         # getting coverage for chimera reads

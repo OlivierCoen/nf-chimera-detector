@@ -11,8 +11,8 @@ process SEQKIT_SPLIT2 {
     tuple val(meta), path(reads), val(nb_chunks)
 
     output:
-    tuple val(meta), path("**/*.gz"), emit: reads
-    tuple val("${task.process}"), val('seqkit'), eval("seqkit | sed '3!d; s/Version: //'"),     topic: versions
+    tuple val(meta), path("**/*.gz"), emit: reads, optional: true
+    tuple val("${task.process}"), val('seqkit'), eval("seqkit | sed '3!d; s/Version: //'"), topic: versions
 
     script:
     def args   = task.ext.args   ?: ''

@@ -6,8 +6,8 @@ process FIND_CHIMERAS {
 
     conda "${moduleDir}/environment.yml"
     container "${ workflow.containerEngine in ['singularity', 'apptainer'] && !task.ext.singularity_pull_docker_container ?
-        'https://community-cr-prod.seqera.io/docker/registry/v2/blobs/sha256/7e/7e34603d81980331f4fb0224349f0af3019e234dc8c43130f9e3e36fff12dcd2/data':
-        'community.wave.seqera.io/library/r-arrow_r-base_r-dplyr_r-optparse:55d208ef780e672c' }"
+        'https://community-cr-prod.seqera.io/docker/registry/v2/blobs/sha256/c4/c4f9fed0b61f39af8198f97aafc7c5cae07ab08570a44ebc48985995357628ce/data':
+        'community.wave.seqera.io/library/r-arrow_r-base_r-data.table_r-dplyr_r-optparse:bcfb3d73ca929439' }"
 
     input:
     tuple val(meta), path("blast_hits.against_target.txt"), path("blast_hits.against_genome.txt")

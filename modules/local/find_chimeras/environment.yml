@@ -8,3 +8,4 @@ dependencies:
   - conda-forge::r-dplyr==1.2.1
   - conda-forge::r-arrow==24.0.0
   - conda-forge::r-optparse==1.8.2
+  - conda-forge::r-data.table==1.17.8

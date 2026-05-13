@@ -116,7 +116,7 @@ get_reads_with_hits_on_both <- function(dt1, dt2) {
 
     #merges these tables (all = FALSE: inner join)
     merged <- merge(dt1, dt2, by = "qseqid", all = FALSE, suffixes = c("_1","_2"))
-    message(paste("Obtained", nrow(merged), "reads having hits on both 1 and 2"))
+    #message(paste("Obtained", nrow(merged), "reads having hits on both 1 and 2"))
 
     different_qlen <- merged %>% filter(qlen_1 != qlen_2)
     # checking (just in case)
@@ -348,7 +348,7 @@ get_blast_output_schema <- function() {
   )
 }
 
-parse_blast_output <- function(file) {
+get_arrow_dataset_blast_output <- function(file) {
   arrow::open_dataset(
     file, 
     schema = get_blast_output_schema(),
@@ -357,37 +357,31 @@ parse_blast_output <- function(file) {
   )
 }
 
-process_batches <- function(df1_dataset, df2_dataset) {
+get_common_qseqids <- function(ds1, ds2) {
+  uniques_ds1_qseqids <- ds1 |> distinct(qseqid) |> pull(qseqid, as_vector = TRUE)
+  uniques_ds2_qseqids <- ds2 |> distinct(qseqid) |> pull(qseqid, as_vector = TRUE)
+  intersect(uniques_ds1_qseqids, uniques_ds2_qseqids)
+}
+
+process_batches <- function(ds1, ds2) {
     
-  # Process in chunks using Scanner
-  df1_scanner <- arrow::Scanner$create(df1_dataset, batch_size = CHUNK_SIZE)
-  df2_scanner <- arrow::Scanner$create(df2_dataset, batch_size = CHUNK_SIZE)
-  
-  df1_batches <- df1_scanner$ToRecordBatchReader()
-  df2_batches <- df2_scanner$ToRecordBatchReader()
-  
-  all_pvalues <- c()
-  i <- 0
-  total_processed_rows <- 0
-  while ( !is.null(df1_batch <- df1_batches$read_next_batch()) ) {
-  
-      df1 <- as.data.frame(df1_batch)
-      
-      while ( !is.null(df2_batch <- df2_batches$read_next_batch()) ) {
-          df2 <- as.data.frame(df2_batch)
-          chimera_dt <- find_chimeras(df1, df2)
-      }
-      
-      tmp_outfile <- paste0(TMP_FOLDER, "/", i, ".csv")
-      write.table(chimera_dt, tmp_outfile, sep = ',', row.names = FALSE, quote = FALSE)
-      
-      i <- i + 1
-      total_processed_rows <- total_processed_rows + nrow(df1)
-      pct_done <- 100 * total_processed_rows / df1_nrows
-      message(paste0("Chunk ", i, " done. ", total_processed_rows, " rows processed (",  format(round(pct_done, 2), nsmall = 2), "% of total)."))
-    
+  common_qseqids <- get_common_qseqids(ds1, ds2)
+  nb_unique_qseqids <- length(common_qseqids)
+
+  nb_processed <- 0
+  for (read_id in common_qseqids) {
+    df1 <- ds1 |> filter(qseqid == read_id) |> collect()
+    df2 <- ds2 |> filter(qseqid == read_id) |> collect()
+    chimera_dt <- find_chimeras(df1, df2)
+
+    tmp_outfile <- paste0(TMP_FOLDER, "/", read_id, ".csv")
+    write.table(chimera_dt, tmp_outfile, sep = ',', row.names = FALSE, quote = FALSE)
+
+    nb_processed <- nb_processed + 1
+    pct_done <- 100 * nb_processed / nb_unique_qseqids
+    message(paste0("Qseqid ", read_id, " done. ", nb_processed, " qseqid processed (",  format(round(pct_done, 2), nsmall = 2), "% of total)."))
   }
-  
+
   message("Collecting all tempopary chimera results into one single dataframe")
   file_names <- paste0(TMP_FOLDER, "/", dir(TMP_FOLDER, pattern = "*.csv"))
   df <- do.call(rbind, lapply(file_names, read.csv))   
@@ -415,8 +409,8 @@ export_data <- function(dt, filename) {
 
 args <- get_args()
 
-df1_dataset <- parse_blast_output(args$blast_hits_1_file)
-df2_dataset <- parse_blast_output(args$blast_hits_2_file)
+df1_dataset <- get_arrow_dataset_blast_output(args$blast_hits_1_file)
+df2_dataset <- get_arrow_dataset_blast_output(args$blast_hits_2_file)
 
 df1_nrows <- nrow(df1_dataset)
 df2_nrows <- nrow(df2_dataset)
@@ -432,7 +426,7 @@ if ( df1_nrows == 0 || df2_nrows == 0 ) {
 }
 
 # we want to export files anyway, even when there is no read
-# this helps t keep tracjk of SRRs that have been processed until the end
+# this helps to keep track of SRRs that have been processed until the end
 nb_chimeras <- nrow(df)
 if ( nb_chimeras == 0 ) {
     message("\nNo chimeras found")

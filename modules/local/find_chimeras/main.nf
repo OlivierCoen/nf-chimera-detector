@@ -1,6 +1,6 @@
 process FIND_CHIMERAS {
 
-    label 'process_low'
+    label 'process_high'
 
     tag "${meta.family} :: txid${meta.taxid} :: ${meta.id}"
 

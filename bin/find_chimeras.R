@@ -13,9 +13,15 @@ options(error = traceback)
 
 suppressPackageStartupMessages(library("data.table"))
 suppressPackageStartupMessages(library("dplyr"))
+suppressPackageStartupMessages(library("arrow"))
+suppressPackageStartupMessages(library("optparse"))
 library(data.table)
 library(optparse)
 library(dplyr)
+library(arrow)
+
+CHUNK_SIZE <- 100000
+TMP_FOLDER <- "tmp"
 
 #####################################################
 #####################################################
@@ -263,18 +269,18 @@ find_chimeras <- function (dt1, dt2) {
     MIN_COVERAGE_ORIGINAL_SEQUENCE <- 16
 
     # remove alignments within the blast object that are overlapping for a same read, keeping the best alignment (best bitscore)
-    message("Removing overlapping alignments for each read")
+    #message("Removing overlapping alignments for each read")
     dt1 <- remove_overlapping_alignments(dt1, MIN_OVERLAP_FOR_DROPPING)
     dt2 <- remove_overlapping_alignments(dt2, MIN_OVERLAP_FOR_DROPPING)
 
-    message("Keeping best hit per read")
+    #message("Keeping best hit per read")
     dt1 <- get_best_hit_per_read(dt1)
     dt2 <- get_best_hit_per_read(dt2)
 
-    message("Keeping reads having a hit on both target and genome")
+    #message("Keeping reads having a hit on both target and genome")
     dt <- get_reads_with_hits_on_both(dt1, dt2)
 
-    message("Computing coverages and overlap")
+    #message("Computing coverages and overlap")
     dt <- compute_coverages_and_overlap(dt, MIN_TOTAL_COVERAGE)
 
     # find chimeric reads. Four parameters can be set:
@@ -282,7 +288,7 @@ find_chimeras <- function (dt1, dt2) {
     # 2 - maximum number of bases inserted between the 2 genomes at recombination point, reflecting non - templated nucleotide additions (here 5)
     # 3 - maximum overlap in the alignment with the 2 genomes at the recombination points, reflects the presence of homology between the 2 genomes at the recombination point (here 20)
     # 4 - minimum alignment length on one genome only. Here the read has to be aligned over at least 16 bp on the genome 1 only and over at least 16 bp on genome 2 only
-    message("Detecting chimeric reads...")
+    #message("Detecting chimeric reads...")
     dt = get_chimeric_reads(
         dt,
         MIN_TOTAL_COVERAGE,
@@ -292,7 +298,7 @@ find_chimeras <- function (dt1, dt2) {
     )
 
     # insert overlap column containing the number of nucleotides shared between the 2 genomes at the recombination point
-    message("Adding length of overlaps between 1 and 2")
+    #message("Adding length of overlaps between 1 and 2")
     dt$overlap_length = get_overlap_length(dt)
 
     # insert column containing coordinate of the recombination point in 1
@@ -305,35 +311,87 @@ find_chimeras <- function (dt1, dt2) {
 
 }
 
-parse_blast_hit_file <- function(blast_hits_file) {
-    #' Parse blast hit result file
-    # Add propre header to dataframes
-    # qseqid      query or source (gene) sequence id
-    # sseqid      sseqid or target (reference genome) sequence id
-    # pident      percentage of identical positions
-    # length      alignment length (sequence overlap)
-    # mismatch    number of mismatches
-    # gapopen     number of gap openings
-    # qstart      start of alignment in query
-    # qend        end of alignment in query
-    # sstart      start of alignment in sseqid
-    # send        end of alignment in sseqid
-    # qlen        [additional column] query sequence length
-    # slen        [additional column] sseqid sequence length
-    # evalue      expect value
-    # bitscore    bitscore
-    #
-    # see https://www.metagenomics.wiki/tools/blast/blastn-output-format-6
+get_blast_output_schema <- function() {
+  # Sets the schema for the blast output dataframe
+  # qseqid      query or source (gene) sequence id
+  # sseqid      sseqid or target (reference genome) sequence id
+  # pident      percentage of identical positions
+  # length      alignment length (sequence overlap)
+  # mismatch    number of mismatches
+  # gapopen     number of gap openings
+  # qstart      start of alignment in query
+  # qend        end of alignment in query
+  # sstart      start of alignment in sseqid
+  # send        end of alignment in sseqid
+  # qlen        [additional column] query sequence length
+  # slen        [additional column] sseqid sequence length
+  # evalue      expect value
+  # bitscore    bitscore
+  #
+  # see https://www.metagenomics.wiki/tools/blast/blastn-output-format-6
+  # columns defined in conf/modules/blast.config
+  arrow::schema(
+    qseqid     = utf8(),
+    sseqid     = utf8(),
+    pident     = float64(),
+    length     = int32(),
+    mismatch   = int32(),
+    gapopen    = int32(),
+    qstart     = int32(),
+    qend       = int32(),
+    sstart     = int32(),
+    send       = int32(),
+    qlen       = int32(),
+    slen       = int32(),
+    evalue     = float64(),
+    bitscore   = float64()
+  )
+}
 
-    blast_hits_dt = fread(blast_hits_file)
-    if ( nrow(blast_hits_dt) == 0 ) {
-        return(blast_hits_dt)
-    }
+parse_blast_output <- function(file) {
+  arrow::open_dataset(
+    file, 
+    schema = get_blast_output_schema(),
+    format = "text", 
+    delimiter = "\t"
+  )
+}
 
-    # columns defined in conf/modules/blast.config
-    BLAST_OUTFMT6_COLS <- c("qseqid", "sseqid", "pident", "length", "mismatch", "gapopen", "qstart", "qend", "sstart", "send", "qlen", "slen", "evalue", "bitscore")
-    setnames(blast_hits_dt, BLAST_OUTFMT6_COLS)
-    return(blast_hits_dt)
+process_batches <- function(df1_dataset, df2_dataset) {
+    
+  # Process in chunks using Scanner
+  df1_scanner <- arrow::Scanner$create(df1_dataset, batch_size = CHUNK_SIZE)
+  df2_scanner <- arrow::Scanner$create(df2_dataset, batch_size = CHUNK_SIZE)
+  
+  df1_batches <- df1_scanner$ToRecordBatchReader()
+  df2_batches <- df2_scanner$ToRecordBatchReader()
+  
+  all_pvalues <- c()
+  i <- 0
+  total_processed_rows <- 0
+  while ( !is.null(df1_batch <- df1_batches$read_next_batch()) ) {
+  
+      df1 <- as.data.frame(df1_batch)
+      
+      while ( !is.null(df2_batch <- df2_batches$read_next_batch()) ) {
+          df2 <- as.data.frame(df2_batch)
+          chimera_dt <- find_chimeras(df1, df2)
+      }
+      
+      tmp_outfile <- paste0(TMP_FOLDER, "/", i, ".csv")
+      write.table(chimera_dt, tmp_outfile, sep = ',', row.names = FALSE, quote = FALSE)
+      
+      i <- i + 1
+      total_processed_rows <- total_processed_rows + nrow(df1)
+      pct_done <- 100 * total_processed_rows / df1_nrows
+      message(paste0("Chunk ", i, " done. ", total_processed_rows, " rows processed (",  format(round(pct_done, 2), nsmall = 2), "% of total)."))
+    
+  }
+  
+  message("Collecting all tempopary chimera results into one single dataframe")
+  file_names <- paste0(TMP_FOLDER, "/", dir(TMP_FOLDER, pattern = "*.csv"))
+  df <- do.call(rbind, lapply(file_names, read.csv))   
+  return(df) 
 }
 
 add_metadata <- function(dt, family, species, srr) {
@@ -357,27 +415,33 @@ export_data <- function(dt, filename) {
 
 args <- get_args()
 
-blast_hits_1_dt <- parse_blast_hit_file(args$blast_hits_1_file)
-blast_hits_2_dt <- parse_blast_hit_file(args$blast_hits_2_file)
+df1_dataset <- parse_blast_output(args$blast_hits_1_file)
+df2_dataset <- parse_blast_output(args$blast_hits_2_file)
 
-if ( nrow(blast_hits_1_dt) == 0 || nrow(blast_hits_2_dt) == 0 ) {
+df1_nrows <- nrow(df1_dataset)
+df2_nrows <- nrow(df2_dataset)
+message(paste("File 1 dataset has", df1_nrows, "rows."))
+message(paste("File 2 dataset has", df2_nrows, "rows."))
+
+if ( df1_nrows == 0 || df2_nrows == 0 ) {
     warning("At least one input file is empty")
-    chimera_dt <- data.table()
+    df <- data.table()
 } else {
-    chimera_dt <- find_chimeras(blast_hits_1_dt, blast_hits_2_dt)
+    dir.create(TMP_FOLDER)
+    df <- process_batches(df1_dataset, df2_dataset)
 }
 
 # we want to export files anyway, even when there is no read
 # this helps t keep tracjk of SRRs that have been processed until the end
-nb_chimeras <- nrow(chimera_dt)
+nb_chimeras <- nrow(df)
 if ( nb_chimeras == 0 ) {
     message("\nNo chimeras found")
     file.create(args$outfile)
     file.create("chimeric_reads.txt")
 } else {
-    message(paste("\nFound ", nb_chimeras, " chimeras"))
+    message(paste("\nFound ", nb_chimeras, " chimeras in total."))
     # writing the names of the chimeric reads in a file
-    write(chimera_dt$qseqid, file = "chimeric_reads.txt", ncolumns = 1)
-    chimera_dt <- add_metadata(chimera_dt, args$family, args$species, args$srr)
-    export_data(chimera_dt, args$outfile)
+    write(df$qseqid, file = "chimeric_reads.txt", ncolumns = 1)
+    df <- add_metadata(df, args$family, args$species, args$srr)
+    export_data(df, args$outfile)
 }

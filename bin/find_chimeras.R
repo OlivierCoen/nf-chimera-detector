@@ -409,20 +409,22 @@ export_data <- function(dt, filename) {
 
 args <- get_args()
 
-df1_dataset <- get_arrow_dataset_blast_output(args$blast_hits_1_file)
-df2_dataset <- get_arrow_dataset_blast_output(args$blast_hits_2_file)
+if ( file.size(args$blast_hits_1_file) > 0 && file.size(args$blast_hits_2_file) > 0 ) {
 
-df1_nrows <- nrow(df1_dataset)
-df2_nrows <- nrow(df2_dataset)
-message(paste("File 1 dataset has", df1_nrows, "rows."))
-message(paste("File 2 dataset has", df2_nrows, "rows."))
-
-if ( df1_nrows == 0 || df2_nrows == 0 ) {
-    warning("At least one input file is empty")
-    df <- data.table()
-} else {
+    df1_dataset <- get_arrow_dataset_blast_output(args$blast_hits_1_file)
+    df2_dataset <- get_arrow_dataset_blast_output(args$blast_hits_2_file)
+    
+    df1_nrows <- nrow(df1_dataset)
+    df2_nrows <- nrow(df2_dataset)
+    message(paste("File 1 dataset has", df1_nrows, "rows."))
+    message(paste("File 2 dataset has", df2_nrows, "rows."))
+    
     dir.create(TMP_FOLDER)
     df <- process_batches(df1_dataset, df2_dataset)
+    
+} else {
+    message("At least one input file is empty")
+    df <- data.table()
 }
 
 # we want to export files anyway, even when there is no read

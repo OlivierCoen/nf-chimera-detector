@@ -9,3 +9,4 @@ dependencies:
   - conda-forge::r-arrow==24.0.0
   - conda-forge::r-optparse==1.8.2
   - conda-forge::r-data.table==1.17.8
+  - conda-forge::r-stringr==1.6.0

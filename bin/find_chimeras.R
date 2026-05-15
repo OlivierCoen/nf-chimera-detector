@@ -19,35 +19,15 @@ library(data.table)
 library(optparse)
 library(dplyr)
 library(arrow)
+library(stringr)
 
-CHUNK_SIZE <- 100000
 TMP_FOLDER <- "tmp"
 
 #####################################################
 #####################################################
-# FUNCTIONS
+# CHIMERA DETECTION FUNCTIONS
 #####################################################
 #####################################################
-
-
-get_args <- function() {
-
-    option_list <- list(
-        make_option("--hits-1", dest = 'blast_hits_1_file', help = "Path to first Blast output file"),
-        make_option("--hits-2", dest = 'blast_hits_2_file', help = "Path to second Blast output file for genome"),
-        make_option("--family", help = "Family name / Taxid"),
-        make_option("--species", help = "Species Taxid"),
-        make_option("--srr", dest = 'srr_id', help = "ID of the corresponding SRR"),
-        make_option("--out", dest = 'outfile', help = "Output file name")
-    )
-
-    args <- parse_args(OptionParser(
-        option_list = option_list,
-        description = "Find chimeric sequences"
-        ))
-
-    return(args)
-}
 
 remove_overlapping_alignments <- function(blast, min_overlap_for_dropping) {
     #' among HSPs covering the same ≥20bp region of the same read, selects the one of max score
@@ -112,8 +92,8 @@ cross_dataframes <- function(df1, df2) {
     merged <- df1 |>
       mutate(.key = 1) |> # add a dummy key column to merge on
       full_join(
-        df2 |> mutate(.key = 1), 
-        by = ".key", 
+        df2 |> mutate(.key = 1),
+        by = ".key",
         suffix = c("_1", "_2")
       ) |>
       select(-.key) # remove dummy column
@@ -271,12 +251,12 @@ find_chimeras <- function (dt1, dt2) {
     # remove alignments within the blast object that are overlapping for a same read, keeping the best alignment (best bitscore)
     dt1 <- remove_overlapping_alignments(dt1, MIN_OVERLAP_FOR_DROPPING)
     dt2 <- remove_overlapping_alignments(dt2, MIN_OVERLAP_FOR_DROPPING)
-    
+
     dt1 <- get_best_hit_per_read(dt1)
     dt2 <- get_best_hit_per_read(dt2)
 
     dt <- cross_dataframes(dt1, dt2)
-    
+
     dt <- compute_coverages_and_overlap(dt, MIN_TOTAL_COVERAGE)
 
     # find chimeric reads. Four parameters can be set:
@@ -300,9 +280,35 @@ find_chimeras <- function (dt1, dt2) {
 
     # insert column containing coordinate of the recombination point in 2
     dt$coordinate_in_2 = get_coordinate_in_2(dt)
-    
+
     return(dt)
 
+}
+
+#####################################################
+#####################################################
+# PARSING AND DATA MANAGEMENT FUNCTIONS
+#####################################################
+#####################################################
+
+
+get_args <- function() {
+
+    option_list <- list(
+        make_option("--hits-1", dest = 'blast_hits_1_file', help = "Path to first Blast output file"),
+        make_option("--hits-2", dest = 'blast_hits_2_file', help = "Path to second Blast output file for genome"),
+        make_option("--family", help = "Family name / Taxid"),
+        make_option("--species", help = "Species Taxid"),
+        make_option("--srr", dest = 'srr_id', help = "ID of the corresponding SRR"),
+        make_option("--out", dest = 'outfile', help = "Output file name")
+    )
+
+    args <- parse_args(OptionParser(
+        option_list = option_list,
+        description = "Find chimeric sequences"
+        ))
+
+    return(args)
 }
 
 get_blast_output_schema <- function() {
@@ -344,28 +350,49 @@ get_blast_output_schema <- function() {
 
 get_arrow_dataset_blast_output <- function(file) {
   arrow::open_dataset(
-    file, 
+    file,
     schema = get_blast_output_schema(),
-    format = "text", 
+    format = "text",
     delimiter = "\t"
   )
 }
 
+get_bucket_id <- function(col) {
+  stringr::str_sub(as.character(col), -3, -1)
+}
+
+partition_dataset_on_qseqid <- function(ds, outfile) {
+  ds |>
+    mutate(bucket = get_bucket_id(qseqid)) |> # attributes an integer between 0 and 999 to each qseqid based on last 3 digits
+    write_dataset(outfile, partitioning = "bucket") # writes one partition for each bucket
+}
+
+get_unique_qseqids <- function(ds) {
+  ds |> distinct(qseqid) |> pull(qseqid, as_vector = TRUE)
+}
+
 get_common_qseqids <- function(ds1, ds2) {
-  uniques_ds1_qseqids <- ds1 |> distinct(qseqid) |> pull(qseqid, as_vector = TRUE)
-  uniques_ds2_qseqids <- ds2 |> distinct(qseqid) |> pull(qseqid, as_vector = TRUE)
+  uniques_ds1_qseqids <- get_unique_qseqids(ds1)
+  uniques_ds2_qseqids <- get_unique_qseqids(ds2)
   intersect(uniques_ds1_qseqids, uniques_ds2_qseqids)
 }
 
+get_dataframe_subset <- function(ds, bucket_id, read_id) {
+  ds |> filter(bucket == bucket_id, qseqid == read_id) |> select(-bucket) |> collect()
+}
+
 process_batches <- function(ds1, ds2) {
-    
+
   common_qseqids <- get_common_qseqids(ds1, ds2)
   nb_unique_qseqids <- length(common_qseqids)
 
   nb_processed <- 0
   for (read_id in common_qseqids) {
-    df1 <- ds1 |> filter(qseqid == read_id) |> collect()
-    df2 <- ds2 |> filter(qseqid == read_id) |> collect()
+
+    bucket_id <- get_bucket_id(read_id)
+    df1 <- get_dataframe_subset(ds1, bucket_id, read_id)
+    df2 <- get_dataframe_subset(ds2, bucket_id, read_id)
+
     chimera_dt <- find_chimeras(df1, df2)
 
     tmp_outfile <- paste0(TMP_FOLDER, "/", read_id, ".csv")
@@ -378,8 +405,8 @@ process_batches <- function(ds1, ds2) {
 
   message("Collecting all tempopary chimera results into one single dataframe")
   file_names <- paste0(TMP_FOLDER, "/", dir(TMP_FOLDER, pattern = "*.csv"))
-  df <- do.call(rbind, lapply(file_names, read.csv))   
-  return(df) 
+  df <- do.call(rbind, lapply(file_names, read.csv))
+  return(df)
 }
 
 add_metadata <- function(dt, family, species, srr) {
@@ -405,17 +432,32 @@ args <- get_args()
 
 if ( file.size(args$blast_hits_1_file) > 0 && file.size(args$blast_hits_2_file) > 0 ) {
 
-    df1_dataset <- get_arrow_dataset_blast_output(args$blast_hits_1_file)
-    df2_dataset <- get_arrow_dataset_blast_output(args$blast_hits_2_file)
-    
-    df1_nrows <- nrow(df1_dataset)
-    df2_nrows <- nrow(df2_dataset)
+    message("Parsing datasets...")
+    #ds1 <- get_arrow_dataset_blast_output(args$blast_hits_1_file)
+    #ds2 <- get_arrow_dataset_blast_output(args$blast_hits_2_file)
+
+    # write with partitioning on qesqid, so that subsequent filtering get much faster
+    message("Partitioning dataset 1...")
+    #partition_dataset_on_qseqid(ds1, "ds1_partitioned")
+    message("Partitioning dataset 2...")
+    #partition_dataset_on_qseqid(ds2, "ds2_partitioned")
+
+    # read the partitioned datasets
+    df1_partitioned <- open_dataset("ds1_partitioned")
+    df2_partitioned <- open_dataset("ds2_partitioned")
+
+    df1_nrows <- nrow(df1_partitioned)
+    df2_nrows <- nrow(df2_partitioned)
     message(paste("File 1 dataset has", df1_nrows, "rows."))
     message(paste("File 2 dataset has", df2_nrows, "rows."))
-    
+
     dir.create(TMP_FOLDER)
-    df <- process_batches(df1_dataset, df2_dataset)
-    
+    df <- process_batches(df1_partitioned, df2_partitioned)
+
+    message("Removing partitioned datasets...")
+    unlink("ds1_partitioned", recursive = TRUE)
+    unlink("ds2_partitioned", recursive = TRUE)
+
 } else {
     message("At least one input file is empty")
     df <- data.table()

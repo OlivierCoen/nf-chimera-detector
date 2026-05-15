@@ -49,8 +49,6 @@ get_args <- function() {
     return(args)
 }
 
-# functions used for the search and analysis of chimeric reads
-
 remove_overlapping_alignments <- function(blast, min_overlap_for_dropping) {
     #' among HSPs covering the same ≥20bp region of the same read, selects the one of max score
 
@@ -101,22 +99,25 @@ get_best_hit_per_read <- function(dt) {
   # 3: qlen
   # these three filters are used only in the case where multiple hits have the same bitscore
   best_hit_blast <- dt %>%
-      group_by(qseqid) %>%
       slice_max(bitscore, with_ties = TRUE) %>% # get all hits with the highest bitscore
       slice_max(pident, with_ties = TRUE) %>% # get all hits with the highest pident
       slice_max(length, with_ties = FALSE) %>% # get only one hit (the first in the group) with the highest alignment length
-      ungroup()
 
   return(best_hit_blast)
 }
 
 
-get_reads_with_hits_on_both <- function(dt1, dt2) {
-    # Join both dataframes (inner join) to keep only reads with hits on both target and genome
+cross_dataframes <- function(df1, df2) {
+    # Make a cross product of both dataframes
 
-    #merges these tables (all = FALSE: inner join)
-    merged <- merge(dt1, dt2, by = "qseqid", all = FALSE, suffixes = c("_1","_2"))
-    #message(paste("Obtained", nrow(merged), "reads having hits on both 1 and 2"))
+    merged <- df1 |>
+      mutate(.key = 1) |> # add a dummy key column to merge on
+      full_join(
+        df2 |> mutate(.key = 1), 
+        by = ".key", 
+        suffix = c("_1", "_2")
+      ) |>
+      select(-.key) # remove dummy column
 
     different_qlen <- merged %>% filter(qlen_1 != qlen_2)
     # checking (just in case)
@@ -270,16 +271,19 @@ find_chimeras <- function (dt1, dt2) {
 
     # remove alignments within the blast object that are overlapping for a same read, keeping the best alignment (best bitscore)
     #message("Removing overlapping alignments for each read")
+    
     dt1 <- remove_overlapping_alignments(dt1, MIN_OVERLAP_FOR_DROPPING)
     dt2 <- remove_overlapping_alignments(dt2, MIN_OVERLAP_FOR_DROPPING)
+    
 
     #message("Keeping best hit per read")
     dt1 <- get_best_hit_per_read(dt1)
     dt2 <- get_best_hit_per_read(dt2)
+    c <- Sys.time()
 
     #message("Keeping reads having a hit on both target and genome")
-    dt <- get_reads_with_hits_on_both(dt1, dt2)
-
+    dt <- cross_dataframes(dt1, dt2)
+    b <- Sys.time()
     #message("Computing coverages and overlap")
     dt <- compute_coverages_and_overlap(dt, MIN_TOTAL_COVERAGE)
 
@@ -306,7 +310,10 @@ find_chimeras <- function (dt1, dt2) {
 
     # insert column containing coordinate of the recombination point in 2
     dt$coordinate_in_2 = get_coordinate_in_2(dt)
-
+    
+    print(b-c)
+    
+    
     return(dt)
 
 }

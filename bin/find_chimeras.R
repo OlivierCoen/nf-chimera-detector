@@ -433,14 +433,14 @@ args <- get_args()
 if ( file.size(args$blast_hits_1_file) > 0 && file.size(args$blast_hits_2_file) > 0 ) {
 
     message("Parsing datasets...")
-    #ds1 <- get_arrow_dataset_blast_output(args$blast_hits_1_file)
-    #ds2 <- get_arrow_dataset_blast_output(args$blast_hits_2_file)
+    ds1 <- get_arrow_dataset_blast_output(args$blast_hits_1_file)
+    ds2 <- get_arrow_dataset_blast_output(args$blast_hits_2_file)
 
     # write with partitioning on qesqid, so that subsequent filtering get much faster
     message("Partitioning dataset 1...")
-    #partition_dataset_on_qseqid(ds1, "ds1_partitioned")
+    partition_dataset_on_qseqid(ds1, "ds1_partitioned")
     message("Partitioning dataset 2...")
-    #partition_dataset_on_qseqid(ds2, "ds2_partitioned")
+    partition_dataset_on_qseqid(ds2, "ds2_partitioned")
 
     # read the partitioned datasets
     df1_partitioned <- open_dataset("ds1_partitioned")

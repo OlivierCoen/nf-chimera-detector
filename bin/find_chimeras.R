@@ -54,7 +54,7 @@ remove_overlapping_alignments <- function(blast, min_overlap_for_dropping) {
 
     dt = copy(blast)
     #sorts HSPs by coordinates
-    setorder(dt, qseqid, qstart, qend)
+    setorder(dt, qstart, qend)
 
     if (nrow(dt) == 1) {
         return(dt)
@@ -69,9 +69,8 @@ remove_overlapping_alignments <- function(blast, min_overlap_for_dropping) {
         #HSPs at rows with even numbers
         even = odd + 1
 
-        #f is TRUE for consecutive HSPs that overlap by at least 20bp
-        f = abs(dt$qstart[even] - dt$qend[odd]) + 1 > min_overlap_for_dropping &
-            dt$qseqid[odd] ==  dt$qseqid[even]
+        # if is TRUE for consecutive HSPs that overlap by at least 20bp
+        f = abs(dt$qstart[even] - dt$qend[odd]) + 1 > min_overlap_for_dropping
 
         #puts consecutive overlapping HSPs in two columns of a data table (odd rows at the left)
         candidates = data.table(odds = odd[f], evens = even[f])
@@ -96,7 +95,7 @@ get_best_hit_per_read <- function(dt) {
   # get the best hits based on:
   # 1: bitscore
   # 2: pident
-  # 3: qlen
+  # 3: length
   # these three filters are used only in the case where multiple hits have the same bitscore
   best_hit_blast <- dt %>%
       slice_max(bitscore, with_ties = TRUE) %>% # get all hits with the highest bitscore

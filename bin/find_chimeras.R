@@ -176,7 +176,7 @@ compute_coverages_and_overlap <- function(dt, min_total_coverage) {
 
     #minimum alignment length of a read against 1 and 2
     if(min_total_coverage <=  1) {
-        min_total_coverage = min_total_coverage * dt$qlen
+        min_total_coverage = min_total_coverage * dt$qlen_1
     } else {
         min_total_coverage = rep(min_total_coverage, nrow(dt))
     }
@@ -270,21 +270,14 @@ find_chimeras <- function (dt1, dt2) {
     MIN_COVERAGE_ORIGINAL_SEQUENCE <- 16
 
     # remove alignments within the blast object that are overlapping for a same read, keeping the best alignment (best bitscore)
-    #message("Removing overlapping alignments for each read")
-    
     dt1 <- remove_overlapping_alignments(dt1, MIN_OVERLAP_FOR_DROPPING)
     dt2 <- remove_overlapping_alignments(dt2, MIN_OVERLAP_FOR_DROPPING)
     
-
-    #message("Keeping best hit per read")
     dt1 <- get_best_hit_per_read(dt1)
     dt2 <- get_best_hit_per_read(dt2)
-    c <- Sys.time()
 
-    #message("Keeping reads having a hit on both target and genome")
     dt <- cross_dataframes(dt1, dt2)
-    b <- Sys.time()
-    #message("Computing coverages and overlap")
+    
     dt <- compute_coverages_and_overlap(dt, MIN_TOTAL_COVERAGE)
 
     # find chimeric reads. Four parameters can be set:
@@ -292,7 +285,6 @@ find_chimeras <- function (dt1, dt2) {
     # 2 - maximum number of bases inserted between the 2 genomes at recombination point, reflecting non - templated nucleotide additions (here 5)
     # 3 - maximum overlap in the alignment with the 2 genomes at the recombination points, reflects the presence of homology between the 2 genomes at the recombination point (here 20)
     # 4 - minimum alignment length on one genome only. Here the read has to be aligned over at least 16 bp on the genome 1 only and over at least 16 bp on genome 2 only
-    #message("Detecting chimeric reads...")
     dt = get_chimeric_reads(
         dt,
         MIN_TOTAL_COVERAGE,
@@ -302,7 +294,6 @@ find_chimeras <- function (dt1, dt2) {
     )
 
     # insert overlap column containing the number of nucleotides shared between the 2 genomes at the recombination point
-    #message("Adding length of overlaps between 1 and 2")
     dt$overlap_length = get_overlap_length(dt)
 
     # insert column containing coordinate of the recombination point in 1
@@ -310,9 +301,6 @@ find_chimeras <- function (dt1, dt2) {
 
     # insert column containing coordinate of the recombination point in 2
     dt$coordinate_in_2 = get_coordinate_in_2(dt)
-    
-    print(b-c)
-    
     
     return(dt)
 

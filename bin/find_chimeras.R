@@ -432,27 +432,30 @@ args <- get_args()
 
 if ( file.size(args$blast_hits_1_file) > 0 && file.size(args$blast_hits_2_file) > 0 ) {
 
-    message("Parsing datasets...")
+    # parse and write with partitioning on qesqid, so that subsequent filtering get much faster
+    message("Parsing dataset 1")
     ds1 <- get_arrow_dataset_blast_output(args$blast_hits_1_file)
-    ds2 <- get_arrow_dataset_blast_output(args$blast_hits_2_file)
-
-    # write with partitioning on qesqid, so that subsequent filtering get much faster
     message("Partitioning dataset 1...")
     partition_dataset_on_qseqid(ds1, "ds1_partitioned")
+    rm(ds1)
+
+    message("Parsing dataset 2")
+    ds2 <- get_arrow_dataset_blast_output(args$blast_hits_2_file)
     message("Partitioning dataset 2...")
     partition_dataset_on_qseqid(ds2, "ds2_partitioned")
+    rm(ds2)
 
     # read the partitioned datasets
-    df1_partitioned <- open_dataset("ds1_partitioned")
-    df2_partitioned <- open_dataset("ds2_partitioned")
+    ds1 <- open_dataset("ds1_partitioned")
+    ds2 <- open_dataset("ds2_partitioned")
 
-    df1_nrows <- nrow(df1_partitioned)
-    df2_nrows <- nrow(df2_partitioned)
+    df1_nrows <- nrow(ds1)
+    df2_nrows <- nrow(ds2)
     message(paste("File 1 dataset has", df1_nrows, "rows."))
     message(paste("File 2 dataset has", df2_nrows, "rows."))
 
     dir.create(TMP_FOLDER)
-    df <- process_batches(df1_partitioned, df2_partitioned)
+    df <- process_batches(ds1, ds2)
 
     message("Removing partitioned datasets...")
     unlink("ds1_partitioned", recursive = TRUE)

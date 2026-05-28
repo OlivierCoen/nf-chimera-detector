@@ -1,5 +1,11 @@
 include { FIND_CHIMERAS                       } from '../../../modules/local/find_chimeras'
+include { MERGE_CHIMERAS                       } from '../../../modules/local/merge_chimeras'
 include { GET_CHIMERA_READ_COVERAGE           } from '../../../modules/local/get_chimera_read_coverage'
+
+
+// ------------------------------------------------------------------------------------
+// WORKFLOW
+// ------------------------------------------------------------------------------------
 
 
 workflow GET_CHIMERAS {
@@ -15,9 +21,15 @@ workflow GET_CHIMERAS {
     // ------------------------------------------------------------------------------------
 
     FIND_CHIMERAS (
-        ch_target_hits.join( ch_genome_hits )
+        ch_target_hits.combine( ch_genome_hits, by: 0)
     )
-    ch_chimeras_csv = FIND_CHIMERAS.out.csv
+
+    // ------------------------------------------------------------------------------------
+    // MERGE CHIMERAS OBTAINED FROM SPLITTED BLAST RESULTS
+    // ------------------------------------------------------------------------------------
+
+    MERGE_CHIMERAS( FIND_CHIMERAS.out.csv.groupTuple() )
+    ch_chimeras_csv = MERGE_CHIMERAS.out.chimeras
 
     // ------------------------------------------------------------------------------------
     // COMPUTE COVERAGE OF CHIMERAS ON TARGETS

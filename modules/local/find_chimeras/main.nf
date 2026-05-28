@@ -13,8 +13,7 @@ process FIND_CHIMERAS {
     tuple val(meta), path("blast_hits.against_target.txt"), path("blast_hits.against_genome.txt")
 
     output:
-    tuple val(meta), path("*_chimeras.csv"),                                                                                  emit: csv
-    tuple val("${meta.family}"),  val("${meta.id}"), env("NB_CHIMERAS"),                                                      topic: nb_chimeras
+    tuple val(meta), path("chimeras.csv"),                                                                                  emit: csv
     tuple val("${task.process}"), val('R'),          eval('Rscript -e "cat(R.version.string)" | sed "s/R version //"'),       topic: versions
     tuple val("${task.process}"), val('dplyr'),      eval('Rscript -e "cat(as.character(packageVersion(\'dplyr\')))"'),       topic: versions
     tuple val("${task.process}"), val('data.table'), eval('Rscript -e "cat(as.character(packageVersion(\'data.table\')))"'),  topic: versions
@@ -29,9 +28,7 @@ process FIND_CHIMERAS {
         --family ${meta.family} \\
         --species ${meta.taxid} \\
         --srr ${meta.id} \\
-        --out ${prefix}.csv
-
-    NB_CHIMERAS=\$(wc -l < chimeric_reads.txt)
+        --out chimeras.csv
     """
 
 }

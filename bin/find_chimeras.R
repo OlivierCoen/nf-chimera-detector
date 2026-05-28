@@ -77,10 +77,10 @@ get_best_hit_per_read <- function(dt) {
   # 2: pident
   # 3: length
   # these three filters are used only in the case where multiple hits have the same bitscore
-  best_hit_blast <- dt %>%
-      slice_max(bitscore, with_ties = TRUE) %>% # get all hits with the highest bitscore
-      slice_max(pident, with_ties = TRUE) %>% # get all hits with the highest pident
-      slice_max(length, with_ties = FALSE) %>% # get only one hit (the first in the group) with the highest alignment length
+  best_hit_blast <- dt |>
+      slice_max(bitscore, with_ties = TRUE) |> # get all hits with the highest bitscore
+      slice_max(pident, with_ties = TRUE) |> # get all hits with the highest pident
+      slice_max(length, with_ties = FALSE) # get only one hit (the first in the group) with the highest alignment length
 
   return(best_hit_blast)
 }
@@ -96,9 +96,10 @@ cross_dataframes <- function(df1, df2) {
         by = ".key",
         suffix = c("_1", "_2")
       ) |>
-      select(-.key) # remove dummy column
+      select(-c(qseqid_2, .key)) |> # remove unnecessary columns
+      rename(qseqid = qseqid_1)
 
-    different_qlen <- merged %>% filter(qlen_1 != qlen_2)
+    different_qlen <- merged |> filter(qlen_1 != qlen_2)
     # checking (just in case)
     if ( nrow(different_qlen) > 0 ) {
         warning("Some query read lengths do not correspond!")
@@ -144,7 +145,7 @@ get_chimeric_reads <- function(dt, min_total_coverage, min_coverage_original_seq
                 dt$coverage_2_only >= min_coverage_original_sequence
 
     # keeping only chimeric reads
-    dt = dt %>% filter(chimeric == TRUE)
+    dt = dt |> filter(chimeric == TRUE)
 
     return(dt)
 }
@@ -472,11 +473,8 @@ nb_chimeras <- nrow(df)
 if ( nb_chimeras == 0 ) {
     message("\nNo chimeras found")
     file.create(args$outfile)
-    file.create("chimeric_reads.txt")
 } else {
     message(paste("\nFound ", nb_chimeras, " chimeras in total."))
-    # writing the names of the chimeric reads in a file
-    write(df$qseqid, file = "chimeric_reads.txt", ncolumns = 1)
     df <- add_metadata(df, args$family, args$species, args$srr)
     export_data(df, args$outfile)
 }

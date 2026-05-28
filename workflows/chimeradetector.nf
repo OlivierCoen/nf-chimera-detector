@@ -196,7 +196,8 @@ workflow CHIMERADETECTOR {
 
     BLAST_AGAINST_TARGET (
         ch_reads_fasta,
-        ch_target_db
+        ch_target_db,
+        params.read_fasta_chunk_max_size
     )
 
     // ------------------------------------------------------------------------------------
@@ -204,7 +205,8 @@ workflow CHIMERADETECTOR {
     // ------------------------------------------------------------------------------------
 
     BLAST_AGAINST_GENOMES (
-        BLAST_AGAINST_TARGET.out.hit_sequences,
+        ch_reads_fasta,
+        BLAST_AGAINST_TARGET.out.hit_ids,
         ch_assemblies
     )
 

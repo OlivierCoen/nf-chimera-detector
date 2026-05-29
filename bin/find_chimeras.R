@@ -349,6 +349,11 @@ get_blast_output_schema <- function() {
   )
 }
 
+get_partitioned_dataset_schema <- function() {
+  new_schema <- arrow::schema(bucket = utf8())
+  arrow::schema(c(get_blast_output_schema()$fields, new_schema$fields))
+}
+
 get_arrow_dataset_blast_output <- function(file) {
   arrow::open_dataset(
     file,
@@ -358,13 +363,17 @@ get_arrow_dataset_blast_output <- function(file) {
   )
 }
 
+get_partitioned_dataset <- function(file) {
+  arrow::open_dataset(file, schema = get_partitioned_dataset_schema())
+}
+
 get_bucket_id <- function(col) {
   stringr::str_sub(as.character(col), -3, -1)
 }
 
 partition_dataset_on_qseqid <- function(ds, outfile) {
   ds |>
-    mutate(bucket = get_bucket_id(qseqid)) |> # attributes an integer between 0 and 999 to each qseqid based on last 3 digits
+    mutate(bucket = as.character(get_bucket_id(qseqid))) |> # attributes an integer between 0 and 999 to each qseqid based on last 3 digits
     write_dataset(outfile, partitioning = "bucket") # writes one partition for each bucket
 }
 
@@ -447,8 +456,8 @@ if ( file.size(args$blast_hits_1_file) > 0 && file.size(args$blast_hits_2_file) 
     rm(ds2)
 
     # read the partitioned datasets
-    ds1 <- open_dataset("ds1_partitioned")
-    ds2 <- open_dataset("ds2_partitioned")
+    ds1 <- get_partitioned_dataset("ds1_partitioned")
+    ds2 <- get_partitioned_dataset("ds2_partitioned")
 
     ds1_nrows <- nrow(ds1)
     ds2_nrows <- nrow(ds2)

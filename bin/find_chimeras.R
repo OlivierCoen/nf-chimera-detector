@@ -414,8 +414,16 @@ process_batches <- function(ds1, ds2) {
   }
 
   message("Collecting all tempopary chimera results into one single dataframe")
-  file_names <- paste0(TMP_FOLDER, "/", dir(TMP_FOLDER, pattern = "*.csv"))
-  df <- do.call(rbind, lapply(file_names, read.csv))
+  chimera_filenames <- dir(TMP_FOLDER, pattern = "\\.csv$")
+
+  if (length(chimera_filenames) == 0) {
+    message("No CSV files found.")
+    df <- data.frame()
+  } else {
+    csv_files <- paste0(TMP_FOLDER, "/", chimera_filenames)
+    df <- do.call(rbind, lapply(csv_files, read.csv))
+  }
+
   return(df)
 }
 

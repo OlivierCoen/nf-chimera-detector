@@ -98,12 +98,22 @@ workflow MULTIQC_WORKFLOW {
                             storeDir: "${params.outdir}/chimeras/"
                         )
 
+    ch_nb_chimeras = ch_chimeras_csv
+                        .map { meta, file ->
+                            if (file.size() > 0) {
+                                [ meta.family, meta.id, file.splitCsv().size() - 1 ]
+                            } else {
+                                [ meta.family, meta.id, 0 ]
+                            }
+                        }
+
     // ------------------------------------------------------------------------------------
     // PREPARE MULTIQC DATA
     // ------------------------------------------------------------------------------------
 
     PREPARE_MULTIQC_DATA (
         ch_chimeras_table,
+        ch_nb_chimeras,
         ch_fastq_stats,
         ch_reads_fasta,
         ch_species_taxids

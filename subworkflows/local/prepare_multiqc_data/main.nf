@@ -22,6 +22,7 @@ workflow PREPARE_MULTIQC_DATA {
 
     take:
     ch_chimeras_table
+    ch_nb_chimeras
     ch_fastq_stats
     ch_reads_fasta
     ch_species_taxids
@@ -126,7 +127,7 @@ workflow PREPARE_MULTIQC_DATA {
                                 remainder: true
                             )
                             .join( // joining with chimeras metadata
-                                channel.topic('nb_chimeras').map { family, id, nb -> [ id, [nb_chimeras: nb] ] },
+                                ch_nb_chimeras.map { family, id, nb -> [ id, [nb_chimeras: nb] ] },
                                 remainder: true
                             )
                             .map { // removing SRR ID and cleaning data
@@ -235,7 +236,7 @@ workflow PREPARE_MULTIQC_DATA {
     // COLLECTING NB OF CHIMERAS PER FAMILY
     // ------------------------------------------------------------------------------------
 
-    ch_nb_chimeras_file = channel.topic('nb_chimeras')  // family, id, nb_chimeras
+    ch_nb_chimeras_file = ch_nb_chimeras  // family, id, nb_chimeras
                             .collectFile(
                                 name: 'nb_chimeras.tsv',
                                 seed: "family\tdata",

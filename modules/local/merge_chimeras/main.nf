@@ -1,5 +1,8 @@
 process MERGE_CHIMERAS {
-    tag "${meta.id}"
+
+    label 'process_high'
+
+    tag "${meta.family} :: txid${meta.taxid} :: ${meta.id}"
 
     conda "${moduleDir}/environment.yml"
     container "${ workflow.containerEngine in ['singularity', 'apptainer'] && !task.ext.singularity_pull_docker_container ?
@@ -11,7 +14,6 @@ process MERGE_CHIMERAS {
 
     output:
     tuple val(meta), path("${meta.id}.chimeras.csv"), emit: chimeras
-    tuple val("${meta.family}"), val("${meta.id}"), env("NB_CHIMERAS"), topic: nb_chimeras
 
     script:
     """
@@ -19,6 +21,6 @@ process MERGE_CHIMERAS {
         --chimeras ${files} \\
         --out ${meta.id}.chimeras.csv
 
-    NB_CHIMERAS=\$(cut -f 1 ${meta.id}.chimeras.csv | wc -l)
+    sleep 1
     """
 }

@@ -134,7 +134,7 @@ workflow CHIMERADETECTOR {
 
     ch_db_specific_ids = ch_not_processed_sra_ids
                             .branch { meta, id ->
-                                        sra: id.startsWith('SR')
+                                        sra: id.startsWith('SR') || id.startsWith('DR')
                                         ena: id.startsWith('ER')
                             }
 

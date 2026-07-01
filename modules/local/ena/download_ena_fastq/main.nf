@@ -20,7 +20,7 @@ process DOWNLOAD_ENA_FASTQ {
     """
     for url in \$(cat ${ena_ftp_url_file}); do
         echo "Downloading \${url}"
-        curl \${url} -o \${url##*/}
+        wget \${url}
     done
     """
 

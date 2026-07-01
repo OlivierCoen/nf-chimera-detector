@@ -6,21 +6,27 @@ process DOWNLOAD_ENA_FASTQ {
 
     conda "${moduleDir}/environment.yml"
     container "${ workflow.containerEngine in ['singularity', 'apptainer'] && !task.ext.singularity_pull_docker_container ?
-        'https://community-cr-prod.seqera.io/docker/registry/v2/blobs/sha256/95/9568ac2c728b11372f8d48c58ae686ac8802e3597145b161cbd50d9599605896/data':
-        'community.wave.seqera.io/library/curl:8.21.0--ec591a19969f30d6' }"
+        'https://community-cr-prod.seqera.io/docker/registry/v2/blobs/sha256/95/95c0d3d867f5bc805b926b08ee761a993b24062739743eb82cc56363e0f7817d/data':
+        'community.wave.seqera.io/library/aria2:1.37.0--3a9ec328469995dd' }"
 
     input:
     tuple val(meta), path(ena_ftp_url_file)
 
     output:
-    tuple val(meta), path('*.fastq.gz'),                                                          emit: fastq
-    tuple val("${task.process}"), val('curl'), eval("curl --version | head -1 | cut -d' ' -f2"), topic: versions
+    tuple val(meta), path('*.fastq.gz'),                                                              emit: fastq
+    tuple val("${task.process}"), val('aria2'), eval('aria2c --version | head -1 | cut -d" " -f3'),   topic: versions
 
     script:
     """
     for url in \$(cat ${ena_ftp_url_file}); do
-        echo "Downloading \${url}"
-        wget \${url}
+        # concert ftp URL to https to avoid ftp connection issues
+        http_url=\$(echo \$url | sed 's#ftp://#https://#g')
+        echo "Downloading \${http_url}"
+        aria2c \\
+            -x ${task.cpus} \\
+            -s ${task.cpus} \\
+            -o \${url##*/} \\
+            \${url}
     done
     """
 

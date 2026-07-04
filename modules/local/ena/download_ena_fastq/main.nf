@@ -26,7 +26,7 @@ process DOWNLOAD_ENA_FASTQ {
             -x ${task.cpus} \\
             -s ${task.cpus} \\
             -o \${url##*/} \\
-            \${url}
+            \${http_url}
     done
     """
 

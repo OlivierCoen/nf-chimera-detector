@@ -25,7 +25,6 @@ process DOWNLOAD_ENA_FASTQ {
         aria2c \\
             -x ${task.cpus} \\
             -s ${task.cpus} \\
-            -o \${url##*/} \\
             \${http_url}
     done
     """

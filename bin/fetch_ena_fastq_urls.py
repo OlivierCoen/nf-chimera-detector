@@ -8,8 +8,6 @@ import csv
 import logging
 import re
 import sys
-from email.message import Message
-from pathlib import Path
 
 import requests
 from tenacity import (
@@ -348,14 +346,21 @@ def main():
     ena_metadata_fields = ["run_accession", "fastq_ftp"]
     ena_fetcher = ENAMetadataFetcher(ena_metadata_fields)
 
-    ena_table = ena_fetcher.open_experiment_table(args.accession)
-    logger.info(f"Found {len(ena_table)} ENA entries")
-    logger.info(ena_table)
+    ena_records = ena_fetcher.open_experiment_table(args.accession)
+    logger.info(f"Found {len(ena_records)} ENA entries")
 
     logger.info("Writing FTP URLs to file")
-    ftp_urls = [url for row in ena_table for url in row["fastq_ftp"].split(";")]
-    with open(OUTFILE, "w") as fout:
-        fout.writelines([f"ftp://{url}\n" for url in ftp_urls])
+    ftp_urls = []
+    for record in ena_records:
+        if record.get("fastq_ftp"):
+            for url in record["fastq_ftp"].split(";"):
+                ftp_urls.append(url)
+
+    logger.info(f"Found {len(ftp_urls)} FTP URLs")
+
+    if ftp_urls:
+        with open(OUTFILE, "w") as fout:
+            fout.writelines([f"ftp://{url}\n" for url in ftp_urls])
 
     logger.info("Done")
 

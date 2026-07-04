@@ -2,7 +2,7 @@ process DOWNLOAD_ENA_FASTQ {
 
     label 'process_single'
 
-    tag "${meta.family} :: txid${meta.taxid} :: ${meta.id}"
+    tag "${meta.family} :: txid${meta.taxid} :: ${meta.sra_id}"
 
     conda "${moduleDir}/environment.yml"
     container "${ workflow.containerEngine in ['singularity', 'apptainer'] && !task.ext.singularity_pull_docker_container ?

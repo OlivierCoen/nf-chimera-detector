@@ -34,6 +34,11 @@ process DOWNLOAD_ENA_FASTQ {
         aria2c \\
             -x ${task.cpus} \\
             -s ${task.cpus} \\
+            --max-tries=10 \\
+            --retry-wait=30 \\
+            --timeout=60 \\
+            --optimize-concurrent-downloads \\
+            --check-integrity \\
             \${http_url}
     done
     """

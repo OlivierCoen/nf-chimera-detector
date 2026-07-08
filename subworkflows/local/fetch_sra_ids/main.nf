@@ -6,6 +6,7 @@ workflow FETCH_SRA_IDS {
 
     take:
     ch_families
+    restrict_to_taxids
     ncbi_api_key
 
     main:
@@ -20,6 +21,16 @@ workflow FETCH_SRA_IDS {
                             .transpose() // explodes each list : we get items like [[family: ..., mean_assembly_length: ...], [taxid: ..., taxon_name: ...]]
                             .map { metas -> metas.collectEntries { it } } // flattens both maps together
                             .map { meta -> [ meta, meta.taxid.strip() ] }
+
+    if ( restrict_to_taxids ) {
+        // filter to keep only taxids in the restrict_to_taxids list
+        ch_restricted_taxids = channel.fromList( params.restrict_to_taxids.tokenize(',') )
+
+        ch_species_taxids = ch_species_taxids
+                                .combine( ch_restricted_taxids )
+                                .filter { meta, taxid, restricted_taxids -> restricted_taxids.contains(taxid) }
+                                .map { meta, taxid, restricted_taxids -> [ meta, taxid ] }
+    }
 
     GET_SRA_METADATA ( ch_species_taxids )
 

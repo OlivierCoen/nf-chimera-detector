@@ -23,8 +23,13 @@ workflow DOWNLOAD_ENA {
 
     DOWNLOAD_ENA_FASTQ ( FETCH_ENA_FASTQ_URLS.out.ftp_urls)
 
+    ch_downloaded_fastq = DOWNLOAD_ENA_FASTQ.out.fastq
+                            .map {
+                                meta, fastqs ->
+                                    meta.id = fastqs instanceof List ? fastqs[0].simpleName.tokenize("_")[0] : fastqs.simpleName
+                                    [ meta, fastqs ]
+                            }
 
     emit:
-    reads               = DOWNLOAD_ENA_FASTQ.out.fastq
-
+    reads               = ch_downloaded_fastq
 }

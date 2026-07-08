@@ -2,8 +2,6 @@
 // Subworkflow with functionality specific to the nf-chimera-detector pipeline
 //
 
-import org.yaml.snakeyaml.Yaml
-
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     IMPORT FUNCTIONS / MODULES / SUBWORKFLOWS
@@ -94,7 +92,7 @@ workflow PIPELINE_INITIALISATION {
                         //converting taxid to string, for compatibility with subsequent steps
                         //println "meta.taxid ${meta.taxid}"
                         meta.taxid = meta.taxid.toString()
-                        new_meta = meta + [ sra_id: meta.id ]
+                        def new_meta = meta + [ sra_id: meta.id ]
                         if (file2 == null || file2 == [] ) {
                             [ new_meta, file1 ]
                         } else {
@@ -160,6 +158,20 @@ workflow PIPELINE_COMPLETION {
 
 
 //
+// Validate channels from input samplesheet
+//
+def validateInputSamplesheet(ch_input){
+    ch_input
+        .map { meta, fastq_1, fastq_2, bam -> [ "${meta.id}_${meta.lane}", meta, fastq_1, fastq_2, bam ] }
+        .groupTuple()
+        .map { id, meta, fastq_1, fastq_2, bam ->
+            if (meta.size() > 1) {
+                error("Multiple files found for sample ${meta[0].id} and lane ${meta[0].lane}. Each line of the samplesheet must contain unique combinations of samples and lanes.")
+            }
+        }
+}
+
+//
 // Generate methods description for MultiQC
 //
 def toolCitationText() {
@@ -168,6 +180,8 @@ def toolCitationText() {
     // Uncomment function in methodsDescriptionText to render in MultiQC report
     def citation_text = [
             "Tools used in the workflow included:",
+            "FastQC (Andrews 2010),",
+            "MultiQC (Ewels et al. 2016)",
             "."
         ].join(' ').trim()
 
@@ -179,6 +193,8 @@ def toolBibliographyText() {
     // Can use ternary operators to dynamically construct based conditions, e.g. params["run_xyz"] ? "<li>Author (2023) Pub name, Journal, DOI</li>" : "",
     // Uncomment function in methodsDescriptionText to render in MultiQC report
     def reference_text = [
+            "<li>Andrews S, (2010) FastQC, URL: https://www.bioinformatics.babraham.ac.uk/projects/fastqc/).</li>",
+            "<li>Ewels, P., Magnusson, M., Lundin, S., & Käller, M. (2016). MultiQC: summarize analysis results for multiple tools and samples in a single report. Bioinformatics , 32(19), 3047–3048. doi: /10.1093/bioinformatics/btw354</li>"
         ].join(' ').trim()
 
     return reference_text
@@ -217,7 +233,7 @@ def methodsDescriptionText(mqc_methods_yaml) {
 
     def engine =  new groovy.text.SimpleTemplateEngine()
     def description_html = engine.createTemplate(methods_text).make(meta)
-    //println "description_html $description_html"
+
     return description_html.toString()
 }
 
@@ -303,39 +319,39 @@ def groupFilesBySRR ( fileList ) {
 // A SRA ID IS CONSIDERED DONE WHEN ALL ITS UNDERLYING SRRS ARE MARKED AS DONE
 def getSraIdsNotProcessed ( ch_sra_ids ) {
 
-    ch_prefix = ch_sra_ids
+    def ch_prefix = ch_sra_ids
                     .map {
-                        meta, _ ->
+                        meta, id ->
                             [ meta, "${meta.family}_${meta.taxid}_${meta.sra_id}" ]
                     }
 
     def to_process_folder = file ( "${params.outdir}/${params.sra_registry}/to_process/" )
     def done_folder = file ( "${params.outdir}/${params.sra_registry}/done/" )
 
-    ch_to_process = parseSraFolder ( ch_prefix, to_process_folder )
-    ch_done = parseSraFolder ( ch_prefix, done_folder )
+    def ch_to_process = parseSraFolder ( ch_prefix, to_process_folder )
+    def ch_done = parseSraFolder ( ch_prefix, done_folder )
 
-    ch_grouped = ch_to_process
+    def ch_grouped = ch_to_process
                     .mix( ch_done )
                     .groupTuple()
                     .map { meta, files -> [ meta, files.flatten() ] }
 
-    ch_started = ch_grouped.filter { meta, files -> files.size() > 0 }
-    ch_not_started = ch_grouped.filter { meta, files -> files.size() == 0 }
+    def ch_started = ch_grouped.filter { meta, files -> files.size() > 0 }
+    def ch_not_started = ch_grouped.filter { meta, files -> files.size() == 0 }
 
-    ch_started_not_done = ch_started
-                            .map { meta, files -> [ meta, groupFilesBySRR ( files ) ] }
-                            .transpose()
-                            .map {
-                                meta, files ->
-                                    flattened_files = files.flatten()
-                                    //println "flattened_files $flattened_files"
-                                    if ( flattened_files )
-                                        [ meta, flattened_files ]
-                            }
-                            .filter {
-                                meta, files -> files.size() == 1 && files[0].toString().contains('to_process')
-                            }
+    def ch_started_not_done = ch_started
+                                .map { meta, files -> [ meta, groupFilesBySRR ( files ) ] }
+                                .transpose()
+                                .map {
+                                    meta, files ->
+                                        def flattened_files = files.flatten()
+                                        //println "flattened_files $flattened_files"
+                                        if ( flattened_files )
+                                            [ meta, flattened_files ]
+                                }
+                                .filter {
+                                    meta, files -> files.size() == 1 && files[0].toString().contains('to_process')
+                                }
 
 
     return ch_not_started

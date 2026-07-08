@@ -2,9 +2,6 @@ process FASTP {
     tag "${meta.taxid} :: ${meta.id}"
     label 'process_high'
 
-    maxRetries    = 10
-    maxErrors     = '-1'
-
     conda "${moduleDir}/environment.yml"
     container "${ workflow.containerEngine in ['singularity', 'apptainer'] && !task.ext.singularity_pull_docker_container ?
         'https://community-cr-prod.seqera.io/docker/registry/v2/blobs/sha256/88/889a182b8066804f4799f3808a5813ad601381a8a0e3baa4ab8d73e739b97001/data' :

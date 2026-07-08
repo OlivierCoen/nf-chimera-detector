@@ -80,6 +80,7 @@ workflow CHIMERADETECTOR {
 
     FETCH_SRA_IDS (
         ch_families,
+        params.restrict_to_taxids,
         params.ncbi_api_key ?: []
     )
     ch_sra_ids = FETCH_SRA_IDS.out.sra_ids

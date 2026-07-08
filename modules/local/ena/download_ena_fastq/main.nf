@@ -1,8 +1,17 @@
 process DOWNLOAD_ENA_FASTQ {
 
     label 'process_single'
-
     tag "${meta.family} :: txid${meta.taxid} :: ${meta.sra_id}"
+
+    errorStrategy {
+        if ( task.exitStatus == 1 ) {
+            'retry'
+        } else if ( task.exitStatus in ( [104, 175] + (130..145).toList() ) ) { // OOM & related errors; should be retried as long as memory does not fit
+            'retry'
+        } else {
+            'ignore'
+        }
+    }
 
     conda "${moduleDir}/environment.yml"
     container "${ workflow.containerEngine in ['singularity', 'apptainer'] && !task.ext.singularity_pull_docker_container ?

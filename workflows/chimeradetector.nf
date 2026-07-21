@@ -142,13 +142,17 @@ workflow CHIMERADETECTOR {
     // DOWNLOAD ALL SRA DATA
     // ------------------------------------------------------------------------------------
 
-    DOWNLOAD_SRA( ch_db_specific_ids.sra )
+    if ( !params.skip_sra ) {
+        DOWNLOAD_SRA( ch_db_specific_ids.sra )
+    }
 
     // ------------------------------------------------------------------------------------
     // DOWNLOAD ALL ENA DATA
     // ------------------------------------------------------------------------------------
 
-    DOWNLOAD_ENA( ch_db_specific_ids.ena )
+    if ( !params.skip_ena ) {
+        DOWNLOAD_ENA( ch_db_specific_ids.ena )
+    }
 
     // ------------------------------------------------------------------------------------
     // MERGE SRA, ENA READS AND READS PROVIDED BY USER

@@ -108,6 +108,16 @@
                     "exists": true,
                     "description": "If specified, only the SRA accessions in this file will be downloaded.",
                     "fa_icon": "fas fa-file-csv"
+                },
+                "skip_sra": {
+                    "type": "boolean",
+                    "description": "Skip downloading SRRs from NCBI SRA.",
+                    "fa_icon": "fas fa-chart-simple"
+                },
+                "skip_ena": {
+                    "type": "boolean",
+                    "description": "Skip downloading ERRs from ENA.",
+                    "fa_icon": "fas fa-chart-simple"
                 }
             }
         },

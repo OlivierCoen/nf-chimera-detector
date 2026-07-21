@@ -142,8 +142,16 @@ workflow CHIMERADETECTOR {
     // DOWNLOAD ALL SRA DATA
     // ------------------------------------------------------------------------------------
 
+    ch_reads = ch_fastq
+
     if ( !params.skip_sra ) {
+
         DOWNLOAD_SRA( ch_db_specific_ids.sra )
+
+        ch_reads = ch_reads.mix ( DOWNLOAD_SRA.out.reads )
+
+        ch_versions = ch_versions
+                        .mix( DOWNLOAD_SRA.out.versions )
     }
 
     // ------------------------------------------------------------------------------------
@@ -151,16 +159,11 @@ workflow CHIMERADETECTOR {
     // ------------------------------------------------------------------------------------
 
     if ( !params.skip_ena ) {
+
         DOWNLOAD_ENA( ch_db_specific_ids.ena )
+
+        ch_reads = ch_reads.mix ( DOWNLOAD_ENA.out.reads )
     }
-
-    // ------------------------------------------------------------------------------------
-    // MERGE SRA, ENA READS AND READS PROVIDED BY USER
-    // ------------------------------------------------------------------------------------
-
-    ch_reads = ch_fastq
-                .mix ( DOWNLOAD_SRA.out.reads )
-                .mix ( DOWNLOAD_ENA.out.reads )
 
     // ---------------------------------------------------------------
     // COMPUTING STATISTICS FOR EACH SRR / CUSTOM FASTQS
@@ -232,7 +235,6 @@ workflow CHIMERADETECTOR {
     // ------------------------------------------------------------------------------------
 
     ch_versions = ch_versions
-                    .mix( DOWNLOAD_SRA.out.versions )
                     .mix( SEQKIT_STATS.out.versions )
                     .mix( GET_GENOMES.out.versions )
                     .mix( POST_PROCESS_READS.out.versions )

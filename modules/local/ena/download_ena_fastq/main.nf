@@ -1,7 +1,9 @@
 process DOWNLOAD_ENA_FASTQ {
 
-    label 'process_medium'
+    label 'process_high'
     tag "${meta.family} :: txid${meta.taxid} :: ${meta.sra_id}"
+
+    maxForks 1
 
     errorStrategy {
         if ( task.exitStatus == 1 ) {

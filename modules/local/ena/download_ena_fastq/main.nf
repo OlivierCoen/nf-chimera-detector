@@ -1,6 +1,6 @@
 process DOWNLOAD_ENA_FASTQ {
 
-    label 'process_single'
+    label 'process_medium'
     tag "${meta.family} :: txid${meta.taxid} :: ${meta.sra_id}"
 
     errorStrategy {
@@ -15,31 +15,25 @@ process DOWNLOAD_ENA_FASTQ {
 
     conda "${moduleDir}/environment.yml"
     container "${ workflow.containerEngine in ['singularity', 'apptainer'] && !task.ext.singularity_pull_docker_container ?
-        'https://community-cr-prod.seqera.io/docker/registry/v2/blobs/sha256/95/95c0d3d867f5bc805b926b08ee761a993b24062739743eb82cc56363e0f7817d/data':
-        'community.wave.seqera.io/library/aria2:1.37.0--3a9ec328469995dd' }"
+        'https://community-cr-prod.seqera.io/docker/registry/v2/blobs/sha256/5e/5e19ee5cc46963e10871d03bbcc4d41823f4a57ca6f52d7bcdf3147d0e895d8a/data':
+        'community.wave.seqera.io/library/axel:2.17.13--3a206f517a443ff3' }"
 
     input:
     tuple val(meta), path(ena_ftp_url_file)
 
     output:
-    tuple val(meta), path('*.fastq.gz'),                                                              emit: fastq
-    tuple val("${task.process}"), val('aria2'), eval('aria2c --version | head -1 | cut -d" " -f3'),   topic: versions
+    tuple val(meta), path('*.fastq.gz'),                                                          emit: fastq
+    tuple val("${task.process}"), val('axel'), eval("axel --version | head -1 | cut -d' ' -f2"), topic: versions
 
     script:
     """
     for url in \$(cat ${ena_ftp_url_file}); do
         # concert ftp URL to https to avoid ftp connection issues
-        http_url=\$(echo \$url | sed 's#ftp://#https://#g')
-        echo "Downloading \${http_url}"
-        aria2c \\
-            -x ${task.cpus} \\
-            -s ${task.cpus} \\
-            --max-tries=10 \\
-            --retry-wait=30 \\
-            --timeout=60 \\
-            --optimize-concurrent-downloads \\
-            --check-integrity \\
-            \${http_url}
+        #http_url=\$(echo \$url | sed 's#ftp://#https://#g')
+        echo "Downloading \${url}"
+        axel \\
+            -n ${task.cpus} \\
+            \${url}
     done
     """
 

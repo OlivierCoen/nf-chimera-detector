@@ -32,10 +32,10 @@ process DOWNLOAD_ENA_FASTQ {
     for url in \$(cat ${ena_ftp_url_file}); do
         # concert ftp URL to https to avoid ftp connection issues
         #http_url=\$(echo \$url | sed 's#ftp://#https://#g')
-        echo "Downloading \${url}"
+        echo "Downloading \${http_url}"
         axel \\
             -n ${task.cpus} \\
-            \${url}
+            \${http_url}
     done
     """
 

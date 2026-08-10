@@ -1,6 +1,6 @@
 process DOWNLOAD_ENA_FASTQ {
 
-    label 'process_high'
+    label 'process_medium'
     tag "${meta.family} :: txid${meta.taxid} :: ${meta.sra_id}"
 
     maxForks 1
@@ -24,6 +24,8 @@ process DOWNLOAD_ENA_FASTQ {
         #http_url=\$(echo \$url | sed 's#ftp://#https://#g')
         echo "Downloading \${url}"
         aria2c \\
+            -x ${task.cpus} \\
+            -s ${task.cpus} \\
             --check-integrity \\
             \${url}
     done

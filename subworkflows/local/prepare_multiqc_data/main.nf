@@ -143,7 +143,12 @@ workflow PREPARE_MULTIQC_DATA {
                             .map { // computing coverage
                                 meta ->
                                     def genome_length = meta.dl_genome_len ?: meta.asm_genome_len
-                                    def coverage = meta.read_fasta_sum_len.toFloat() / genome_length.toFloat()
+                                    def coverage = 0
+                                    try {
+                                        coverage = meta.read_fasta_sum_len.toFloat() / genome_length.toFloat()
+                                    } catch (Exception e) {
+                                        log.warn "Could not compute coverage for row ${meta.srr_id}: ${e.message}"
+                                    }
                                     meta + [coverage: coverage]
                             }
                             .collectFile(

@@ -86,7 +86,7 @@ workflow POST_PROCESS_READS {
     // putting together single reads and processed paired reads
     ch_reads = ch_branched_reads.single
                     .mix ( ch_processed_paired_reads )
-
+ch_reads.view{ v -> "reads $v"}
     SEQKIT_FQ2FA ( ch_reads )
 
     // adding read fasta length to meta

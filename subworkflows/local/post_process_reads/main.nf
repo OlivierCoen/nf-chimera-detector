@@ -92,14 +92,14 @@ workflow POST_PROCESS_READS {
     // adding read fasta length to meta
     ch_fasta = SEQKIT_FQ2FA.out.fasta
                     .map {  meta, read_fasta_sum_len, file ->
-                        def read_fasta_sum_len = null
+                        def sum_len_long = null
                         try {
-                            read_fasta_sum_len = read_fasta_sum_len.toLong()
+                            sum_len_long = read_fasta_sum_len.toLong()
                         } catch (Exception e) {
                             log.warn "Could not get read fasta sum len for ${meta.id}"
-                            read_fasta_sum_len = 0
+                            sum_len_long = 0
                         }
-                        [ meta + [ read_fasta_sum_len:  read_fasta_sum_len], file ]
+                        [ meta + [ read_fasta_sum_len:  sum_len_long], file ]
                     }
 
     emit:

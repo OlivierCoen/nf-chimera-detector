@@ -86,14 +86,20 @@ workflow POST_PROCESS_READS {
     // putting together single reads and processed paired reads
     ch_reads = ch_branched_reads.single
                     .mix ( ch_processed_paired_reads )
-ch_reads.view{ v -> "reads $v"}
+
     SEQKIT_FQ2FA ( ch_reads )
 
     // adding read fasta length to meta
     ch_fasta = SEQKIT_FQ2FA.out.fasta
-                    .map {
-                        meta, read_fasta_sum_len, file ->
-                            [ meta + [ read_fasta_sum_len: read_fasta_sum_len.toLong() ], file ]
+                    .map {  meta, read_fasta_sum_len, file ->
+                        def read_fasta_sum_len = null
+                        try {
+                            read_fasta_sum_len = read_fasta_sum_len.toLong()
+                        } catch (Exception e) {
+                            log.warn "Could not get read fasta sum len for ${meta.id}"
+                            read_fasta_sum_len = 0
+                        }
+                        [ meta + [ read_fasta_sum_len:  read_fasta_sum_len], file ]
                     }
 
     emit:

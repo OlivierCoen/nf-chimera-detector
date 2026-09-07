@@ -14,8 +14,8 @@ process GET_CHILDREN_TAXIDS {
     val(ncbi_api_key)
 
     output:
-    tuple val(meta), path("*.taxids2names.csv"),             emit: taxid_to_names_files
-    tuple val(meta), path("*.children_taxons_metadata.csv"), emit: children_taxons_metadata
+    tuple val(meta), path("*.taxids2names.csv"),              emit: taxid_to_names_files
+    tuple val(meta), path("*.children_taxons_metadata.json"), emit: children_taxons_metadata
 
     tuple val("${task.process}"), val('python'),   eval("python3 --version | sed 's/Python //'"),                                               topic: versions
     tuple val("${task.process}"), val('requests'), eval('python3 -c "import requests; print(requests.__version__)"'),                           topic: versions

@@ -35,7 +35,7 @@ NCBI_API_HEADERS = {"accept": "application/json", "content-type": "application/j
 ESEARCH_BASE_URL = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi"
 ESEARCH_RETMAX = 1000000000  # max retmax that worked
 
-CHILDREN_TAXON_METADATA_OUTFILE_SUFFIX = ".children_taxons_metadata.csv"
+CHILDREN_TAXON_METADATA_OUTFILE_SUFFIX = ".children_taxons_metadata.json"
 TAXID_TO_NAME_OUTFILE_SUFFIX = ".taxids2names.csv"
 
 #####################################################

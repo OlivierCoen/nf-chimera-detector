@@ -2,9 +2,14 @@
 
 # Written by Olivier Coen. Released under the MIT license.
 
+"""
+Find all children (here only species and eerything below) taxids, given a taxid
+"""
+
 import argparse
 import logging
 import sys
+import json
 import xml.etree.ElementTree as ET
 
 import requests
@@ -23,13 +28,14 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Modern NCBI API
-NCBI_API_URL = "https://api.ncbi.nlm.nih.gov/datasets/v2/taxonomy"
+NCBI_API_DATASET_REPORT_URL = "https://api.ncbi.nlm.nih.gov/datasets/v2/taxonomy/dataset_report"
 NCBI_API_HEADERS = {"accept": "application/json", "content-type": "application/json"}
 
 # E-UTILITIES OL API
 ESEARCH_BASE_URL = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi"
 ESEARCH_RETMAX = 1000000000  # max retmax that worked
 
+CHILDREN_TAXON_METADATA_OUTFILE_SUFFIX = ".children_taxons_metadata.csv"
 TAXID_TO_NAME_OUTFILE_SUFFIX = ".taxids2names.csv"
 
 #####################################################
@@ -41,12 +47,9 @@ TAXID_TO_NAME_OUTFILE_SUFFIX = ".taxids2names.csv"
 
 def parse_args():
     parser = argparse.ArgumentParser(
-        description="Compute general statistics from count data for each sample"
+        description="Get all descendant NCBI taxon IDs from a specific taxon ID"
     )
     parser.add_argument("--family", type=str, required=True, help="Family name")
-    parser.add_argument(
-        "--ncbi-api-key", dest="ncbi_api_key", type=str, help="NCBI API key"
-    )
     return parser.parse_args()
 
 
@@ -56,13 +59,12 @@ def parse_args():
     wait=wait_exponential(multiplier=1, min=1, max=30),
     before_sleep=before_sleep_log(logger, logging.WARNING),
 )
-def send_request_to_ncbi_taxonomy(taxid: str | int, ncbi_api_key: str | None):
-    taxons = [str(taxid)]
-    data = {"taxons": taxons}
-    headers = dict(NCBI_API_HEADERS)
-    if ncbi_api_key is not None:
-        headers["api_key"] = ncbi_api_key
-    response = requests.post(NCBI_API_URL, headers=headers, json=data)
+def get_metadata_for_taxons(taxons: list[str]):
+    response = requests.post(
+        NCBI_API_DATASET_REPORT_URL,
+        headers=NCBI_API_HEADERS,
+        json={'taxons': taxons}
+    )
     response.raise_for_status()
     return response.json()
 
@@ -73,13 +75,11 @@ def send_request_to_ncbi_taxonomy(taxid: str | int, ncbi_api_key: str | None):
     wait=wait_exponential(multiplier=1, min=1, max=30),
     before_sleep=before_sleep_log(logger, logging.WARNING),
 )
-def send_esearch_query(query: str, database: str, ncbi_api_key: str | None):
+def send_esearch_query(query: str, database: str):
     """
     Query NCBI's db with Esearch API
     """
     params = dict(db=database, term=query, retmax=ESEARCH_RETMAX)
-    if ncbi_api_key is not None:
-        params["api_key"] = ncbi_api_key
     response = requests.get(ESEARCH_BASE_URL, params=params)
     response.raise_for_status()
     return response.text
@@ -101,15 +101,11 @@ def parse_ids_from_xml(xml_string: str) -> list[str]:
     ]
 
 
-def get_taxon_metadata(taxid: str | int, ncbi_api_key: str | None) -> dict:
-    result = send_request_to_ncbi_taxonomy(taxid, ncbi_api_key)
-    if len(result["taxonomy_nodes"]) > 1:
+def get_family_taxid(family: str) -> int:
+    result = get_metadata_for_taxons([family])
+    if len(result["reports"]) > 1:
         raise ValueError(f"Multiple taxids for family {family}")
-    return result["taxonomy_nodes"][0]
-
-
-def get_family_taxid(family: str, ncbi_api_key: str | None) -> int:
-    metadata = get_taxon_metadata(family, ncbi_api_key)
+    metadata = result["reports"][0]
     if "taxonomy" not in metadata:
         logger.info(f"Could not find taxonomy results for family {family}")
         if "errors" in metadata:
@@ -119,24 +115,37 @@ def get_family_taxid(family: str, ncbi_api_key: str | None) -> int:
     return int(metadata["taxonomy"]["tax_id"])
 
 
-def get_children_taxids(taxid: int, ncbi_api_key: str | None) -> list[str]:
+def get_all_children_taxids(taxid: int) -> list[str]:
     """
-    Get list of children taxonomy IDs given a family taxonomy ID
+    Get list of all children taxonomy IDs given a family taxonomy ID
     :param taxid:
-    :return: list of SRA experiment IDs
+    :return: list of children IDs
     """
     xml_string = send_esearch_query(
         query=f"txid{taxid}[Subtree]",
         # query=f"txid{taxid}[Subtree] AND species[Rank]",
         database="taxonomy",
-        ncbi_api_key=ncbi_api_key,
     )
     return parse_ids_from_xml(xml_string)
 
 
-def get_taxon_name(taxid: int, ncbi_api_key: str | None):
-    metadata = get_taxon_metadata(taxid, ncbi_api_key)
-    return metadata.get("taxonomy", {}).get("organism_name", None)
+def filter_children_taxids(taxids: list[int]) -> list[dict]:
+    result = get_metadata_for_taxons([str(taxid) for taxid in taxids])
+    valid_taxons = []
+    for report in result['reports']:
+        if 'taxonomy' not in report:
+            continue
+        taxonomy_report = report['taxonomy']
+        # if one of the parents node is at the species level, we keep it
+        if taxonomy_report.get('classification', {}).get('species', {}).get('id') is not None:
+            taxon = {
+                'taxid': taxonomy_report['tax_id'],
+                'name': taxonomy_report.get('current_scientific_name', {}).get('name', 'Unknown'),
+                'rank': taxonomy_report.get('rank', "RANK_UNKNOWN"),
+                'classification': taxonomy_report['classification']
+            }
+            valid_taxons.append(taxon)
+    return valid_taxons
 
 
 #####################################################
@@ -149,11 +158,11 @@ if __name__ == "__main__":
     args = parse_args()
     family = args.family
 
-    family_taxid = get_family_taxid(family, args.ncbi_api_key)
+    family_taxid = get_family_taxid(family)
     logger.info(f"Family taxid: {family_taxid}")
 
     logger.info(f"Getting children taxids for family {family}")
-    children_taxids = get_children_taxids(family_taxid, args.ncbi_api_key)
+    children_taxids = get_all_children_taxids(family_taxid)
 
     # converting all taxids to int for uniformity
     # adding family taxid to children taxids (in case)
@@ -163,14 +172,17 @@ if __name__ == "__main__":
     )
     logger.info(f"Obtained {len(children_taxids)} children taxids\n")
 
-    taxids2names = {
-        taxid: get_taxon_name(taxid, args.ncbi_api_key)
-        for taxid in tqdm(children_taxids)
-    }
+    logger.info("Filtering out node above species level")
+    filtered_taxons = filter_children_taxids(children_taxids)
+    logger.info(f"Kept {len(filtered_taxons)} children taxons of species rank or below")
+
+    children_taxon_metadata_outfile = f"{family}{CHILDREN_TAXON_METADATA_OUTFILE_SUFFIX}"
+    with open(children_taxon_metadata_outfile, "w") as fout:
+        json.dump(filtered_taxons, fout)
 
     taxid2name_outfile = f"{family}{TAXID_TO_NAME_OUTFILE_SUFFIX}"
     with open(taxid2name_outfile, "w") as fout:
-        for taxid, name in taxids2names.items():
-            fout.write(f"{taxid},{name}\n")
+        for taxon in filtered_taxons:
+            fout.write(f"{taxon['taxid']},{taxon['name']}\n")
 
     logger.info("Done")

@@ -34,11 +34,11 @@ EFETCH_BASE_URL = (
     "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db={db}&id={id}"
 )
 ESEARCH_RETMAX = 1000000000  # max retmax that worked
-CHUNKSIZE = 2000
+CHUNKSIZE = 400 # 500 is already too much, but 400 seems to work fine
 
 TAXID_OUTFILE = "taxid.txt"
-SRA_IDS_OUTFILE_SUFFIX = ".sra_ids.txt"
-EXPERIMENT_OUTFILE_SUFFIX = ".sra_metadata.json"
+SRA_IDS_OUTFILE = "sra_ids.txt"
+EXPERIMENT_OUTFILE = "sra_metadata.json"
 
 QUERY_FILTERS = ['"biomol dna"[Properties]', '"genomic"[Source]']
 
@@ -74,7 +74,7 @@ def get_metadata_for_taxons(taxons: list[str]):
     return response.json()
 
 
-def get_taxid(taxon: str) -> int:
+def get_taxon_metadata(taxon: str) -> tuple[int, str]:
     result = get_metadata_for_taxons([taxon])
     if len(result["reports"]) > 1:
         raise ValueError(f"Multiple taxids for taxon {taxon}")
@@ -85,7 +85,12 @@ def get_taxid(taxon: str) -> int:
             for error in metadata["errors"]:
                 logger.error(f"Error: {error['reason']}\n")
                 sys.exit(100)
-    return int(metadata["taxonomy"]["tax_id"])
+    taxid = int(metadata["taxonomy"]["tax_id"])
+    try:
+        organism_name = metadata["taxonomy"]['current_scientific_name']['name']
+    except KeyError:
+        raise KeyError(f"Could not find current scientific name for taxon {taxon}")
+    return taxid, organism_name
 
 
 class RateLimitException(Exception):
@@ -167,13 +172,13 @@ def parse_sra_accessions_from_xml(xml_string: str) -> list[dict]:
     ]
 
 
-def get_sra_ids_from_taxid(taxid: int) -> list[str]:
+def get_sra_ids_from_taxid(organism_name: str) -> list[str]:
     """
     Get list of SRA experiment IDs given a NCBI taxonomy ID
     :param taxid:
     :return: list of SRA experiment IDs
     """
-    query = f"txid{taxid}"
+    query = f"{organism_name}[Taxonomy]"
     if QUERY_FILTERS:
         query_filters_str = " AND " + " AND ".join(QUERY_FILTERS)
         query += query_filters_str
@@ -221,12 +226,12 @@ if __name__ == "__main__":
     args = parse_args()
 
     logger.info(f"Fetching taxid for taxon {args.taxon}")
-    taxid = get_taxid(args.taxon)
-    logger.info(f"Taxid: {taxid}")
+    taxid, organism_name = get_taxon_metadata(args.taxon)
+    logger.info(f"Taxid: {taxid}. Organism name: {organism_name}")
 
     try:
-        logger.info(f"Fetching sra experiment UIDs from taxon ID {taxid}")
-        sra_uids = get_sra_ids_from_taxid(taxid)
+        logger.info(f"Fetching sra experiment UIDs from {organism_name} ({taxid})")
+        sra_uids = get_sra_ids_from_taxid(organism_name)
         logger.info(f"Got {len(sra_uids)} SRA experiment UIDs")
 
         logger.info("Fetching sra experiment metadata for each SRA experiment ID")
@@ -234,7 +239,8 @@ if __name__ == "__main__":
         sra_uids_chunks = [
             sra_uids[i : i + CHUNKSIZE] for i in range(0, len(sra_uids), CHUNKSIZE)
         ]
-        for sra_uids_chunk in sra_uids_chunks:
+        for i, sra_uids_chunk in enumerate(sra_uids_chunks):
+            logger.info(f"Fetching chunk {i + 1}/{len(sra_uids_chunks)}")
             experiments += fetch_sra_experiments(sra_uids_chunk)
 
     except requests.exceptions.HTTPError as e:
@@ -244,14 +250,12 @@ if __name__ == "__main__":
     with open(TAXID_OUTFILE, "w") as fout:
         fout.write(str(taxid))
 
-    outfile = f"{taxid}{EXPERIMENT_OUTFILE_SUFFIX}"
-    with open(outfile, "w") as fout:
+    with open(EXPERIMENT_OUTFILE, "w") as fout:
         json.dump(experiments, fout)
 
     srrs = [exp["@accession"] for exp in experiments]
 
-    outfile = f"{taxid}{SRA_IDS_OUTFILE_SUFFIX}"
-    with open(outfile, "w") as fout:
+    with open(SRA_IDS_OUTFILE, "w") as fout:
         for srr in srrs:
             fout.write(f"{srr}\n")
 

@@ -13,12 +13,12 @@ process GET_SRA_METADATA {
     tuple val(meta), val(taxon)
 
     output:
-    tuple val(meta), env('TAXID'), path("*.sra_ids.txt"),                                                                                       emit: taxid_sra_id_file
-    tuple val(meta), path("*.sra_metadata.json"),                                                                                               emit: sra_metadata
-    tuple val("${task.process}"), val('python'),   eval("python3 --version | sed 's/Python //'"),                                               topic: versions
-    tuple val("${task.process}"), val('requests'), eval('python3 -c "import requests; print(requests.__version__)"'),                           topic: versions
-    tuple val("${task.process}"), val('xmltodict'), eval('python3 -c "import xmltodict; print(xmltodict.__version__)"'),                        topic: versions
-    tuple val("${task.process}"), val('tenacity'), eval('python3 -c "from importlib.metadata import version; print(version(\'tenacity\'))"'),   topic: versions
+    tuple val(meta), env('TAXID'), path("sra_ids.txt"),                                                                                       emit: taxid_sra_id_file
+    tuple val(meta), path("sra_metadata.json"),                                                                                               emit: sra_metadata
+    tuple val("${task.process}"), val('python'),   eval("python3 --version | sed 's/Python //'"),                                             topic: versions
+    tuple val("${task.process}"), val('requests'), eval('python3 -c "import requests; print(requests.__version__)"'),                         topic: versions
+    tuple val("${task.process}"), val('xmltodict'), eval('python3 -c "import xmltodict; print(xmltodict.__version__)"'),                      topic: versions
+    tuple val("${task.process}"), val('tenacity'), eval('python3 -c "from importlib.metadata import version; print(version(\'tenacity\'))"'), topic: versions
 
     script:
     """

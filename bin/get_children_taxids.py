@@ -30,6 +30,7 @@ logger = logging.getLogger(__name__)
 # Modern NCBI API
 NCBI_API_DATASET_REPORT_URL = "https://api.ncbi.nlm.nih.gov/datasets/v2/taxonomy/dataset_report"
 NCBI_API_HEADERS = {"accept": "application/json", "content-type": "application/json"}
+NCBI_DATASET_REPORT_TAXON_CHUNKSIZE = 1000
 
 # E-UTILITIES OL API
 ESEARCH_BASE_URL = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi"
@@ -49,7 +50,8 @@ def parse_args():
     parser = argparse.ArgumentParser(
         description="Get all descendant NCBI taxon IDs from a specific taxon ID"
     )
-    parser.add_argument("--family", type=str, required=True, help="Family name")
+    parser.add_argument("--taxon", type=str, required=True, help="Taxon name")
+    parser.add_argument("--keep-below", dest="upper_node_type_allowed", type=str, required=True, help="Keep all nodes below this type of node")
     return parser.parse_args()
 
 
@@ -60,13 +62,18 @@ def parse_args():
     before_sleep=before_sleep_log(logger, logging.WARNING),
 )
 def get_metadata_for_taxons(taxons: list[str]):
-    response = requests.post(
-        NCBI_API_DATASET_REPORT_URL,
-        headers=NCBI_API_HEADERS,
-        json={'taxons': taxons}
-    )
-    response.raise_for_status()
-    return response.json()
+    chunked_taxons_list = [
+        taxons[i:i + NCBI_DATASET_REPORT_TAXON_CHUNKSIZE] 
+        for i in range(0, len(taxons), NCBI_DATASET_REPORT_TAXON_CHUNKSIZE)
+    ]
+    for chunked_taxons in chunked_taxons_list:
+        response = requests.post(
+            NCBI_API_DATASET_REPORT_URL,
+            headers=NCBI_API_HEADERS,
+            json={'taxons': chunked_taxons}
+        )
+        response.raise_for_status()
+        yield response.json()
 
 
 @retry(
@@ -101,8 +108,8 @@ def parse_ids_from_xml(xml_string: str) -> list[str]:
     ]
 
 
-def get_family_taxid(family: str) -> int:
-    result = get_metadata_for_taxons([family])
+def get_parent_taxid(family: str) -> int:
+    result = next(get_metadata_for_taxons([family]))
     if len(result["reports"]) > 1:
         raise ValueError(f"Multiple taxids for family {family}")
     metadata = result["reports"][0]
@@ -129,22 +136,32 @@ def get_all_children_taxids(taxid: int) -> list[str]:
     return parse_ids_from_xml(xml_string)
 
 
-def filter_children_taxids(taxids: list[int]) -> list[dict]:
-    result = get_metadata_for_taxons([str(taxid) for taxid in taxids])
+def is_valid_taxon(taxonomy_report: dict, upper_node_type_allowed: str) -> bool:
+    # if one of the parents node is at the species level, we keep it
+    if taxonomy_report.get('classification', {}).get(upper_node_type_allowed, {}).get('id') is not None:
+        return True
+    # handle exceptions
+    # if rank is None ('no rank'), it most generally (but not always) means that it's under species, or at the same level
+    if taxonomy_report.get('rank') is None:
+        return True
+    return False
+    
+
+def filter_children_taxids(taxids: list[int], upper_node_type_allowed: str) -> list[dict]:
     valid_taxons = []
-    for report in result['reports']:
-        if 'taxonomy' not in report:
-            continue
-        taxonomy_report = report['taxonomy']
-        # if one of the parents node is at the species level, we keep it
-        if taxonomy_report.get('classification', {}).get('species', {}).get('id') is not None:
-            taxon = {
-                'taxid': taxonomy_report['tax_id'],
-                'name': taxonomy_report.get('current_scientific_name', {}).get('name', 'Unknown'),
-                'rank': taxonomy_report.get('rank', "RANK_UNKNOWN"),
-                'classification': taxonomy_report['classification']
-            }
-            valid_taxons.append(taxon)
+    for chunk_result in get_metadata_for_taxons([str(taxid) for taxid in taxids]):
+        for report in chunk_result['reports']:
+            if 'taxonomy' not in report:
+                continue
+            taxonomy_report = report['taxonomy']
+            if is_valid_taxon(taxonomy_report, upper_node_type_allowed):
+                taxon = {
+                    'taxid': taxonomy_report['tax_id'],
+                    'name': taxonomy_report.get('current_scientific_name', {}).get('name', 'Unknown'),
+                    'rank': taxonomy_report.get('rank', "RANK_UNKNOWN"),
+                    'classification': taxonomy_report.get('classification', {})
+                }
+                valid_taxons.append(taxon)
     return valid_taxons
 
 
@@ -156,31 +173,29 @@ def filter_children_taxids(taxids: list[int]) -> list[dict]:
 
 if __name__ == "__main__":
     args = parse_args()
-    family = args.family
+    parent_taxon = args.taxon
 
-    family_taxid = get_family_taxid(family)
-    logger.info(f"Family taxid: {family_taxid}")
+    parent_taxid = get_parent_taxid(parent_taxon)
+    logger.info(f"Parent taxid: {parent_taxid}")
 
-    logger.info(f"Getting children taxids for family {family}")
-    children_taxids = get_all_children_taxids(family_taxid)
+    logger.info(f"Getting children taxids for family {parent_taxon}")
+    children_taxids = get_all_children_taxids(parent_taxid)
 
     # converting all taxids to int for uniformity
     # adding family taxid to children taxids (in case)
     # keeping unique taxids (in case)
-    children_taxids = list(
-        set([int(taxid) for taxid in children_taxids + [family_taxid]])
-    )
+    children_taxids = sorted({int(taxid) for taxid in children_taxids + [parent_taxid]})
     logger.info(f"Obtained {len(children_taxids)} children taxids\n")
 
-    logger.info("Filtering out node above species level")
-    filtered_taxons = filter_children_taxids(children_taxids)
+    logger.info(f"Filtering out all nodes above {args.upper_node_type_allowed} level")
+    filtered_taxons = filter_children_taxids(children_taxids, args.upper_node_type_allowed)
     logger.info(f"Kept {len(filtered_taxons)} children taxons of species rank or below")
 
-    children_taxon_metadata_outfile = f"{family}{CHILDREN_TAXON_METADATA_OUTFILE_SUFFIX}"
+    children_taxon_metadata_outfile = f"{parent_taxon}{CHILDREN_TAXON_METADATA_OUTFILE_SUFFIX}"
     with open(children_taxon_metadata_outfile, "w") as fout:
         json.dump(filtered_taxons, fout)
 
-    taxid2name_outfile = f"{family}{TAXID_TO_NAME_OUTFILE_SUFFIX}"
+    taxid2name_outfile = f"{parent_taxon}{TAXID_TO_NAME_OUTFILE_SUFFIX}"
     with open(taxid2name_outfile, "w") as fout:
         for taxon in filtered_taxons:
             fout.write(f"{taxon['taxid']},{taxon['name']}\n")

@@ -24,7 +24,7 @@ process GET_SRA_METADATA {
 
     script:
     """
-    get_sra_metadata.py --taxon-id $taxid
+    get_sra_metadata.py --taxid $taxid
     """
 
     stub:

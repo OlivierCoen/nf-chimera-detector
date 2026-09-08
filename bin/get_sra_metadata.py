@@ -50,7 +50,7 @@ def parse_args():
         description="Compute general statistics from count data for each sample"
     )
     parser.add_argument(
-        "--taxon-id",
+        "--taxid",
         type=int,
         dest="taxid",
         required=True,

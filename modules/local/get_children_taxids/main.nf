@@ -25,7 +25,8 @@ process GET_CHILDREN_TAXIDS {
     def ncbi_api_key_arg = ncbi_api_key ? "--ncbi-api-key $ncbi_api_key" : ""
     """
     get_children_taxids.py \\
-        --family $family \\
+        --taxon $family \\
+        --keep-below family \\
         $ncbi_api_key_arg
     """
 

@@ -6,6 +6,7 @@ import argparse
 import json
 import logging
 import sys
+from termios import TAB0
 import xml.etree.ElementTree as ET
 
 import requests
@@ -24,6 +25,9 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+NCBI_API_DATASET_REPORT_URL = "https://api.ncbi.nlm.nih.gov/datasets/v2/taxonomy/dataset_report"
+NCBI_API_HEADERS = {"accept": "application/json", "content-type": "application/json"}
+
 # E-UTILITIES OL API
 ESEARCH_BASE_URL = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi"
 EFETCH_BASE_URL = (
@@ -32,6 +36,7 @@ EFETCH_BASE_URL = (
 ESEARCH_RETMAX = 1000000000  # max retmax that worked
 CHUNKSIZE = 2000
 
+TAXID_OUTFILE = "taxid.txt"
 SRA_IDS_OUTFILE_SUFFIX = ".sra_ids.txt"
 EXPERIMENT_OUTFILE_SUFFIX = ".sra_metadata.json"
 
@@ -49,14 +54,38 @@ def parse_args():
     parser = argparse.ArgumentParser(
         description="Compute general statistics from count data for each sample"
     )
-    parser.add_argument(
-        "--taxid",
-        type=int,
-        dest="taxid",
-        required=True,
-        help="Taxon ID on NCBI Taxonomy",
-    )
+    parser.add_argument("--taxon", type=str, required=True, help="Taxon name")
     return parser.parse_args()
+
+
+@retry(
+    retry=retry_if_exception_type(requests.exceptions.HTTPError),
+    stop=stop_after_delay(600),
+    wait=wait_exponential(multiplier=1, min=1, max=30),
+    before_sleep=before_sleep_log(logger, logging.WARNING),
+)
+def get_metadata_for_taxons(taxons: list[str]):
+    response = requests.post(
+        NCBI_API_DATASET_REPORT_URL,
+        headers=NCBI_API_HEADERS,
+        json={'taxons': taxons}
+    )
+    response.raise_for_status()
+    return response.json()
+
+
+def get_taxid(taxon: str) -> int:
+    result = get_metadata_for_taxons([taxon])
+    if len(result["reports"]) > 1:
+        raise ValueError(f"Multiple taxids for taxon {taxon}")
+    metadata = result["reports"][0]
+    if "taxonomy" not in metadata:
+        logger.info(f"Could not find taxonomy results for taxon {taxon}")
+        if "errors" in metadata:
+            for error in metadata["errors"]:
+                logger.error(f"Error: {error['reason']}\n")
+                sys.exit(100)
+    return int(metadata["taxonomy"]["tax_id"])
 
 
 class RateLimitException(Exception):
@@ -82,7 +111,6 @@ def send_esearch_query(query: str, database: str):
     """
     params = dict(db=database, term=query, retmax=ESEARCH_RETMAX)
     response = requests.get(ESEARCH_BASE_URL, params=params)
-    print(response.url)
     if response.status_code == 429:
         raise RateLimitException("Rate limit exceeded")
     response.raise_for_status()
@@ -139,7 +167,7 @@ def parse_sra_accessions_from_xml(xml_string: str) -> list[dict]:
     ]
 
 
-def get_sra_ids_from_taxid(taxid: str) -> list[str]:
+def get_sra_ids_from_taxid(taxid: int) -> list[str]:
     """
     Get list of SRA experiment IDs given a NCBI taxonomy ID
     :param taxid:
@@ -192,9 +220,13 @@ def fetch_sra_experiments(sra_uids: list[str]) -> list[dict]:
 if __name__ == "__main__":
     args = parse_args()
 
+    logger.info(f"Fetching taxid for taxon {args.taxon}")
+    taxid = get_taxid(args.taxon)
+    logger.info(f"Taxid: {taxid}")
+
     try:
-        logger.info(f"Fetching sra experiment UIDs from taxon ID {args.taxid}")
-        sra_uids = get_sra_ids_from_taxid(args.taxid)
+        logger.info(f"Fetching sra experiment UIDs from taxon ID {taxid}")
+        sra_uids = get_sra_ids_from_taxid(taxid)
         logger.info(f"Got {len(sra_uids)} SRA experiment UIDs")
 
         logger.info("Fetching sra experiment metadata for each SRA experiment ID")
@@ -209,13 +241,16 @@ if __name__ == "__main__":
         # ignoring error in wrapper module
         sys.exit(100)
 
-    outfile = f"{args.taxid}{EXPERIMENT_OUTFILE_SUFFIX}"
+    with open(TAXID_OUTFILE, "w") as fout:
+        fout.write(str(taxid))
+
+    outfile = f"{taxid}{EXPERIMENT_OUTFILE_SUFFIX}"
     with open(outfile, "w") as fout:
         json.dump(experiments, fout)
 
     srrs = [exp["@accession"] for exp in experiments]
 
-    outfile = f"{args.taxid}{SRA_IDS_OUTFILE_SUFFIX}"
+    outfile = f"{taxid}{SRA_IDS_OUTFILE_SUFFIX}"
     with open(outfile, "w") as fout:
         for srr in srrs:
             fout.write(f"{srr}\n")

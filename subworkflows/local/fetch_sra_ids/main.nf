@@ -6,10 +6,14 @@ workflow FETCH_SRA_IDS {
 
     take:
     ch_families
-    restrict_to_taxids
     ncbi_api_key
 
     main:
+
+    // ------------------------------------------------------------------------------------
+    // GET_CHILDREN_TAXIDS is USELESS NOW
+    // WE KEEP IT ONLY FOR THE SYLE (ACTUALLY MULTIQC REPORT)
+    // ------------------------------------------------------------------------------------
 
     GET_CHILDREN_TAXIDS (
         ch_families,
@@ -22,36 +26,27 @@ workflow FETCH_SRA_IDS {
                             .map { metas -> metas.collectEntries { it } } // flattens both maps together
                             .map { meta -> [ meta, meta.taxid.strip() ] }
 
-    if ( restrict_to_taxids ) {
-        // filter to keep only taxids in the restrict_to_taxids list
-        ch_restricted_taxids = channel.fromList( params.restrict_to_taxids.tokenize(',') )
-
-        ch_species_taxids = ch_species_taxids
-                                .combine( ch_restricted_taxids )
-                                .filter { meta, taxid, restricted_taxids -> restricted_taxids.contains(taxid) }
-                                .map { meta, taxid, restricted_taxids -> [ meta, taxid ] }
-    }
-
-    GET_SRA_METADATA ( ch_species_taxids )
+    GET_SRA_METADATA ( ch_families )
 
     // ------------------------------------------------------------------------------------
     // FOR DEV PURPOSES : RESTRICTING SELECTED SRRS
     // ------------------------------------------------------------------------------------
 
-    ch_sra_id_files = GET_SRA_METADATA.out.sra_id_files
-                        .map {
-                            meta, file ->
-                                if ( params.max_srrs_per_taxid ) { // in dev, limiting the nb of SRR per taxid
-                                    [ meta, file.splitText( limit: params.max_srrs_per_taxid ) ]
-                                } else {
-                                    [ meta, file.splitText() ]
-                                }
-                        }
+    ch_sra_ids = GET_SRA_METADATA.out.taxid_sra_id_file
+                    .map {
+                        meta, taxid, file ->
+                            def new_meta = meta + [taxid: taxid]
+                            if ( params.max_srrs_per_taxid ) { // in dev, limiting the nb of SRR per taxid
+                                [ new_meta, file.splitText( limit: params.max_srrs_per_taxid ) ]
+                            } else {
+                                [ new_meta, file.splitText() ]
+                            }
+                    }
 
     // ------------------------------------------------------------------------------------
     // ------------------------------------------------------------------------------------
 
-    ch_sra_ids = ch_sra_id_files
+    ch_sra_ids = ch_sra_ids
                     .transpose() // explodes each list
                     .unique() // there may be duplicates
                     .map {

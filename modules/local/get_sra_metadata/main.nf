@@ -2,9 +2,7 @@ process GET_SRA_METADATA {
 
     label 'process_single'
 
-    tag "${meta.family} :: ${taxid}"
-
-
+    tag "$taxon"
 
     conda "${moduleDir}/spec-file.txt"
     container "${ workflow.containerEngine in ['singularity', 'apptainer'] && !task.ext.singularity_pull_docker_container ?
@@ -12,10 +10,10 @@ process GET_SRA_METADATA {
         'community.wave.seqera.io/library/requests_tenacity_xmltodict:9e74a2aeeb88aab9' }"
 
     input:
-    tuple val(meta), val(taxid)
+    tuple val(meta), val(taxon)
 
     output:
-    tuple val(meta), path("*.sra_ids.txt"),                                                                                                     emit: sra_id_files
+    tuple val(meta), env('TAXID'), path("*.sra_ids.txt"),                                                                                       emit: taxid_sra_id_file
     tuple val(meta), path("*.sra_metadata.json"),                                                                                               emit: sra_metadata
     tuple val("${task.process}"), val('python'),   eval("python3 --version | sed 's/Python //'"),                                               topic: versions
     tuple val("${task.process}"), val('requests'), eval('python3 -c "import requests; print(requests.__version__)"'),                           topic: versions
@@ -24,12 +22,8 @@ process GET_SRA_METADATA {
 
     script:
     """
-    get_sra_metadata.py --taxid $taxid
-    """
+    get_sra_metadata.py --taxon $taxon
 
-    stub:
+    TAXID=\$(cat taxid.txt)
     """
-    touch test.sra_ids.txt test.sra_metadata.csv
-    """
-
 }

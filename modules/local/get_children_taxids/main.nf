@@ -26,7 +26,7 @@ process GET_CHILDREN_TAXIDS {
     """
     get_children_taxids.py \\
         --taxon $family \\
-        --keep-below family \\
+        --keep-below species \\
         $ncbi_api_key_arg
     """
 

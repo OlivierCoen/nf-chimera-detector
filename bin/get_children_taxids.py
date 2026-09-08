@@ -54,9 +54,14 @@ def parse_args():
     parser.add_argument("--keep-below", dest="upper_node_type_allowed", type=str, required=True, help="Keep all nodes below this type of node")
     return parser.parse_args()
 
+class RateLimitException(Exception):
+    pass
 
 @retry(
-    retry=retry_if_exception_type(requests.exceptions.HTTPError),
+    retry=retry_if_exception_type((
+        RateLimitException,
+        requests.exceptions.HTTPError
+    )),
     stop=stop_after_delay(600),
     wait=wait_exponential(multiplier=1, min=1, max=30),
     before_sleep=before_sleep_log(logger, logging.WARNING),
@@ -72,6 +77,8 @@ def get_metadata_for_taxons(taxons: list[str]):
             headers=NCBI_API_HEADERS,
             json={'taxons': chunked_taxons}
         )
+        if response.status_code == 429:
+            raise RateLimitException("Rate limit exceeded")
         response.raise_for_status()
         yield response.json()
 
@@ -108,13 +115,13 @@ def parse_ids_from_xml(xml_string: str) -> list[str]:
     ]
 
 
-def get_parent_taxid(family: str) -> int:
-    result = next(get_metadata_for_taxons([family]))
+def get_parent_taxid(taxon: str) -> int:
+    result = next(get_metadata_for_taxons([taxon]))
     if len(result["reports"]) > 1:
-        raise ValueError(f"Multiple taxids for family {family}")
+        raise ValueError(f"Multiple taxids for taxon {taxon}")
     metadata = result["reports"][0]
     if "taxonomy" not in metadata:
-        logger.info(f"Could not find taxonomy results for family {family}")
+        logger.info(f"Could not find taxonomy results for taxon {taxon}")
         if "errors" in metadata:
             for error in metadata["errors"]:
                 logger.error(f"Error: {error['reason']}\n")
@@ -124,7 +131,7 @@ def get_parent_taxid(family: str) -> int:
 
 def get_all_children_taxids(taxid: int) -> list[str]:
     """
-    Get list of all children taxonomy IDs given a family taxonomy ID
+    Get list of all children taxonomy IDs given a taxon taxonomy ID
     :param taxid:
     :return: list of children IDs
     """
